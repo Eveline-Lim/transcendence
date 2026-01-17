@@ -1,0 +1,1153 @@
+openapi: 3.1.0
+info:
+  title: Tournament Service API
+  description: |
+    Tournament Service for the Pong game platform.
+    Manages tournament brackets, scheduling, rankings, and leaderboards.
+  version: 1.0.0
+  contact:
+    name: Transcendence Team
+
+servers:
+  - url: /api/v1
+    description: API Gateway endpoint
+
+tags:
+  - name: Tournaments
+    description: Tournament management operations
+  - name: Brackets
+    description: Tournament bracket operations
+  - name: Matches
+    description: Tournament match scheduling
+  - name: Rankings
+    description: Player rankings and leaderboards
+
+paths:
+  /tournaments:
+    get:
+      tags:
+        - Tournaments
+      summary: List all tournaments
+      description: Retrieve a paginated list of tournaments
+      operationId: listTournaments
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          description: Filter by tournament status
+          schema:
+            $ref: '#/components/schemas/TournamentStatus'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tournament'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Tournaments
+      summary: Create a new tournament
+      description: Create a new tournament with the specified configuration
+      operationId: createTournament
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTournamentRequest'
+      responses:
+        '201':
+          description: Tournament created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tournament'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tournaments/{tournamentId}:
+    get:
+      tags:
+        - Tournaments
+      summary: Get tournament details
+      description: Retrieve detailed information about a specific tournament
+      operationId: getTournament
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tournament'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      tags:
+        - Tournaments
+      summary: Update tournament
+      description: Update tournament details (only allowed before tournament starts)
+      operationId: updateTournament
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTournamentRequest'
+      responses:
+        '200':
+          description: Tournament updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tournament'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Tournament already started, cannot modify
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Tournaments
+      summary: Cancel tournament
+      description: Cancel a tournament (only allowed before tournament starts)
+      operationId: cancelTournament
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+      responses:
+        '204':
+          description: Tournament cancelled successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Tournament already started, cannot cancel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tournaments/{tournamentId}/register:
+    post:
+      tags:
+        - Tournaments
+      summary: Register for tournament
+      description: Register the current user for a tournament
+      operationId: registerForTournament
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+      responses:
+        '201':
+          description: Successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TournamentParticipant'
+        '400':
+          description: Registration closed or tournament full
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tournaments/{tournamentId}/unregister:
+    post:
+      tags:
+        - Tournaments
+      summary: Unregister from tournament
+      description: Remove the current user from a tournament
+      operationId: unregisterFromTournament
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+      responses:
+        '204':
+          description: Successfully unregistered
+        '400':
+          description: Tournament already started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tournaments/{tournamentId}/participants:
+    get:
+      tags:
+        - Tournaments
+      summary: List tournament participants
+      description: Get all participants registered for a tournament
+      operationId: listTournamentParticipants
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TournamentParticipant'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tournaments/{tournamentId}/start:
+    post:
+      tags:
+        - Tournaments
+      summary: Start tournament
+      description: Start the tournament and generate initial bracket
+      operationId: startTournament
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+      responses:
+        '200':
+          description: Tournament started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tournament'
+        '400':
+          description: Not enough participants or invalid state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Bracket endpoints
+  /tournaments/{tournamentId}/bracket:
+    get:
+      tags:
+        - Brackets
+      summary: Get tournament bracket
+      description: Retrieve the complete bracket structure for a tournament
+      operationId: getTournamentBracket
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bracket'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tournaments/{tournamentId}/bracket/rounds/{roundNumber}:
+    get:
+      tags:
+        - Brackets
+      summary: Get bracket round
+      description: Get all matches for a specific round in the bracket
+      operationId: getBracketRound
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+        - name: roundNumber
+          in: path
+          required: true
+          description: Round number (1-based)
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BracketRound'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Match scheduling endpoints
+  /tournaments/{tournamentId}/matches:
+    get:
+      tags:
+        - Matches
+      summary: List tournament matches
+      description: Get all scheduled matches for a tournament
+      operationId: listTournamentMatches
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+        - name: status
+          in: query
+          description: Filter by match status
+          schema:
+            $ref: '#/components/schemas/MatchStatus'
+        - name: round
+          in: query
+          description: Filter by round number
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TournamentMatch'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tournaments/{tournamentId}/matches/{matchId}:
+    get:
+      tags:
+        - Matches
+      summary: Get match details
+      description: Get detailed information about a tournament match
+      operationId: getTournamentMatch
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+        - $ref: '#/components/parameters/MatchIdParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TournamentMatch'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tournaments/{tournamentId}/matches/{matchId}/schedule:
+    post:
+      tags:
+        - Matches
+      summary: Schedule match
+      description: Schedule a match to be played at a specific time
+      operationId: scheduleMatch
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+        - $ref: '#/components/parameters/MatchIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - scheduledAt
+              properties:
+                scheduledAt:
+                  type: string
+                  format: date-time
+                  description: Scheduled start time for the match
+      responses:
+        '200':
+          description: Match scheduled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TournamentMatch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tournaments/{tournamentId}/matches/{matchId}/queue:
+    post:
+      tags:
+        - Matches
+      summary: Queue match for play
+      description: Queue the match to be played via the Matchmaking Service
+      operationId: queueMatch
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+        - $ref: '#/components/parameters/MatchIdParam'
+      responses:
+        '202':
+          description: Match queued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  matchId:
+                    type: string
+                    format: uuid
+                  queuedAt:
+                    type: string
+                    format: date-time
+                  estimatedWait:
+                    type: integer
+                    description: Estimated wait time in seconds
+        '400':
+          description: Match not ready to be queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tournaments/{tournamentId}/matches/{matchId}/result:
+    post:
+      tags:
+        - Matches
+      summary: Submit match result
+      description: Submit the result of a completed match (typically called by Game Engine)
+      operationId: submitMatchResult
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+        - $ref: '#/components/parameters/MatchIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MatchResultRequest'
+      responses:
+        '200':
+          description: Result recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TournamentMatch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Match result already submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Rankings and Leaderboards
+  /rankings:
+    get:
+      tags:
+        - Rankings
+      summary: Get global rankings
+      description: Retrieve global player rankings across all tournaments
+      operationId: getGlobalRankings
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: period
+          in: query
+          description: Time period for rankings
+          schema:
+            type: string
+            enum:
+              - all_time
+              - yearly
+              - monthly
+              - weekly
+            default: all_time
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlayerRanking'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /rankings/users/{userId}:
+    get:
+      tags:
+        - Rankings
+      summary: Get user ranking
+      description: Get ranking information for a specific user
+      operationId: getUserRanking
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerRanking'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /leaderboards:
+    get:
+      tags:
+        - Rankings
+      summary: List leaderboards
+      description: Get available leaderboards
+      operationId: listLeaderboards
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Leaderboard'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /leaderboards/{leaderboardId}:
+    get:
+      tags:
+        - Rankings
+      summary: Get leaderboard
+      description: Get entries for a specific leaderboard
+      operationId: getLeaderboard
+      parameters:
+        - name: leaderboardId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  leaderboard:
+                    $ref: '#/components/schemas/Leaderboard'
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardEntry'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tournaments/{tournamentId}/leaderboard:
+    get:
+      tags:
+        - Rankings
+      summary: Get tournament leaderboard
+      description: Get the leaderboard for a specific tournament
+      operationId: getTournamentLeaderboard
+      parameters:
+        - $ref: '#/components/parameters/TournamentIdParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardEntry'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from Auth Service
+
+  parameters:
+    TournamentIdParam:
+      name: tournamentId
+      in: path
+      required: true
+      description: Unique tournament identifier
+      schema:
+        type: string
+        format: uuid
+
+    MatchIdParam:
+      name: matchId
+      in: path
+      required: true
+      description: Unique match identifier
+      schema:
+        type: string
+        format: uuid
+
+    PageParam:
+      name: page
+      in: query
+      description: Page number (1-based)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    LimitParam:
+      name: limit
+      in: query
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    Tournament:
+      type: object
+      required:
+        - id
+        - name
+        - status
+        - format
+        - maxParticipants
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        status:
+          $ref: '#/components/schemas/TournamentStatus'
+        format:
+          $ref: '#/components/schemas/TournamentFormat'
+        maxParticipants:
+          type: integer
+          minimum: 2
+          maximum: 256
+        currentParticipants:
+          type: integer
+        registrationStartAt:
+          type: string
+          format: date-time
+        registrationEndAt:
+          type: string
+          format: date-time
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        rules:
+          $ref: '#/components/schemas/TournamentRules'
+        createdBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TournamentStatus:
+      type: string
+      enum:
+        - draft
+        - registration_open
+        - registration_closed
+        - in_progress
+        - completed
+        - cancelled
+
+    TournamentFormat:
+      type: string
+      enum:
+        - single_elimination
+        - double_elimination
+        - round_robin
+        - swiss
+
+    TournamentRules:
+      type: object
+      properties:
+        pointsToWin:
+          type: integer
+          minimum: 1
+          default: 11
+        maxGameDuration:
+          type: integer
+          description: Maximum game duration in seconds
+        powerUpsEnabled:
+          type: boolean
+          default: false
+        bestOf:
+          type: integer
+          enum: [1, 3, 5]
+          default: 1
+          description: Number of games per match (best of N)
+
+    CreateTournamentRequest:
+      type: object
+      required:
+        - name
+        - format
+        - maxParticipants
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        format:
+          $ref: '#/components/schemas/TournamentFormat'
+        maxParticipants:
+          type: integer
+          minimum: 2
+          maximum: 256
+        registrationStartAt:
+          type: string
+          format: date-time
+        registrationEndAt:
+          type: string
+          format: date-time
+        startAt:
+          type: string
+          format: date-time
+        rules:
+          $ref: '#/components/schemas/TournamentRules'
+
+    UpdateTournamentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        maxParticipants:
+          type: integer
+          minimum: 2
+          maximum: 256
+        registrationStartAt:
+          type: string
+          format: date-time
+        registrationEndAt:
+          type: string
+          format: date-time
+        startAt:
+          type: string
+          format: date-time
+        rules:
+          $ref: '#/components/schemas/TournamentRules'
+
+    TournamentParticipant:
+      type: object
+      required:
+        - id
+        - tournamentId
+        - userId
+        - status
+        - registeredAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        tournamentId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        status:
+          type: string
+          enum:
+            - registered
+            - checked_in
+            - eliminated
+            - winner
+        seed:
+          type: integer
+          description: Seeding position for bracket placement
+        registeredAt:
+          type: string
+          format: date-time
+
+    Bracket:
+      type: object
+      required:
+        - tournamentId
+        - format
+        - rounds
+      properties:
+        tournamentId:
+          type: string
+          format: uuid
+        format:
+          $ref: '#/components/schemas/TournamentFormat'
+        totalRounds:
+          type: integer
+        currentRound:
+          type: integer
+        rounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/BracketRound'
+
+    BracketRound:
+      type: object
+      required:
+        - roundNumber
+        - name
+        - matches
+      properties:
+        roundNumber:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+          description: "e.g., 'Round of 16', 'Quarter Finals', 'Semi Finals', 'Finals'"
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/TournamentMatch'
+
+    TournamentMatch:
+      type: object
+      required:
+        - id
+        - tournamentId
+        - round
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        tournamentId:
+          type: string
+          format: uuid
+        round:
+          type: integer
+        matchNumber:
+          type: integer
+          description: Position within the round
+        player1:
+          $ref: '#/components/schemas/MatchPlayer'
+        player2:
+          $ref: '#/components/schemas/MatchPlayer'
+        status:
+          $ref: '#/components/schemas/MatchStatus'
+        scheduledAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        winnerId:
+          type: string
+          format: uuid
+        score:
+          $ref: '#/components/schemas/MatchScore'
+        gameSessionId:
+          type: string
+          format: uuid
+          description: Reference to the game session in Game Engine
+
+    MatchPlayer:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        seed:
+          type: integer
+
+    MatchStatus:
+      type: string
+      enum:
+        - pending
+        - scheduled
+        - queued
+        - in_progress
+        - completed
+        - cancelled
+        - walkover
+
+    MatchScore:
+      type: object
+      properties:
+        player1Score:
+          type: integer
+        player2Score:
+          type: integer
+        games:
+          type: array
+          description: Individual game scores for best-of-N matches
+          items:
+            type: object
+            properties:
+              player1Score:
+                type: integer
+              player2Score:
+                type: integer
+
+    MatchResultRequest:
+      type: object
+      required:
+        - winnerId
+        - score
+      properties:
+        winnerId:
+          type: string
+          format: uuid
+        score:
+          $ref: '#/components/schemas/MatchScore'
+        gameSessionId:
+          type: string
+          format: uuid
+        completedAt:
+          type: string
+          format: date-time
+
+    PlayerRanking:
+      type: object
+      required:
+        - userId
+        - rank
+        - points
+      properties:
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        rank:
+          type: integer
+        points:
+          type: integer
+        tournamentsPlayed:
+          type: integer
+        tournamentsWon:
+          type: integer
+        matchesPlayed:
+          type: integer
+        matchesWon:
+          type: integer
+        winRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+
+    Leaderboard:
+      type: object
+      required:
+        - id
+        - name
+        - type
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum:
+            - global
+            - tournament
+            - weekly
+            - monthly
+        updatedAt:
+          type: string
+          format: date-time
+
+    LeaderboardEntry:
+      type: object
+      required:
+        - rank
+        - userId
+        - score
+      properties:
+        rank:
+          type: integer
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        score:
+          type: integer
+        additionalStats:
+          type: object
+          additionalProperties: true
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalItems:
+          type: integer
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+security:
+  - bearerAuth: []
