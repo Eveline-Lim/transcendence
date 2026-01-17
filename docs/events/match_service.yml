@@ -1,0 +1,406 @@
+asyncapi: 3.0.0
+info:
+  title: Match Service WebSocket API
+  version: 1.0.0
+  description: Real-time events for lobby sync and matchmaking
+
+servers:
+  production:
+    host: ws.pong-platform.com # Need until we know the url
+    protocol: wss
+    description: Production WebSocket server
+    security:
+      - $ref: '#/components/securitySchemes/bearerAuth'
+
+channels:
+  lobby/{lobbyId}:
+    address: lobby/{lobbyId}
+    parameters:
+      lobbyId: 
+        description: Unique lobby identifier
+        schema:
+          type: string
+          format: uuid
+    messages: 
+      playerJoined:
+        $ref: '#/components/messages/PlayerJoined'
+      playerLeft:
+        $ref: '#/components/messages/PlayerLeft'
+      playerReady:
+        $ref: '#/components/messages/PlayerReady'
+      gameStarting:
+        $ref: '#/components/messages/GameStarting'
+      lobbyClosed:
+        $ref: '#/components/messages/LobbyClosed'
+
+  matchmaking/{playerId}:
+    address: matchmaking/{playerId}
+    parameters:
+      playerId:
+        description: Player's unique identifier
+        schema:
+          type: string
+          format: uuid
+    messages:
+      queueUpdate:
+        $ref: '#/components/messages/QueueUpdate'
+      matchFound:
+        $ref: '#/components/messages/MatchFound'
+
+operations:
+  # Lobby operations - Server to Client
+  onPlayerJoined:
+    action: receive
+    channel:
+      $ref: '#/channels/lobby~1{lobbyId}'
+    messages:
+      - $ref: '#/channels/lobby~1{lobbyId}/messages/playerJoined'
+  onPlayerLeft:
+    action: receive
+    channel:
+      $ref: '#/channels/lobby~1{lobbyId}'
+    messages:
+      - $ref: '#/channels/lobby~1{lobbyId}/messages/playerLeft'
+  onPlayerReady:
+    action: receive
+    channel:
+      $ref: '#/channels/lobby~1{lobbyId}'
+    messages:
+      - $ref: '#/channels/lobby~1{lobbyId}/messages/playerReady'
+  onGameStarting:
+    action: receive
+    channel:
+      $ref: '#/channels/lobby~1{lobbyId}'
+    messages:
+      - $ref: '#/channels/lobby~1{lobbyId}/messages/gameStarting'
+  onLobbyClosed:
+    action: receive
+    channel:
+      $ref: '#/channels/lobby~1{lobbyId}'
+    messages:
+      - $ref: '#/channels/lobby~1{lobbyId}/messages/lobbyClosed'
+
+  # Lobby operations - Client to Server
+  sendSetReady:
+    action: send
+    channel:
+      $ref: '#/channels/lobby~1{lobbyId}'
+    messages:
+      - $ref: '#/components/messages/SetReady'
+  sendLeaveLobby:
+    action: send
+    channel:
+      $ref: '#/channels/lobby~1{lobbyId}'
+    messages:
+      - $ref: '#/components/messages/LeaveLobby'
+
+  # Matchmaking operations - Server to Client
+  onQueueUpdate:
+    action: receive
+    channel:
+      $ref: '#/channels/matchmaking~1{playerId}'
+    messages:
+      - $ref: '#/channels/matchmaking~1{playerId}/messages/queueUpdate'
+  onMatchFound:
+    action: receive
+    channel:
+      $ref: '#/channels/matchmaking~1{playerId}'
+    messages:
+      - $ref: '#/channels/matchmaking~1{playerId}/messages/matchFound'
+
+  # Matchmaking operations - Client to Server
+  sendJoinQueue:
+    action: send
+    channel:
+      $ref: '#/channels/matchmaking~1{playerId}'
+    messages:
+      - $ref: '#/components/messages/JoinQueue'
+  sendLeaveQueue:
+    action: send
+    channel:
+      $ref: '#/channels/matchmaking~1{playerId}'
+    messages:
+      - $ref: '#/components/messages/LeaveQueue'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  messages:
+    # Client to Server Messages
+    SetReady:
+      name: setReady
+      title: Set Ready Status
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - data
+        properties:
+          event:
+            type: string
+            const: set_ready
+          data:
+            type: object
+            required:
+              - isReady
+            properties:
+              isReady:
+                type: boolean
+
+    LeaveLobby:
+      name: leaveLobby
+      title: Leave Lobby
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+        properties:
+          event:
+            type: string
+            const: leave_lobby
+
+    JoinQueue:
+      name: joinQueue
+      title: Join Matchmaking Queue
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+        properties:
+          event:
+            type: string
+            const: join_queue
+          data:
+            type: object
+            properties:
+              gameMode:
+                type: string
+                enum: [casual, ranked]
+                default: casual
+
+    LeaveQueue:
+      name: leaveQueue
+      title: Leave Matchmaking Queue
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+        properties:
+          event:
+            type: string
+            const: leave_queue
+
+    # Server to Client Messages
+    PlayerJoined:
+      name: playerJoined
+      title: Player Joined Lobby
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - data
+        properties:
+          event:
+            type: string
+            const: player_joined
+          data:
+            type: object
+            required:
+              - playerId
+              - username
+              - joinedAt
+            properties:
+              playerId:
+                type: string
+                format: uuid
+              username:
+                type: string
+              avatarUrl:
+                type: string
+                format: uri
+              joinedAt:
+                type: string
+                format: date-time
+
+    PlayerLeft:
+      name: playerLeft
+      title: Player Left Lobby
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - data
+        properties:
+          event:
+            type: string
+            const: player_left
+          data:
+            type: object
+            required:
+              - playerId
+              - reason
+            properties:
+              playerId:
+                type: string
+                format: uuid
+              reason:
+                type: string
+                enum: [voluntary, disconnected, kicked, timeout]
+
+    PlayerReady:
+      name: playerReady
+      title: Player Ready Status Changed
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - data
+        properties:
+          event:
+            type: string
+            const: player_ready
+          data:
+            type: object
+            required:
+              - playerId
+              - isReady
+            properties:
+              playerId:
+                type: string
+                format: uuid
+              isReady:
+                type: boolean
+
+    GameStarting:
+      name: gameStarting
+      title: Game Is Starting
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - data
+        properties:
+          event:
+            type: string
+            const: game_starting
+          data:
+            type: object
+            required:
+              - gameId
+              - gameEngineUrl
+              - startsAt
+            properties:
+              gameId:
+                type: string
+                format: uuid
+              gameEngineUrl:
+                type: string
+                format: uri
+                description: WebSocket URL to connect to Game Engine Service
+              startsAt:
+                type: string
+                format: date-time
+              countdown:
+                type: integer
+                description: Seconds until game starts
+
+    LobbyClosed:
+      name: lobbyClosed
+      title: Lobby Was Closed
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - data
+        properties:
+          event:
+            type: string
+            const: lobby_closed
+          data:
+            type: object
+            required:
+              - reason
+            properties:
+              reason:
+                type: string
+                enum: [game_started, host_left, timeout, cancelled]
+
+    QueueUpdate:
+      name: queueUpdate
+      title: Queue Position Update
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - data
+        properties:
+          event:
+            type: string
+            const: queue_update
+          data:
+            type: object
+            required:
+              - position
+              - estimatedWait
+            properties:
+              position:
+                type: integer
+                minimum: 1
+              estimatedWait:
+                type: integer
+                description: Estimated wait time in seconds
+              playersInQueue:
+                type: integer
+
+    MatchFound:
+      name: matchFound
+      title: Match Has Been Found
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - data
+        properties:
+          event:
+            type: string
+            const: match_found
+          data:
+            type: object
+            required:
+              - lobbyId
+              - opponent
+            properties:
+              lobbyId:
+                type: string
+                format: uuid
+              opponent:
+                type: object
+                required:
+                  - playerId
+                  - username
+                properties:
+                  playerId:
+                    type: string
+                    format: uuid
+                  username:
+                    type: string
+                  avatarUrl:
+                    type: string
+                    format: uri
+                  ranking:
+                    type: integer
