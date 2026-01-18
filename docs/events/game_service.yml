@@ -1,0 +1,283 @@
+asyncapi: 3.0.0
+
+info:
+  title: Game Engine Service
+  version: 1.0.0
+  description: |
+    Real-time WebSocket API for the Pong Game Engine.
+    Handles game state synchronization, player inputs, and game lifecycle events.
+  contact:
+    name: Transcendence Team
+  license:
+    name: MIT
+  tags:
+    - name: game
+      description: Core game events
+    - name: player
+      description: Player input events
+
+servers:
+  production:
+    host: api.transcendence.local # Temporaire, à voir si on change
+    pathname: /ws/game
+    protocol: wss
+    description: Production WebSocket server for game events
+    security:
+      - $ref: '#/components/securitySchemes/jwt'
+  development:
+    host: localhost:8080 # temporaire à voir si on change
+    pathname: /ws/game
+    protocol: ws
+    description: Development WebSocket server
+
+channels:
+  gameState:
+    address: game/{gameId}/state
+    description: Channel for broadcasting game state updates to connected clients
+    parameters:
+      gameId:
+        $ref: '#/components/parameters/gameId'
+    messages:
+      gameStateUpdate:
+        $ref: '#/components/messages/GameStateUpdate'
+
+  playerInput:
+    address: game/{gameId}/input
+    description: Channel for receiving player paddle movement inputs
+    parameters:
+      gameId:
+        $ref: '#/components/parameters/gameId'
+    messages:
+      paddleMove:
+        $ref: '#/components/messages/PaddleMove'
+
+  gameLifecycle:
+    address: game/{gameId}/lifecycle
+    description: Channel for game lifecycle events (start, pause, end)
+    parameters:
+      gameId:
+        $ref: '#/components/parameters/gameId'
+    messages:
+      gameStarted:
+        $ref: '#/components/messages/GameStarted'
+      gamePaused:
+        $ref: '#/components/messages/GamePaused'
+      gameEnded:
+        $ref: '#/components/messages/GameEnded'
+
+  score:
+    address: game/{gameId}/score
+    description: Channel for score update events
+    parameters:
+      gameId:
+        $ref: '#/components/parameters/gameId'
+    messages:
+      scoreUpdate:
+        $ref: '#/components/messages/ScoreUpdate'
+
+operations:
+  sendGameState:
+    action: send
+    channel:
+      $ref: '#/channels/gameState'
+    summary: Broadcast game state to players
+    description: Sends the current game state (ball position, paddle positions) at ~60fps
+    messages:
+      - $ref: '#/channels/gameState/messages/gameStateUpdate'
+
+  receivePlayerInput:
+    action: receive
+    channel:
+      $ref: '#/channels/playerInput'
+    summary: Receive player input
+    description: Receives paddle movement commands from players
+    messages:
+      - $ref: '#/channels/playerInput/messages/paddleMove'
+
+  sendGameStarted:
+    action: send
+    channel:
+      $ref: '#/channels/gameLifecycle'
+    summary: Notify game has started
+    messages:
+      - $ref: '#/channels/gameLifecycle/messages/gameStarted'
+
+  sendGameEnded:
+    action: send
+    channel:
+      $ref: '#/channels/gameLifecycle'
+    summary: Notify game has ended
+    messages:
+      - $ref: '#/channels/gameLifecycle/messages/gameEnded'
+
+  sendScoreUpdate:
+    action: send
+    channel:
+      $ref: '#/channels/score'
+    summary: Broadcast score changes
+    messages:
+      - $ref: '#/channels/score/messages/scoreUpdate'
+
+components:
+  parameters:
+    gameId:
+      description: Unique identifier for the game session
+
+  securitySchemes:
+    jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authenticating WebSocket connections
+
+  messages:
+    GameStateUpdate:
+      name: GameStateUpdate
+      title: Game State Update
+      summary: Current state of the game sent to clients
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/GameState'
+
+    PaddleMove:
+      name: PaddleMove
+      title: Paddle Move Input
+      summary: Player's paddle movement command
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PaddleInput'
+
+    GameStarted:
+      name: GameStarted
+      title: Game Started
+      summary: Notification that the game has begun
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/GameLifecycleEvent'
+
+    GamePaused:
+      name: GamePaused
+      title: Game Paused
+      summary: Notification that the game is paused
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/GameLifecycleEvent'
+
+    GameEnded:
+      name: GameEnded
+      title: Game Ended
+      summary: Notification that the game has finished
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/GameEndedPayload'
+
+    ScoreUpdate:
+      name: ScoreUpdate
+      title: Score Update
+      summary: Score change notification
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/Score'
+
+  schemas:
+    GameState:
+      type: object
+      required:
+        - gameId
+        - ball
+        - paddles
+        - timestamp
+      properties:
+        gameId:
+          type: string
+          format: uuid
+        ball:
+          $ref: '#/components/schemas/BallState'
+        paddles:
+          type: object
+          properties:
+            player1:
+              $ref: '#/components/schemas/PaddleState'
+            player2:
+              $ref: '#/components/schemas/PaddleState'
+        timestamp:
+          type: integer
+          description: Server timestamp in milliseconds
+
+    BallState:
+      type: object
+      properties:
+        x:
+          type: number
+          format: float
+        y:
+          type: number
+          format: float
+        velocityX:
+          type: number
+          format: float
+        velocityY:
+          type: number
+          format: float
+
+    PaddleState:
+      type: object
+      properties:
+        y:
+          type: number
+          format: float
+        height:
+          type: number
+          format: float
+
+    PaddleInput:
+      type: object
+      required:
+        - direction
+      properties:
+        direction:
+          type: string
+          enum: [up, down, stop]
+        playerId:
+          type: string
+        timestamp:
+          type: integer
+
+    Score:
+      type: object
+      properties:
+        player1Score:
+          type: integer
+        player2Score:
+          type: integer
+        scoringPlayer:
+          type: string
+          enum: [player1, player2]
+
+    GameLifecycleEvent:
+      type: object
+      properties:
+        gameId:
+          type: string
+          format: uuid
+        event:
+          type: string
+          enum: [started, paused, resumed]
+        timestamp:
+          type: integer
+
+    GameEndedPayload:
+      type: object
+      properties:
+        gameId:
+          type: string
+          format: uuid
+        winner:
+          type: string
+        finalScore:
+          $ref: '#/components/schemas/Score'
+        duration:
+          type: integer
+          description: Game duration in seconds
+        timestamp:
+          type: integer
