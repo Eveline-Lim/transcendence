@@ -63,11 +63,11 @@ jobs:
 
       - name: Generate Match Service documentation (AsyncAPI)
         if: hashFiles('docs/api/match_service.yml') != ''
-        run: npx @asyncapi/cli generate fromTemplate docs/api/match_service.yml @asyncapi/html-template -o public/match-service --force-write
+        run: npx @asyncapi/cli@2 generate fromTemplate docs/api/match_service.yml @asyncapi/html-template -o public/match-service --force-write
 
       - name: Generate Game Service documentation (AsyncAPI)
         if: hashFiles('docs/api/game_service.yml') != ''
-        run: npx @asyncapi/cli generate fromTemplate docs/api/game_service.yml @asyncapi/html-template -o public/game-service --force-write
+        run: npx @asyncapi/cli@2 generate fromTemplate docs/api/game_service.yml @asyncapi/html-template -o public/game-service --force-write
 
       - name: Generate AI Opponent Service documentation (Proto)
         if: hashFiles('docs/api/ai_opponent_service.proto') != ''
