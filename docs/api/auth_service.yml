@@ -9,6 +9,7 @@ info:
     name: Transcendence Team
   license:
     name: MIT
+    url: https://opensource.org/licenses/MIT
 
 servers:
   - url: /api/v1

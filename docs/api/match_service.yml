@@ -20,14 +20,11 @@ servers:
     description: Development WebSocket server
 
 channels:
-  lobby/{lobbyId}:
+  lobbyChannel:
     address: lobby/{lobbyId}
     parameters:
       lobbyId: 
-        description: Unique lobby identifier
-        schema:
-          type: string
-          format: uuid
+        description: Unique lobby identifier (UUID)
     messages: 
       playerJoined:
         $ref: '#/components/messages/PlayerJoined'
@@ -39,95 +36,105 @@ channels:
         $ref: '#/components/messages/GameStarting'
       lobbyClosed:
         $ref: '#/components/messages/LobbyClosed'
+      setReady:
+        $ref: '#/components/messages/SetReady'
+      leaveLobby:
+        $ref: '#/components/messages/LeaveLobby'
 
-  matchmaking/{playerId}:
+  matchmakingChannel:
     address: matchmaking/{playerId}
     parameters:
       playerId:
-        description: Player's unique identifier
-        schema:
-          type: string
-          format: uuid
+        description: Player's unique identifier (UUID)
     messages:
       queueUpdate:
         $ref: '#/components/messages/QueueUpdate'
       matchFound:
         $ref: '#/components/messages/MatchFound'
+      joinQueue:
+        $ref: '#/components/messages/JoinQueue'
+      leaveQueue:
+        $ref: '#/components/messages/LeaveQueue'
 
 operations:
-  # Lobby operations - Server to Client
-  onPlayerJoined:
-    action: receive
-    channel:
-      $ref: '#/channels/lobby~1{lobbyId}'
-    messages:
-      - $ref: '#/channels/lobby~1{lobbyId}/messages/playerJoined'
-  onPlayerLeft:
-    action: receive
-    channel:
-      $ref: '#/channels/lobby~1{lobbyId}'
-    messages:
-      - $ref: '#/channels/lobby~1{lobbyId}/messages/playerLeft'
-  onPlayerReady:
-    action: receive
-    channel:
-      $ref: '#/channels/lobby~1{lobbyId}'
-    messages:
-      - $ref: '#/channels/lobby~1{lobbyId}/messages/playerReady'
-  onGameStarting:
-    action: receive
-    channel:
-      $ref: '#/channels/lobby~1{lobbyId}'
-    messages:
-      - $ref: '#/channels/lobby~1{lobbyId}/messages/gameStarting'
-  onLobbyClosed:
-    action: receive
-    channel:
-      $ref: '#/channels/lobby~1{lobbyId}'
-    messages:
-      - $ref: '#/channels/lobby~1{lobbyId}/messages/lobbyClosed'
-
-  # Lobby operations - Client to Server
+  # Client to Server Operations
   sendSetReady:
     action: send
-    channel:
-      $ref: '#/channels/lobby~1{lobbyId}'
+    channel: 
+      $ref: '#/channels/lobbyChannel'
     messages:
-      - $ref: '#/components/messages/SetReady'
+      - $ref: '#/channels/lobbyChannel/messages/setReady'
+
   sendLeaveLobby:
     action: send
-    channel:
-      $ref: '#/channels/lobby~1{lobbyId}'
+    channel: 
+      $ref: '#/channels/lobbyChannel'
     messages:
-      - $ref: '#/components/messages/LeaveLobby'
+      - $ref: '#/channels/lobbyChannel/messages/leaveLobby'
 
-  # Matchmaking operations - Server to Client
-  onQueueUpdate:
-    action: receive
-    channel:
-      $ref: '#/channels/matchmaking~1{playerId}'
-    messages:
-      - $ref: '#/channels/matchmaking~1{playerId}/messages/queueUpdate'
-  onMatchFound:
-    action: receive
-    channel:
-      $ref: '#/channels/matchmaking~1{playerId}'
-    messages:
-      - $ref: '#/channels/matchmaking~1{playerId}/messages/matchFound'
-
-  # Matchmaking operations - Client to Server
   sendJoinQueue:
     action: send
-    channel:
-      $ref: '#/channels/matchmaking~1{playerId}'
+    channel: 
+      $ref: '#/channels/matchmakingChannel'
     messages:
-      - $ref: '#/components/messages/JoinQueue'
+      - $ref: '#/channels/matchmakingChannel/messages/joinQueue'
+
   sendLeaveQueue:
     action: send
-    channel:
-      $ref: '#/channels/matchmaking~1{playerId}'
+    channel: 
+      $ref: '#/channels/matchmakingChannel'
     messages:
-      - $ref: '#/components/messages/LeaveQueue'
+      - $ref: '#/channels/matchmakingChannel/messages/leaveQueue'
+
+  # Server to Client Operations
+  onPlayerJoined:
+    action: receive
+    channel: 
+      $ref: '#/channels/lobbyChannel'
+    messages:
+      - $ref: '#/channels/lobbyChannel/messages/playerJoined'
+
+  onPlayerLeft:
+    action: receive
+    channel: 
+      $ref: '#/channels/lobbyChannel'
+    messages:
+      - $ref: '#/channels/lobbyChannel/messages/playerLeft'
+
+  onPlayerReady:
+    action: receive
+    channel: 
+      $ref: '#/channels/lobbyChannel'
+    messages:
+      - $ref: '#/channels/lobbyChannel/messages/playerReady'
+
+  onGameStarting:
+    action: receive
+    channel: 
+      $ref: '#/channels/lobbyChannel'
+    messages:
+      - $ref: '#/channels/lobbyChannel/messages/gameStarting'
+
+  onLobbyClosed:
+    action: receive
+    channel: 
+      $ref: '#/channels/lobbyChannel'
+    messages:
+      - $ref: '#/channels/lobbyChannel/messages/lobbyClosed'
+
+  onQueueUpdate:
+    action: receive
+    channel: 
+      $ref: '#/channels/matchmakingChannel'
+    messages:
+      - $ref: '#/channels/matchmakingChannel/messages/queueUpdate'
+
+  onMatchFound:
+    action: receive
+    channel: 
+      $ref: '#/channels/matchmakingChannel'
+    messages:
+      - $ref: '#/channels/matchmakingChannel/messages/matchFound'
 
 components:
   securitySchemes:
@@ -140,7 +147,7 @@ components:
     # Client to Server Messages
     SetReady:
       name: setReady
-      title: Set Ready Status
+      title: Set Player Ready Status
       contentType: application/json
       payload:
         type: object
@@ -343,11 +350,11 @@ components:
             properties:
               reason:
                 type: string
-                enum: [game_started, host_left, timeout, cancelled]
+                description: Reason why the lobby was closed
 
     QueueUpdate:
       name: queueUpdate
-      title: Queue Position Update
+      title: Matchmaking Queue Update
       contentType: application/json
       payload:
         type: object
@@ -361,21 +368,18 @@ components:
           data:
             type: object
             required:
-              - position
-              - estimatedWait
+              - playersWaiting
+              - estimatedWaitTime
             properties:
-              position:
+              playersWaiting:
                 type: integer
-                minimum: 1
-              estimatedWait:
+              estimatedWaitTime:
                 type: integer
                 description: Estimated wait time in seconds
-              playersInQueue:
-                type: integer
 
     MatchFound:
       name: matchFound
-      title: Match Has Been Found
+      title: Match Found
       contentType: application/json
       payload:
         type: object
@@ -389,25 +393,22 @@ components:
           data:
             type: object
             required:
+              - matchId
               - lobbyId
               - opponent
             properties:
+              matchId:
+                type: string
+                format: uuid
               lobbyId:
                 type: string
                 format: uuid
               opponent:
                 type: object
                 required:
-                  - playerId
                   - username
                 properties:
-                  playerId:
-                    type: string
-                    format: uuid
                   username:
                     type: string
                   avatarUrl:
                     type: string
-                    format: uri
-                  ranking:
-                    type: integer

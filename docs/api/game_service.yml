@@ -10,6 +10,7 @@ info:
     name: Transcendence Team
   license:
     name: MIT
+    url: https://opensource.org/licenses/MIT
   tags:
     - name: game
       description: Core game events
