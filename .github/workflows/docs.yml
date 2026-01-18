@@ -1,0 +1,122 @@
+name: Publish API Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/**'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install -g @redocly/cli
+          npm install -g @asyncapi/generator
+          npm install -g protoc-gen-doc
+
+      - name: Create docs directory
+        run: mkdir -p docs
+
+      - name: Generate OpenAPI/Swagger documentation
+        run: |
+          if [ -f "api/openapi.yaml" ] || [ -f "api/openapi.yml" ] || [ -f "api/swagger.yaml" ]; then
+            redocly build-docs api/openapi.{yaml,yml} -o docs/openapi.html 2>/dev/null || \
+            redocly build-docs api/swagger.yaml -o docs/openapi.html 2>/dev/null || \
+            echo "No OpenAPI spec found"
+          fi
+
+      - name: Generate AsyncAPI documentation
+        run: |
+          if [ -f "api/asyncapi.yaml" ] || [ -f "api/asyncapi.yml" ]; then
+            ag api/asyncapi.{yaml,yml} @asyncapi/html-template -o docs/asyncapi 2>/dev/null || \
+            echo "No AsyncAPI spec found"
+          fi
+
+      - name: Setup Go for protoc-gen-doc
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Install protoc-gen-doc
+        run: go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
+
+      - name: Generate Protocol Buffers documentation
+        run: |
+          if [ -d "api/proto" ] && [ -n "$(find api/proto -name '*.proto')" ]; then
+            mkdir -p docs/proto
+            find api/proto -name "*.proto" -exec protoc --doc_out=docs/proto --doc_opt=html,index.html {} +
+          else
+            echo "No .proto files found"
+          fi
+
+      - name: Create index page
+        run: |
+          cat > docs/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>API Documentation</title>
+            <style>
+              body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+              h1 { color: #333; }
+              .api-links { list-style: none; padding: 0; }
+              .api-links li { margin: 15px 0; }
+              .api-links a { display: inline-block; padding: 10px 20px; background: #0366d6; color: white; text-decoration: none; border-radius: 5px; }
+              .api-links a:hover { background: #0256c5; }
+            </style>
+          </head>
+          <body>
+            <h1>API Documentation</h1>
+            <ul class="api-links">
+              <li><a href="openapi.html">OpenAPI/Swagger Documentation</a></li>
+              <li><a href="asyncapi/index.html">AsyncAPI Documentation</a></li>
+              <li><a href="proto/index.html">Protocol Buffers Documentation</a></li>
+            </ul>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
