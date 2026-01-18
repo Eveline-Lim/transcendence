@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'docs/api/**'
+      - 'docs/index.html'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -23,273 +24,70 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Setup Go for protoc-gen-doc
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
 
-      - name: Install protoc
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
+      - name: Setup Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install documentation generators
         run: |
-          npm install -g @redocly/cli
-          npm install -g @asyncapi/cli
           go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Create output directory
         run: mkdir -p public
 
-      - name: List API specs
-        run: |
-          echo "📁 API specifications found:"
-          ls -lah docs/api/
-
       - name: Generate Auth Service documentation
-        run: |
-          if [ -f "docs/api/auth_service.yml" ]; then
-            echo "✅ Generating Auth Service docs"
-            redocly build-docs docs/api/auth_service.yml -o public/auth-service.html
-          fi
+        if: hashFiles('docs/api/auth_service.yml') != ''
+        run: npx @redocly/cli build-docs docs/api/auth_service.yml -o public/auth-service.html
 
       - name: Generate Player Service documentation
-        run: |
-          if [ -f "docs/api/player_service.yml" ]; then
-            echo "✅ Generating Player Service docs"
-            redocly build-docs docs/api/player_service.yml -o public/player-service.html
-          fi
+        if: hashFiles('docs/api/player_service.yml') != ''
+        run: npx @redocly/cli build-docs docs/api/player_service.yml -o public/player-service.html
 
       - name: Generate Tournament Service documentation
-        run: |
-          if [ -f "docs/api/tournament_service.yml" ]; then
-            echo "✅ Generating Tournament Service docs"
-            redocly build-docs docs/api/tournament_service.yml -o public/tournament-service.html
-          fi
+        if: hashFiles('docs/api/tournament_service.yml') != ''
+        run: npx @redocly/cli build-docs docs/api/tournament_service.yml -o public/tournament-service.html
 
       - name: Generate Match Service documentation (AsyncAPI)
-        run: |
-          if [ -f "docs/api/match_service.yml" ]; then
-            echo "✅ Generating Match Service docs (AsyncAPI)"
-            asyncapi generate fromTemplate docs/api/match_service.yml @asyncapi/html-template -o public/match-service --force-write
-          fi
+        if: hashFiles('docs/api/match_service.yml') != ''
+        run: npx @asyncapi/cli generate fromTemplate docs/api/match_service.yml @asyncapi/html-template -o public/match-service --force-write
 
       - name: Generate Game Service documentation (AsyncAPI)
-        run: |
-          if [ -f "docs/api/game_service.yml" ]; then
-            echo "✅ Generating Game Service docs (AsyncAPI)"
-            asyncapi generate fromTemplate docs/api/game_service.yml @asyncapi/html-template -o public/game-service --force-write
-          fi
+        if: hashFiles('docs/api/game_service.yml') != ''
+        run: npx @asyncapi/cli generate fromTemplate docs/api/game_service.yml @asyncapi/html-template -o public/game-service --force-write
 
       - name: Generate AI Opponent Service documentation (Proto)
+        if: hashFiles('docs/api/ai_opponent_service.proto') != ''
         run: |
-          if [ -f "docs/api/ai_opponent_service.proto" ]; then
-            echo "✅ Generating AI Opponent Service docs (Proto)"
-            mkdir -p public/ai-service
-            protoc --proto_path=docs/api \
-                   --doc_out=public/ai-service \
-                   --doc_opt=html,index.html \
-                   docs/api/ai_opponent_service.proto
-          fi
+          mkdir -p public/ai-service
+          protoc --proto_path=docs/api \
+                 --doc_out=public/ai-service \
+                 --doc_opt=html,index.html \
+                 docs/api/ai_opponent_service.proto
 
       - name: Copy architecture diagrams
         run: |
-          if [ -f "docs/architectures/global-view.md" ]; then
+          if [ -d "docs/architectures" ]; then
             mkdir -p public/architecture
             cp docs/architectures/*.md public/architecture/ || true
           fi
 
-      - name: Create index page
-        run: |
-          cat > public/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Transcendence API Documentation</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { 
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                min-height: 100vh;
-                padding: 40px 20px;
-              }
-              .container {
-                max-width: 1200px;
-                margin: 0 auto;
-              }
-              h1 {
-                color: white;
-                text-align: center;
-                margin-bottom: 50px;
-                font-size: 3rem;
-                text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-              }
-              .services-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 30px;
-                margin-bottom: 50px;
-              }
-              .service-card {
-                background: white;
-                border-radius: 15px;
-                padding: 30px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                transition: transform 0.3s, box-shadow 0.3s;
-              }
-              .service-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-              }
-              .service-card h2 {
-                color: #667eea;
-                margin-bottom: 15px;
-                font-size: 1.5rem;
-              }
-              .service-card p {
-                color: #666;
-                margin-bottom: 20px;
-                line-height: 1.6;
-              }
-              .service-card .badge {
-                display: inline-block;
-                padding: 5px 12px;
-                border-radius: 20px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                margin-right: 8px;
-                margin-bottom: 15px;
-              }
-              .badge-rest { background: #e3f2fd; color: #1976d2; }
-              .badge-websocket { background: #f3e5f5; color: #7b1fa2; }
-              .badge-grpc { background: #e8f5e9; color: #388e3c; }
-              .service-card a {
-                display: inline-block;
-                padding: 12px 24px;
-                background: #667eea;
-                color: white;
-                text-decoration: none;
-                border-radius: 8px;
-                font-weight: 600;
-                transition: background 0.3s;
-              }
-              .service-card a:hover {
-                background: #5568d3;
-              }
-              .section {
-                background: white;
-                border-radius: 15px;
-                padding: 30px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                margin-bottom: 30px;
-              }
-              .section h2 {
-                color: #667eea;
-                margin-bottom: 20px;
-              }
-              .section ul {
-                list-style: none;
-              }
-              .section li {
-                padding: 10px 0;
-                border-bottom: 1px solid #eee;
-              }
-              .section li:last-child {
-                border-bottom: none;
-              }
-              .section a {
-                color: #667eea;
-                text-decoration: none;
-                font-weight: 500;
-              }
-              .section a:hover {
-                text-decoration: underline;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>🏓 Transcendence API Documentation</h1>
-              
-              <div class="services-grid">
-                <div class="service-card">
-                  <h2>🔐 Auth Service</h2>
-                  <span class="badge badge-rest">REST API</span>
-                  <p>JWT authentication, OAuth2/SSO, session management, and 2FA.</p>
-                  <a href="auth-service.html">View Documentation →</a>
-                </div>
-
-                <div class="service-card">
-                  <h2>👤 Player Service</h2>
-                  <span class="badge badge-rest">REST API</span>
-                  <p>User profiles, friends, statistics, rankings, and leaderboards.</p>
-                  <a href="player-service.html">View Documentation →</a>
-                </div>
-
-                <div class="service-card">
-                  <h2>🏆 Tournament Service</h2>
-                  <span class="badge badge-rest">REST API</span>
-                  <p>Tournament management, brackets, scheduling, and standings.</p>
-                  <a href="tournament-service.html">View Documentation →</a>
-                </div>
-
-                <div class="service-card">
-                  <h2>🎯 Match Service</h2>
-                  <span class="badge badge-websocket">WebSocket</span>
-                  <p>Real-time matchmaking, lobby sync, and queue management.</p>
-                  <a href="match-service/index.html">View Documentation →</a>
-                </div>
-
-                <div class="service-card">
-                  <h2>🏓 Game Engine Service</h2>
-                  <span class="badge badge-websocket">WebSocket</span>
-                  <p>Real-time game physics, state synchronization, and score management.</p>
-                  <a href="game-service/index.html">View Documentation →</a>
-                </div>
-
-                <div class="service-card">
-                  <h2>🤖 AI Opponent Service</h2>
-                  <span class="badge badge-grpc">gRPC</span>
-                  <p>AI-controlled opponents with adjustable difficulty levels.</p>
-                  <a href="ai-service/index.html">View Documentation →</a>
-                </div>
-              </div>
-
-              <div class="section">
-                <h2>📐 Architecture</h2>
-                <ul>
-                  <li>
-                    <a href="architecture/global-view.md">System Architecture Overview</a>
-                    <span style="color: #999; margin-left: 10px;">Microservices architecture diagram</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div class="section">
-                <h2>🚀 Getting Started</h2>
-                <ul>
-                  <li><strong>Base URL:</strong> <code>https://api.transcendence.local</code></li>
-                  <li><strong>API Version:</strong> v1</li>
-                  <li><strong>Authentication:</strong> JWT Bearer tokens (see Auth Service)</li>
-                  <li><strong>WebSocket URL:</strong> <code>wss://api.transcendence.local/ws</code></li>
-                </ul>
-              </div>
-            </div>
-          </body>
-          </html>
-          EOF
+      - name: Copy index page
+        if: hashFiles('docs/index.html') != ''
+        run: cp docs/index.html public/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
