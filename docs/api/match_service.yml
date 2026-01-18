@@ -2,15 +2,22 @@ asyncapi: 3.0.0
 info:
   title: Match Service WebSocket API
   version: 1.0.0
-  description: Real-time events for lobby sync and matchmaking
+  description: |
+    Real-time WebSocket events for lobby sync and matchmaking.
 
 servers:
   production:
-    host: ws.pong-platform.com # Need until we know the url
+    host: api.transcendence.local
+    pathname: /ws/match
     protocol: wss
     description: Production WebSocket server
     security:
       - $ref: '#/components/securitySchemes/bearerAuth'
+  development:
+    host: localhost:8080
+    pathname: /ws/match
+    protocol: ws
+    description: Development WebSocket server
 
 channels:
   lobby/{lobbyId}:

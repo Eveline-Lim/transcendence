@@ -243,7 +243,7 @@ paths:
           description: Filter by online status
           schema:
             type: string
-            enum: [online, offline, in_game]
+            enum: [online, offline, in_game, away]
       responses:
         '200':
           description: Successfully retrieved friends list
@@ -557,7 +557,7 @@ paths:
           description: Filter by game mode
           schema:
             type: string
-            enum: [classic, ranked, tournament, ai]
+            enum: [casual, ranked, tournament, ai]
       responses:
         '200':
           description: Successfully retrieved match history
@@ -570,23 +570,102 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  # Rankings and Leaderboards
+  /rankings:
+    get:
+      tags:
+        - Statistics
+      summary: Get global player rankings
+      description: Retrieve global player rankings based on ELO and statistics
+      operationId: getGlobalRankings
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: period
+          in: query
+          description: Time period for rankings
+          schema:
+            type: string
+            enum: [all_time, yearly, monthly, weekly]
+            default: all_time
+      responses:
+        '200':
+          description: Successfully retrieved rankings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RankingsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /rankings/me:
+    get:
+      tags:
+        - Statistics
+      summary: Get current player ranking
+      description: Get the authenticated player's ranking position
+      operationId: getCurrentPlayerRanking
+      responses:
+        '200':
+          description: Successfully retrieved ranking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerRanking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /rankings/{playerId}:
+    get:
+      tags:
+        - Statistics
+      summary: Get player ranking
+      description: Get ranking information for a specific player
+      operationId: getPlayerRanking
+      parameters:
+        - $ref: '#/components/parameters/PlayerIdParam'
+      responses:
+        '200':
+          description: Successfully retrieved ranking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerRanking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /leaderboard:
     get:
       tags:
         - Statistics
       summary: Get leaderboard
-      description: Retrieve the global player rankings
+      description: Retrieve the global player leaderboard
       operationId: getLeaderboard
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/LimitParam'
         - name: period
           in: query
-          description: Time period for ranking
+          description: Time period for leaderboard
           schema:
             type: string
             enum: [all_time, monthly, weekly, daily]
             default: all_time
+        - name: category
+          in: query
+          description: Leaderboard category
+          schema:
+            type: string
+            enum: [elo, wins, winrate, games_played]
+            default: elo
       responses:
         '200':
           description: Successfully retrieved leaderboard
@@ -899,8 +978,8 @@ components:
           type: number
           format: float
           minimum: 0
-          maximum: 100
-          description: Win percentage
+          maximum: 1
+          description: Win ratio (0.0 to 1.0)
         totalPointsScored:
           type: integer
           minimum: 0
@@ -932,7 +1011,7 @@ components:
         wins: 95
         losses: 50
         draws: 5
-        winRate: 63.33
+        winRate: 0.6333
         totalPointsScored: 1250
         totalPointsConceded: 890
         longestWinStreak: 12
@@ -969,7 +1048,7 @@ components:
           enum: [win, loss, draw]
         gameMode:
           type: string
-          enum: [classic, ranked, tournament, ai]
+          enum: [casual, ranked, tournament, ai]
         duration:
           type: integer
           description: Match duration in seconds
@@ -1029,6 +1108,59 @@ components:
         currentPlayerRank:
           type: integer
           description: The authenticated player's rank (if applicable)
+
+    RankingsResponse:
+      type: object
+      required:
+        - rankings
+        - pagination
+      properties:
+        rankings:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerRanking'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        currentPlayerRank:
+          type: integer
+          description: The authenticated player's rank (if applicable)
+
+    PlayerRanking:
+      type: object
+      required:
+        - rank
+        - playerId
+        - eloRating
+      properties:
+        rank:
+          type: integer
+          minimum: 1
+        playerId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+          format: uri
+        eloRating:
+          type: integer
+        gamesPlayed:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        winRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        rankChange:
+          type: integer
+          description: Position change since last period (positive = moved up)
 
     PlayerPreferences:
       type: object
@@ -1167,6 +1299,10 @@ components:
         totalPages:
           type: integer
           minimum: 0
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
 
     Error:
       type: object

@@ -18,9 +18,9 @@ flowchart TB
         AuthDB[("Auth DB<br/>Redis")]
     end
 
-    subgraph UserDomain["👤 User Domain"]
-        UserService["User Service<br/>━━━━━━━━━━<br/>• Profiles<br/>• Friends<br/>• Statistics<br/>• Preferences"]
-        UserDB[("User DB<br/>PostgreSQL")]
+    subgraph PlayerDomain["👤 Player Domain"]
+        PlayerService["Player Service<br/>━━━━━━━━━━<br/>• Profiles<br/>• Friends<br/>• Statistics<br/>• Rankings<br/>• Leaderboard<br/>• Preferences"]
+        PlayerDB[("Player DB<br/>PostgreSQL")]
     end
 
     subgraph GameDomain["🏓 Game Domain"]
@@ -32,7 +32,7 @@ flowchart TB
     subgraph MatchDomain["🎯 Matchmaking Domain"]
         MatchService["Matchmaking Service<br/>━━━━━━━━━━<br/>• Player Matching<br/>• Lobby Management<br/>• Remote Play<br/>• Queue System"]
         MatchDB[("Match Queue<br/>Redis")]
-        TournamentService["Tournament Service<br/>━━━━━━━━━━<br/>• Brackets<br/>• Scheduling<br/>• Rankings<br/>• Leaderboards"]
+        TournamentService["Tournament Service<br/>━━━━━━━━━━<br/>• Brackets<br/>• Scheduling<br/>• Standings"]
         TournamentDB[("Tournament DB<br/>PostgreSQL")]
     end
 
@@ -44,7 +44,7 @@ flowchart TB
 
     %% Gateway to Services
     APIGW --> AuthService
-    APIGW --> UserService
+    APIGW --> PlayerService
     APIGW --> MatchService
     APIGW --> TournamentService
     APIGW <-->|"Game events (WS)"| GameEngine
@@ -55,23 +55,23 @@ flowchart TB
     AuthService -.->|"JWT validation"| APIGW
 
     %% Data access
-    UserService --> UserDB
+    PlayerService --> PlayerDB
     GameEngine --> GameState
 
     %% Inter-service communication (labeled)
-    GameEngine -->|"Update stats"| UserService
+    GameEngine -->|"Update stats"| PlayerService
     GameEngine <-->|"AI moves"| AIService
     MatchService --> MatchDB
     MatchService -->|"Create game"| GameEngine
     TournamentService --> TournamentDB
     TournamentService -->|"Queue match"| MatchService
-    TournamentService -->|"Get rankings"| UserService
+    TournamentService -->|"Get rankings"| PlayerService
 
     %% Styling
     classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef gateway fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef auth fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-    classDef user fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef player fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
     classDef game fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef match fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px
     classDef db fill:#fff8e1,stroke:#ff6f00,stroke-width:1px
@@ -80,8 +80,8 @@ flowchart TB
     class APIGW gateway
     class AuthService auth
     class AuthDB db
-    class UserService user
-    class UserDB db
+    class PlayerService player
+    class PlayerDB db
     class GameEngine game
     class GameState db
     class AIService game

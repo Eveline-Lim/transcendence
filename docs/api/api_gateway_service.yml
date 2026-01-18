@@ -4,11 +4,12 @@
 # The API Gateway routes requests to downstream services which have their own OpenAPI docs.
 # 
 # See individual service documentation:
-#   - /docs/api/auth_service.yml
-#   - /docs/api/user_service.yml
-#   - /docs/api/match_service.yml
-#   - /docs/api/tournament_service.yml
-#   - /docs/api/game_service.yml
+#   - /docs/api/auth_service.yml        (OpenAPI 3.1 - REST)
+#   - /docs/api/player_service.yml      (OpenAPI 3.1 - REST)
+#   - /docs/api/tournament_service.yml  (OpenAPI 3.1 - REST)
+#   - /docs/api/match_service.yml       (AsyncAPI 3.0 - WebSocket)
+#   - /docs/api/game_service.yml        (AsyncAPI 3.0 - WebSocket)
+#   - /docs/api/ai_opponent_service.proto (Proto3 - gRPC, internal only)
 
 gateway:
   name: Transcendence API Gateway
@@ -28,26 +29,26 @@ routes:
     port: 3001
     stripPrefix: false
     
-  - prefix: /users
-    service: user-service
+  - prefix: /players
+    service: player-service
     port: 3002
     stripPrefix: false
-    
-  - prefix: /matchmaking
-    service: match-service
-    port: 3003
+
+  - prefix: /rankings
+    service: player-service
+    port: 3002
+    stripPrefix: false
+
+  - prefix: /leaderboard
+    service: player-service
+    port: 3002
     stripPrefix: false
     
   - prefix: /tournaments
     service: tournament-service
     port: 3004
     stripPrefix: false
-    
-  - prefix: /leaderboard
-    service: tournament-service
-    port: 3004
-    stripPrefix: false
-    
+
   - prefix: /games
     service: game-service
     port: 3005
@@ -59,7 +60,7 @@ websockets:
     service: game-service
     port: 3005
     
-  - path: /ws/lobby
+  - path: /ws/match
     service: match-service
     port: 3003
 
@@ -93,7 +94,7 @@ health:
   path: /health
   checks:
     - service: auth-service
-    - service: user-service
+    - service: player-service
     - service: match-service
     - service: tournament-service
     - service: game-service

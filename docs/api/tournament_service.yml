@@ -3,7 +3,9 @@ info:
   title: Tournament Service API
   description: |
     Tournament Service for the Pong game platform.
-    Manages tournament brackets, scheduling, rankings, and leaderboards.
+    Manages tournament brackets, scheduling, and tournament-specific standings.
+    
+    Note: Global player rankings and leaderboards are handled by the Player Service.
   version: 1.0.0
   contact:
     name: Transcendence Team
@@ -16,11 +18,9 @@ tags:
   - name: Tournaments
     description: Tournament management operations
   - name: Brackets
-    description: Tournament bracket operations
+    description: Tournament bracket and standings operations
   - name: Matches
     description: Tournament match scheduling
-  - name: Rankings
-    description: Player rankings and leaderboards
 
 paths:
   /tournaments:
@@ -494,133 +494,17 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  # Rankings and Leaderboards
-  /rankings:
-    get:
-      tags:
-        - Rankings
-      summary: Get global rankings
-      description: Retrieve global player rankings across all tournaments
-      operationId: getGlobalRankings
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - name: period
-          in: query
-          description: Time period for rankings
-          schema:
-            type: string
-            enum:
-              - all_time
-              - yearly
-              - monthly
-              - weekly
-            default: all_time
-      responses:
-        '200':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/PlayerRanking'
-                  pagination:
-                    $ref: '#/components/schemas/Pagination'
-        '500':
-          $ref: '#/components/responses/InternalError'
+  # Tournament-specific standings
+  # Note: Global player rankings and leaderboards are in Player Service
+  # See /docs/api/player_service.yml for /rankings and /leaderboard endpoints
 
-  /rankings/users/{userId}:
+  /tournaments/{tournamentId}/standings:
     get:
       tags:
-        - Rankings
-      summary: Get user ranking
-      description: Get ranking information for a specific user
-      operationId: getUserRanking
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PlayerRanking'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
-
-  /leaderboards:
-    get:
-      tags:
-        - Rankings
-      summary: List leaderboards
-      description: Get available leaderboards
-      operationId: listLeaderboards
-      responses:
-        '200':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Leaderboard'
-        '500':
-          $ref: '#/components/responses/InternalError'
-
-  /leaderboards/{leaderboardId}:
-    get:
-      tags:
-        - Rankings
-      summary: Get leaderboard
-      description: Get entries for a specific leaderboard
-      operationId: getLeaderboard
-      parameters:
-        - name: leaderboardId
-          in: path
-          required: true
-          schema:
-            type: string
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
-      responses:
-        '200':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  leaderboard:
-                    $ref: '#/components/schemas/Leaderboard'
-                  entries:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/LeaderboardEntry'
-                  pagination:
-                    $ref: '#/components/schemas/Pagination'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
-
-  /tournaments/{tournamentId}/leaderboard:
-    get:
-      tags:
-        - Rankings
-      summary: Get tournament leaderboard
-      description: Get the leaderboard for a specific tournament
-      operationId: getTournamentLeaderboard
+        - Brackets
+      summary: Get tournament standings
+      description: Get current standings/leaderboard for a specific tournament
+      operationId: getTournamentStandings
       parameters:
         - $ref: '#/components/parameters/TournamentIdParam'
       responses:
@@ -631,10 +515,13 @@ paths:
               schema:
                 type: object
                 properties:
-                  entries:
+                  tournamentId:
+                    type: string
+                    format: uuid
+                  standings:
                     type: array
                     items:
-                      $ref: '#/components/schemas/LeaderboardEntry'
+                      $ref: '#/components/schemas/TournamentStanding'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -1012,95 +899,62 @@ components:
           type: string
           format: date-time
 
-    PlayerRanking:
+    TournamentStanding:
       type: object
       required:
-        - userId
         - rank
+        - playerId
         - points
       properties:
-        userId:
+        rank:
+          type: integer
+          minimum: 1
+        playerId:
           type: string
           format: uuid
         username:
           type: string
         displayName:
           type: string
-        rank:
-          type: integer
         points:
           type: integer
-        tournamentsPlayed:
-          type: integer
-        tournamentsWon:
-          type: integer
+          description: Points earned in this tournament
         matchesPlayed:
           type: integer
         matchesWon:
           type: integer
-        winRate:
-          type: number
-          format: float
-          minimum: 0
-          maximum: 1
-
-    Leaderboard:
-      type: object
-      required:
-        - id
-        - name
-        - type
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-        type:
-          type: string
-          enum:
-            - global
-            - tournament
-            - weekly
-            - monthly
-        updatedAt:
-          type: string
-          format: date-time
-
-    LeaderboardEntry:
-      type: object
-      required:
-        - rank
-        - userId
-        - score
-      properties:
-        rank:
+        matchesLost:
           type: integer
-        userId:
-          type: string
-          format: uuid
-        username:
-          type: string
-        displayName:
-          type: string
-        score:
+        eliminated:
+          type: boolean
+          description: Whether the player has been eliminated
+        eliminatedInRound:
           type: integer
-        additionalStats:
-          type: object
-          additionalProperties: true
+          description: Round number when eliminated (if applicable)
+
+    # Note: Global PlayerRanking schema kept for tournament-specific ranking context
+    # Global player rankings are managed by Player Service
 
     Pagination:
       type: object
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
       properties:
         page:
           type: integer
+          minimum: 1
         limit:
           type: integer
-        totalItems:
+          minimum: 1
+        total:
           type: integer
+          minimum: 0
         totalPages:
           type: integer
+          minimum: 0
         hasNext:
           type: boolean
         hasPrevious:
