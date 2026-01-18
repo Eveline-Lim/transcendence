@@ -30,30 +30,6 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
-        run: |
-          npm install -g @redocly/cli
-          npm install -g @asyncapi/generator
-          npm install -g protoc-gen-doc
-
-      - name: Create docs directory
-        run: mkdir -p docs
-
-      - name: Generate OpenAPI/Swagger documentation
-        run: |
-          if [ -f "api/openapi.yaml" ] || [ -f "api/openapi.yml" ] || [ -f "api/swagger.yaml" ]; then
-            redocly build-docs api/openapi.{yaml,yml} -o docs/openapi.html 2>/dev/null || \
-            redocly build-docs api/swagger.yaml -o docs/openapi.html 2>/dev/null || \
-            echo "No OpenAPI spec found"
-          fi
-
-      - name: Generate AsyncAPI documentation
-        run: |
-          if [ -f "api/asyncapi.yaml" ] || [ -f "api/asyncapi.yml" ]; then
-            ag api/asyncapi.{yaml,yml} @asyncapi/html-template -o docs/asyncapi 2>/dev/null || \
-            echo "No AsyncAPI spec found"
-          fi
-
       - name: Setup Go for protoc-gen-doc
         uses: actions/setup-go@v5
         with:
@@ -64,16 +40,59 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler
 
-      - name: Install protoc-gen-doc
-        run: go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
+      - name: Install documentation generators
+        run: |
+          npm install -g @redocly/cli
+          npm install -g @asyncapi/cli
+          go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Create docs directory
+        run: mkdir -p docs
+
+      - name: Discover and list API files
+        run: |
+          echo "📁 API directory structure:"
+          find api -type f 2>/dev/null || echo "No api directory found"
+
+      - name: Generate OpenAPI/Swagger documentation
+        run: |
+          OPENAPI_FILE=$(find api -maxdepth 2 -type f \( -name "openapi.yaml" -o -name "openapi.yml" -o -name "swagger.yaml" -o -name "swagger.yml" \) 2>/dev/null | head -1)
+          if [ -n "$OPENAPI_FILE" ]; then
+            echo "✅ Found OpenAPI spec: $OPENAPI_FILE"
+            redocly build-docs "$OPENAPI_FILE" -o docs/openapi.html
+          else
+            echo "⚠️  No OpenAPI spec found"
+            echo "<html><body><h1>No OpenAPI specification available</h1></body></html>" > docs/openapi.html
+          fi
+
+      - name: Generate AsyncAPI documentation
+        run: |
+          ASYNCAPI_FILE=$(find api -maxdepth 2 -type f \( -name "asyncapi.yaml" -o -name "asyncapi.yml" \) 2>/dev/null | head -1)
+          if [ -n "$ASYNCAPI_FILE" ]; then
+            echo "✅ Found AsyncAPI spec: $ASYNCAPI_FILE"
+            asyncapi generate fromTemplate "$ASYNCAPI_FILE" @asyncapi/html-template -o docs/asyncapi
+          else
+            echo "⚠️  No AsyncAPI spec found"
+            mkdir -p docs/asyncapi
+            echo "<html><body><h1>No AsyncAPI specification available</h1></body></html>" > docs/asyncapi/index.html
+          fi
 
       - name: Generate Protocol Buffers documentation
         run: |
-          if [ -d "api/proto" ] && [ -n "$(find api/proto -name '*.proto')" ]; then
+          PROTO_FILES=$(find api -type f -name "*.proto" 2>/dev/null)
+          if [ -n "$PROTO_FILES" ]; then
+            echo "✅ Found .proto files:"
+            echo "$PROTO_FILES"
             mkdir -p docs/proto
-            find api/proto -name "*.proto" -exec protoc --doc_out=docs/proto --doc_opt=html,index.html {} +
+            protoc --proto_path=api \
+                   --doc_out=docs/proto \
+                   --doc_opt=html,index.html \
+                   $PROTO_FILES
           else
-            echo "No .proto files found"
+            echo "⚠️  No .proto files found"
+            mkdir -p docs/proto
+            echo "<html><body><h1>No Protocol Buffers specifications available</h1></body></html>" > docs/proto/index.html
           fi
 
       - name: Create index page
