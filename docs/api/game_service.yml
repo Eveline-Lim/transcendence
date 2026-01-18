@@ -240,6 +240,7 @@ components:
           enum: [up, down, stop]
         playerId:
           type: string
+          format: uuid
         timestamp:
           type: integer
 
