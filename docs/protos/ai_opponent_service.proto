@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package ai_opponent;
+
+
+// AI Opponent Service - provides computer-controlled opponents
+service AIOpponentService {
+  // Get next AI move based on current game state
+  rpc GetMove(GameState) returns (AIMove);
+
+  // Stream moves for real-time gameplay
+  rpc StreamMoves(stream GameState) returns (stream AIMove);
+}
+
+// Difficulty levels for AI
+enum Difficulty {
+  DIFFICULTY_UNSPECIFIED = 0;
+  DIFFICULTY_EASY = 1;
+  DIFFICULTY_MEDIUM = 2;
+  DIFFICULTY_HARD = 3;
+  DIFFICULTY_IMPOSSIBLE = 4;
+}
+
+// Game arena dimensions
+message ArenaBounds {
+  float width = 1;
+  float height = 2;
+}
+
+// Current state of the game
+message GameState {
+  string game_id = 1;
+  Difficulty difficulty = 2;
+  BallState ball = 3;
+  PaddleState ai_paddle = 4;
+  PaddleState player_paddle = 5;
+  ArenaBounds arena = 6;
+  int32 ai_score = 7;
+  int32 player_score = 8;
+}
+
+message BallState {
+  float x = 1;
+  float y = 2;
+  float velocity_x = 3;
+  float velocity_y = 4;
+}
+
+message PaddleState {
+  float y = 1;
+  float height = 2;
+}
+
+// AI's response - where to move the paddle
+message AIMove {
+  float target_y = 1;
+  optional float reaction_delay_ms = 2; // Simulated reaction time (may be omitted)
+}
