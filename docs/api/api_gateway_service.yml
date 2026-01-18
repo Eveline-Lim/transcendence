@@ -1,0 +1,108 @@
+# API Gateway Configuration Documentation
+# =======================================
+# This is NOT an OpenAPI specification.
+# The API Gateway routes requests to downstream services which have their own OpenAPI docs.
+# 
+# See individual service documentation:
+#   - /docs/api/auth_service.yml
+#   - /docs/api/user_service.yml
+#   - /docs/api/match_service.yml
+#   - /docs/api/tournament_service.yml
+#   - /docs/api/game_service.yml
+
+gateway:
+  name: Transcendence API Gateway
+  description: |
+    Central entry point for all client requests.
+    Routes traffic to appropriate microservices.
+  
+  servers:
+    production: https://api.transcendence.local
+    staging: https://staging-api.transcendence.local
+    development: http://localhost:8080
+
+# Route definitions - maps public paths to internal services
+routes:
+  - prefix: /auth
+    service: auth-service
+    port: 3001
+    stripPrefix: false
+    
+  - prefix: /users
+    service: user-service
+    port: 3002
+    stripPrefix: false
+    
+  - prefix: /matchmaking
+    service: match-service
+    port: 3003
+    stripPrefix: false
+    
+  - prefix: /tournaments
+    service: tournament-service
+    port: 3004
+    stripPrefix: false
+    
+  - prefix: /leaderboard
+    service: tournament-service
+    port: 3004
+    stripPrefix: false
+    
+  - prefix: /games
+    service: game-service
+    port: 3005
+    stripPrefix: false
+
+# WebSocket routes
+websockets:
+  - path: /ws/game
+    service: game-service
+    port: 3005
+    
+  - path: /ws/lobby
+    service: match-service
+    port: 3003
+
+# Rate limiting configuration
+rateLimiting:
+  global:
+    requestsPerMinute: 100
+    burstSize: 20
+  perEndpoint:
+    /auth/login:
+      requestsPerMinute: 10
+      burstSize: 5
+    /auth/register:
+      requestsPerMinute: 5
+      burstSize: 2
+
+# Authentication - JWT validation delegated to auth-service
+authentication:
+  publicPaths:
+    - /auth/login
+    - /auth/register
+    - /auth/oauth/*
+    - /auth/refresh
+    - /health
+  jwtValidation:
+    issuer: auth-service
+    audience: transcendence-api
+
+# Health check endpoint (gateway's own endpoint)
+health:
+  path: /health
+  checks:
+    - service: auth-service
+    - service: user-service
+    - service: match-service
+    - service: tournament-service
+    - service: game-service
+
+# CORS configuration
+cors:
+  allowedOrigins:
+    - https://transcendence.local
+    - http://localhost:3000
+  allowedMethods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+  allowedHeaders: [Authorization, Content-Type]
+  exposeHeaders: [X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset]
