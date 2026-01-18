@@ -10,8 +10,7 @@ flowchart TB
     end
 
     subgraph Gateway["🚪 API Gateway Layer"]
-        APIGW["API Gateway<br/>━━━━━━━━━━<br/>• Routing<br/>• Rate Limiting<br/>• Load Balancing<br/>• SSL Termination"]
-        WSProxy["WebSocket Proxy<br/>━━━━━━━━━━<br/>• Real-time Connection<br/>• Event Streaming"]
+        APIGW["API Gateway<br/>━━━━━━━━━━<br/>• Routing<br/>• Rate Limiting<br/>• Load Balancing<br/>• SSL Termination<br/>• WebSocket Proxy"]
     end
 
     subgraph Auth["🔐 Authentication"]
@@ -39,14 +38,17 @@ flowchart TB
 
     %% Client to Gateway
     Browser -->|HTTPS| APIGW
-    Browser <-->|WSS| WSProxy
+    Browser <-->|WSS| APIGW
     Mobile -->|HTTPS| APIGW
-    Mobile <-->|WSS| WSProxy
+    Mobile <-->|WSS| APIGW
 
     %% Gateway to Services
-    APIGW --> AuthService & UserService & MatchService & TournamentService
-    WSProxy <-->|"Game events"| GameEngine
-    WSProxy <-->|"Lobby sync"| MatchService
+    APIGW --> AuthService
+    APIGW --> UserService
+    APIGW --> MatchService
+    APIGW --> TournamentService
+    APIGW <-->|"Game events (WS)"| GameEngine
+    APIGW <-->|"Lobby sync (WS)"| MatchService
 
     %% Auth flows
     AuthService --> AuthDB
@@ -75,7 +77,7 @@ flowchart TB
     classDef db fill:#fff8e1,stroke:#ff6f00,stroke-width:1px
 
     class Browser,Mobile client
-    class APIGW,WSProxy gateway
+    class APIGW gateway
     class AuthService auth
     class AuthDB db
     class UserService user
