@@ -65,7 +65,7 @@ jobs:
         uses: asyncapi/cli@v5.0.6
         with:
           command: generate
-          filepath: docs/api/match_service_ws.yml
+          filepath: docs/api/match_service.yml
           template: '@asyncapi/html-template'
           output: public/match-service
           parameters: --force-write
