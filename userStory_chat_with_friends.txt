@@ -1,0 +1,9 @@
+User Story: Chat with Friends
+As a friendly player,
+Once logged-in, add some user to my friends list, and chat with them.
+
+1. Chat (Chat and Profile)
+- The user can add friend with his username.
+- The user can chat with him.
+- System Interaction: Player service to add friend; Chat Service to discuss
+

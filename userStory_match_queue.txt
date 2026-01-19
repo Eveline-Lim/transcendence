@@ -1,0 +1,22 @@
+User Story: Core Gameplay Loop
+As a competitive player,
+I want to log in, play a match, and immediately see my updated statistics,
+So that I can track my ranking and performance against other players.
+
+Flow of Events
+1. Connection (Auth)
+- The user arrives at the landing page.
+- The user authenticates successfully (via standard login or OAuth).
+- System Interaction: Auth Service issues a JWT.
+
+2. Gameplay (Match & Game)
+- The user enters the matchmaking queue.
+- The user is paired with an opponent.
+- The user plays the game until one score reaches the winning threshold.
+- System Interaction: Match Service handles queues; Game Service handles real-time positions
+
+3. Statistics (Player)
+- Upon game completion, the user is redirected to the summary screen.
+- The user navigates to their Profile page.
+- The user verifies that the "Games Played" count has increased by 1 and the result (Win/Loss) is recorded.
+- System Interaction: Player Service updates and serves the new user stats.
