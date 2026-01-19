@@ -57,10 +57,6 @@ jobs:
         if: hashFiles('docs/api/player_service.yml') != ''
         run: npx @redocly/cli build-docs docs/api/player_service.yml -o public/player-service.html
 
-      - name: Generate Tournament Service documentation
-        if: hashFiles('docs/api/tournament_service.yml') != ''
-        run: npx @redocly/cli build-docs docs/api/tournament_service.yml -o public/tournament-service.html
-
       - name: Generate Match Service documentation (AsyncAPI)
         uses: asyncapi/cli@v5.0.6
         with:
