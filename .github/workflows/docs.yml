@@ -62,12 +62,22 @@ jobs:
         run: npx @redocly/cli build-docs docs/api/tournament_service.yml -o public/tournament-service.html
 
       - name: Generate Match Service documentation (AsyncAPI)
-        if: hashFiles('docs/api/match_service.yml') != ''
-        run: npx @asyncapi/cli@latest generate fromTemplate docs/api/match_service.yml @asyncapi/html-template -o public/match-service --force-write
+        uses: asyncapi/cli@v5.0.6
+        with:
+          command: generate
+          filepath: docs/api/match_service_ws.yml
+          template: '@asyncapi/html-template'
+          output: public/match-service
+          parameters: --force-write
 
       - name: Generate Game Service documentation (AsyncAPI)
-        if: hashFiles('docs/api/game_service.yml') != ''
-        run: npx @asyncapi/cli@latest generate fromTemplate docs/api/game_service.yml @asyncapi/html-template -o public/game-service --force-write
+        uses: asyncapi/cli@v5.0.6
+        with:
+          command: generate
+          filepath: docs/api/game_service.yml
+          template: '@asyncapi/html-template'
+          output: public/game-service
+          parameters: --force-write
 
       - name: Generate AI Opponent Service documentation (Proto)
         if: hashFiles('docs/api/ai_opponent_service.proto') != ''
