@@ -10,6 +10,9 @@ service AIOpponentService {
 
   // Stream moves for real-time gameplay
   rpc StreamMoves(stream GameState) returns (stream AIMove);
+  
+  // Submit match result for pattern learning
+  rpc AnalyzeMatch(MatchAnalysisRequest) returns (MatchAnalysisResponse);
 }
 
 // Difficulty levels for AI
@@ -37,6 +40,8 @@ message GameState {
   ArenaBounds arena = 6;
   int32 ai_score = 7;
   int32 player_score = 8;
+  repeated PowerUp power_ups = 9;
+  GameConfig config = 10;
 }
 
 message BallState {
@@ -49,6 +54,31 @@ message BallState {
 message PaddleState {
   float y = 1;
   float height = 2;
+  float speed = 3;
+}
+
+message PowerUp {
+  string type = 1; // SPEED_BOOST, PADDLE_ENLARGE, etc.
+  float x = 2;
+  float y = 3;
+}
+
+message GameConfig {
+  bool power_ups_enabled = 1;
+  float paddle_speed_multiplier = 2;
+  float ball_speed_multiplier = 3;
+}
+
+message MatchAnalysisRequest {
+  string match_id = 1;
+  string player_id = 2;
+  repeated GameState history = 3;
+  string result = 4; // WIN, LOSS
+}
+
+message MatchAnalysisResponse {
+  bool success = 1;
+  float learning_rate_applied = 2;
 }
 
 // AI's response - where to move the paddle

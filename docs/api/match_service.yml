@@ -1,9 +1,10 @@
 asyncapi: 3.0.0
 info:
   title: Match Service WebSocket API
-  version: 1.0.0
+  version: 1.0.1
   description: |
-    Real-time WebSocket events for lobby sync and matchmaking.
+    Real-time WebSocket events for matchmaking.
+    Handles player queuing and match creation.
 
 servers:
   production:
@@ -20,27 +21,6 @@ servers:
     description: Development WebSocket server
 
 channels:
-  lobbyChannel:
-    address: lobby/{lobbyId}
-    parameters:
-      lobbyId: 
-        description: Unique lobby identifier (UUID)
-    messages: 
-      playerJoined:
-        $ref: '#/components/messages/PlayerJoined'
-      playerLeft:
-        $ref: '#/components/messages/PlayerLeft'
-      playerReady:
-        $ref: '#/components/messages/PlayerReady'
-      gameStarting:
-        $ref: '#/components/messages/GameStarting'
-      lobbyClosed:
-        $ref: '#/components/messages/LobbyClosed'
-      setReady:
-        $ref: '#/components/messages/SetReady'
-      leaveLobby:
-        $ref: '#/components/messages/LeaveLobby'
-
   matchmakingChannel:
     address: matchmaking/{playerId}
     parameters:
@@ -58,20 +38,6 @@ channels:
 
 operations:
   # Client to Server Operations
-  sendSetReady:
-    action: send
-    channel: 
-      $ref: '#/channels/lobbyChannel'
-    messages:
-      - $ref: '#/channels/lobbyChannel/messages/setReady'
-
-  sendLeaveLobby:
-    action: send
-    channel: 
-      $ref: '#/channels/lobbyChannel'
-    messages:
-      - $ref: '#/channels/lobbyChannel/messages/leaveLobby'
-
   sendJoinQueue:
     action: send
     channel: 
@@ -87,41 +53,6 @@ operations:
       - $ref: '#/channels/matchmakingChannel/messages/leaveQueue'
 
   # Server to Client Operations
-  onPlayerJoined:
-    action: receive
-    channel: 
-      $ref: '#/channels/lobbyChannel'
-    messages:
-      - $ref: '#/channels/lobbyChannel/messages/playerJoined'
-
-  onPlayerLeft:
-    action: receive
-    channel: 
-      $ref: '#/channels/lobbyChannel'
-    messages:
-      - $ref: '#/channels/lobbyChannel/messages/playerLeft'
-
-  onPlayerReady:
-    action: receive
-    channel: 
-      $ref: '#/channels/lobbyChannel'
-    messages:
-      - $ref: '#/channels/lobbyChannel/messages/playerReady'
-
-  onGameStarting:
-    action: receive
-    channel: 
-      $ref: '#/channels/lobbyChannel'
-    messages:
-      - $ref: '#/channels/lobbyChannel/messages/gameStarting'
-
-  onLobbyClosed:
-    action: receive
-    channel: 
-      $ref: '#/channels/lobbyChannel'
-    messages:
-      - $ref: '#/channels/lobbyChannel/messages/lobbyClosed'
-
   onQueueUpdate:
     action: receive
     channel: 
@@ -145,40 +76,6 @@ components:
 
   messages:
     # Client to Server Messages
-    SetReady:
-      name: setReady
-      title: Set Player Ready Status
-      contentType: application/json
-      payload:
-        type: object
-        required:
-          - event
-          - data
-        properties:
-          event:
-            type: string
-            const: set_ready
-          data:
-            type: object
-            required:
-              - isReady
-            properties:
-              isReady:
-                type: boolean
-
-    LeaveLobby:
-      name: leaveLobby
-      title: Leave Lobby
-      contentType: application/json
-      payload:
-        type: object
-        required:
-          - event
-        properties:
-          event:
-            type: string
-            const: leave_lobby
-
     JoinQueue:
       name: joinQueue
       title: Join Matchmaking Queue
@@ -213,145 +110,6 @@ components:
             const: leave_queue
 
     # Server to Client Messages
-    PlayerJoined:
-      name: playerJoined
-      title: Player Joined Lobby
-      contentType: application/json
-      payload:
-        type: object
-        required:
-          - event
-          - data
-        properties:
-          event:
-            type: string
-            const: player_joined
-          data:
-            type: object
-            required:
-              - playerId
-              - username
-              - joinedAt
-            properties:
-              playerId:
-                type: string
-                format: uuid
-              username:
-                type: string
-              avatarUrl:
-                type: string
-                format: uri
-              joinedAt:
-                type: string
-                format: date-time
-
-    PlayerLeft:
-      name: playerLeft
-      title: Player Left Lobby
-      contentType: application/json
-      payload:
-        type: object
-        required:
-          - event
-          - data
-        properties:
-          event:
-            type: string
-            const: player_left
-          data:
-            type: object
-            required:
-              - playerId
-              - reason
-            properties:
-              playerId:
-                type: string
-                format: uuid
-              reason:
-                type: string
-                enum: [voluntary, disconnected, kicked, timeout]
-
-    PlayerReady:
-      name: playerReady
-      title: Player Ready Status Changed
-      contentType: application/json
-      payload:
-        type: object
-        required:
-          - event
-          - data
-        properties:
-          event:
-            type: string
-            const: player_ready
-          data:
-            type: object
-            required:
-              - playerId
-              - isReady
-            properties:
-              playerId:
-                type: string
-                format: uuid
-              isReady:
-                type: boolean
-
-    GameStarting:
-      name: gameStarting
-      title: Game Is Starting
-      contentType: application/json
-      payload:
-        type: object
-        required:
-          - event
-          - data
-        properties:
-          event:
-            type: string
-            const: game_starting
-          data:
-            type: object
-            required:
-              - gameId
-              - gameEngineUrl
-              - startsAt
-            properties:
-              gameId:
-                type: string
-                format: uuid
-              gameEngineUrl:
-                type: string
-                format: uri
-                description: WebSocket URL to connect to Game Engine Service
-              startsAt:
-                type: string
-                format: date-time
-              countdown:
-                type: integer
-                description: Seconds until game starts
-
-    LobbyClosed:
-      name: lobbyClosed
-      title: Lobby Was Closed
-      contentType: application/json
-      payload:
-        type: object
-        required:
-          - event
-          - data
-        properties:
-          event:
-            type: string
-            const: lobby_closed
-          data:
-            type: object
-            required:
-              - reason
-            properties:
-              reason:
-                type: string
-                description: Reason why the lobby was closed
-
     QueueUpdate:
       name: queueUpdate
       title: Matchmaking Queue Update
@@ -394,15 +152,16 @@ components:
             type: object
             required:
               - matchId
-              - lobbyId
+              - gameEngineUrl
               - opponent
             properties:
               matchId:
                 type: string
                 format: uuid
-              lobbyId:
+              gameEngineUrl:
                 type: string
-                format: uuid
+                format: uri
+                description: WebSocket URL to connect to Game Engine Service
               opponent:
                 type: object
                 required:

@@ -76,6 +76,30 @@ channels:
       scoreUpdate:
         $ref: '#/components/messages/ScoreUpdate'
 
+  powerUps:
+    address: game/{gameId}/powerups
+    description: Channel for power-up events
+    parameters:
+      gameId:
+        $ref: '#/components/parameters/gameId'
+    messages:
+      powerUpSpawned:
+        $ref: '#/components/messages/PowerUpSpawned'
+      powerUpCollected:
+        $ref: '#/components/messages/PowerUpCollected'
+
+  reconnection:
+    address: game/{gameId}/connection
+    description: Channel for player connection status events
+    parameters:
+      gameId:
+        $ref: '#/components/parameters/gameId'
+    messages:
+      playerReconnected:
+        $ref: '#/components/messages/PlayerReconnected'
+      playerDisconnected:
+        $ref: '#/components/messages/PlayerDisconnected'
+
 operations:
   sendGameState:
     action: send
@@ -118,6 +142,38 @@ operations:
     summary: Broadcast score changes
     messages:
       - $ref: '#/channels/score/messages/scoreUpdate'
+
+  sendPowerUpSpawned:
+    action: send
+    channel:
+      $ref: '#/channels/powerUps'
+    summary: Notify power-up spawn
+    messages:
+      - $ref: '#/channels/powerUps/messages/powerUpSpawned'
+
+  sendPowerUpCollected:
+    action: send
+    channel:
+      $ref: '#/channels/powerUps'
+    summary: Notify power-up collection
+    messages:
+      - $ref: '#/channels/powerUps/messages/powerUpCollected'
+
+  sendPlayerReconnected:
+    action: send
+    channel:
+      $ref: '#/channels/reconnection'
+    summary: Notify player reconnection
+    messages:
+      - $ref: '#/channels/reconnection/messages/playerReconnected'
+
+  sendPlayerDisconnected:
+    action: send
+    channel:
+      $ref: '#/channels/reconnection'
+    summary: Notify player disconnection
+    messages:
+      - $ref: '#/channels/reconnection/messages/playerDisconnected'
 
 components:
   parameters:
@@ -180,6 +236,38 @@ components:
       payload:
         $ref: '#/components/schemas/Score'
 
+    PowerUpSpawned:
+      name: PowerUpSpawned
+      title: Power-Up Spawned
+      summary: A new power-up has appeared on the field
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PowerUpState'
+
+    PowerUpCollected:
+      name: PowerUpCollected
+      title: Power-Up Collected
+      summary: A player has collected a power-up
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PowerUpCollection'
+
+    PlayerReconnected:
+      name: PlayerReconnected
+      title: Player Reconnected
+      summary: A player has reconnected to the game
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PlayerConnectionEvent'
+
+    PlayerDisconnected:
+      name: PlayerDisconnected
+      title: Player Disconnected
+      summary: A player has disconnected from the game
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PlayerConnectionEvent'
+
   schemas:
     GameState:
       type: object
@@ -201,6 +289,10 @@ components:
               $ref: '#/components/schemas/PaddleState'
             player2:
               $ref: '#/components/schemas/PaddleState'
+        activePowerUps:
+          type: array
+          items:
+            $ref: '#/components/schemas/PowerUpState'
         timestamp:
           type: integer
           description: Server timestamp in milliseconds
@@ -281,5 +373,43 @@ components:
         duration:
           type: integer
           description: Game duration in seconds
+        timestamp:
+          type: integer
+
+    PowerUpState:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [speed_boost, paddle_enlarge, ball_shrink, freeze_opponent]
+        x:
+          type: number
+        y:
+          type: number
+        spawnTimestamp:
+          type: integer
+
+    PowerUpCollection:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        collectedBy:
+          type: string
+          enum: [player1, player2]
+        effectDuration:
+          type: integer
+          description: Duration in milliseconds
+
+    PlayerConnectionEvent:
+      type: object
+      properties:
+        playerId:
+          type: string
+          format: uuid
         timestamp:
           type: integer
