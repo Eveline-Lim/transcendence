@@ -68,7 +68,7 @@ jobs:
           filepath: docs/api/match_service.yml
           template: '@asyncapi/html-template'
           output: public/match-service
-          parameters: --force-write
+          parameters: --force-write -p singleFile=true
 
       - name: Generate Game Service documentation (AsyncAPI)
         uses: asyncapi/cli@v5.0.6
@@ -77,7 +77,7 @@ jobs:
           filepath: docs/api/game_service.yml
           template: '@asyncapi/html-template'
           output: public/game-service
-          parameters: --force-write
+          parameters: --force-write -p singleFile=true
 
       - name: Generate AI Opponent Service documentation (Proto)
         if: hashFiles('docs/api/ai_opponent_service.proto') != ''
