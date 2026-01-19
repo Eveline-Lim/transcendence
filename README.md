@@ -108,6 +108,8 @@ limiting, documentation, and at least 5 endpoints:
 - https://fastify.dev/docs/latest/
 - https://doc.traefik.io/traefik/reference/install-configuration/providers/docker/
 - https://react.dev/learn
+- https://tailwindcss.com/docs
+- https://v6.vite.dev/
 - https://grafana.com/docs/
 - https://grafana.com/docs/opentelemetry/
 - https://prometheus.io/docs/introduction/overview/
