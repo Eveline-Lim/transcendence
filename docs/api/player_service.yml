@@ -558,7 +558,7 @@ paths:
           description: Filter by game mode
           schema:
             type: string
-            enum: [casual, ranked, tournament, ai]
+            enum: [casual, ranked, ai]
       responses:
         '200':
           description: Successfully retrieved match history
@@ -1000,12 +1000,6 @@ components:
         eloRating:
           type: integer
           description: ELO rating score
-        tournamentsWon:
-          type: integer
-          minimum: 0
-        tournamentsPlayed:
-          type: integer
-          minimum: 0
       example:
         playerId: "123e4567-e89b-12d3-a456-426614174000"
         gamesPlayed: 150
@@ -1025,8 +1019,6 @@ components:
     MatchRecord:
       type: object
       required:
-        - id
-        - opponent
         - playerScore
         - opponentScore
         - result
@@ -1049,7 +1041,7 @@ components:
           enum: [win, loss, draw]
         gameMode:
           type: string
-          enum: [casual, ranked, tournament, ai]
+          enum: [casual, ranked, ai]
         duration:
           type: integer
           description: Match duration in seconds
@@ -1208,9 +1200,6 @@ components:
           type: boolean
           default: true
         tournamentUpdates:
-          type: boolean
-          default: true
-        emailNotifications:
           type: boolean
           default: false
 
