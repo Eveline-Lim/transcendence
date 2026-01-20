@@ -1,0 +1,2813 @@
+// implementation of the operations in the openapi specification
+
+export class Service {
+
+	// Operation: listPlayers
+	// URL: /players
+	// summary:	List all players
+	// req.query
+	//   type: object
+	//   properties:
+	//     page:
+	//       type: integer
+	//       minimum: 1
+	//       default: 1
+	//       description: Page number for pagination
+	//     limit:
+	//       type: integer
+	//       minimum: 1
+	//       maximum: 100
+	//       default: 20
+	//       description: Number of items per page
+	//     search:
+	//       type: string
+	//       maxLength: 100
+	//       description: Search players by username or display name
+	//
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved player list
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - players
+	//             - pagination
+	//           properties:
+	//             players:
+	//               type: array
+	//               items:
+	//                 type: object
+	//                 required:
+	//                   - id
+	//                   - username
+	//                   - displayName
+	//                 properties:
+	//                   id:
+	//                     type: string
+	//                     format: uuid
+	//                   username:
+	//                     type: string
+	//                   displayName:
+	//                     type: string
+	//                   avatarUrl:
+	//                     type: string
+	//                     format: uri
+	//                   status:
+	//                     type: string
+	//                     enum:
+	//                       - online
+	//                       - offline
+	//                       - in_game
+	//                       - away
+	//                     description: Current player status
+	//             pagination:
+	//               type: object
+	//               required:
+	//                 - page
+	//                 - limit
+	//                 - total
+	//                 - totalPages
+	//               properties:
+	//                 page:
+	//                   type: integer
+	//                   minimum: 1
+	//                 limit:
+	//                   type: integer
+	//                   minimum: 1
+	//                 total:
+	//                   type: integer
+	//                   minimum: 0
+	//                 totalPages:
+	//                   type: integer
+	//                   minimum: 0
+	//                 hasNext:
+	//                   type: boolean
+	//                 hasPrevious:
+	//                   type: boolean
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async listPlayers(req, _reply) {
+		console.log("listPlayers", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: createPlayer
+	// URL: /players
+	// summary:	Create a new player
+	// req.body
+	//   content:
+	//     application/json:
+	//       schema:
+	//         type: object
+	//         required:
+	//           - username
+	//           - email
+	//           - password
+	//         properties:
+	//           username:
+	//             type: string
+	//             minLength: 3
+	//             maxLength: 20
+	//             pattern: ^[a-zA-Z0-9_]+$
+	//           displayName:
+	//             type: string
+	//             minLength: 1
+	//             maxLength: 50
+	//           email:
+	//             type: string
+	//             format: email
+	//           password:
+	//             type: string
+	//             format: password
+	//             minLength: 8
+	//             maxLength: 128
+	//
+	// valid responses
+	//   '201':
+	//     description: Player created successfully
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - id
+	//             - username
+	//             - displayName
+	//             - createdAt
+	//           properties:
+	//             id:
+	//               type: string
+	//               format: uuid
+	//               description: Unique player identifier
+	//             username:
+	//               type: string
+	//               minLength: 3
+	//               maxLength: 20
+	//               pattern: ^[a-zA-Z0-9_]+$
+	//               description: Unique username
+	//             displayName:
+	//               type: string
+	//               minLength: 1
+	//               maxLength: 50
+	//               description: Display name shown in-game
+	//             email:
+	//               type: string
+	//               format: email
+	//               description: Player's email address
+	//             avatarUrl:
+	//               type: string
+	//               format: uri
+	//               description: URL to player's avatar image
+	//             status:
+	//               type: string
+	//               enum:
+	//                 - online
+	//                 - offline
+	//                 - in_game
+	//                 - away
+	//               description: Current player status
+	//             createdAt:
+	//               type: string
+	//               format: date-time
+	//             updatedAt:
+	//               type: string
+	//               format: date-time
+	//           example:
+	//             id: 123e4567-e89b-12d3-a456-426614174000
+	//             username: pong_master
+	//             displayName: Pong Master
+	//             email: player@example.com
+	//             avatarUrl: https://cdn.example.com/avatars/123.png
+	//             status: online
+	//             createdAt: '2024-01-15T10:30:00Z'
+	//             updatedAt: '2024-01-20T14:22:00Z'
+	//   '400':
+	//     description: Bad request - invalid input
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: VALIDATION_ERROR
+	//           message: Invalid request parameters
+	//           details:
+	//             field: username
+	//             reason: Username must be between 3 and 20 characters
+	//   '409':
+	//     description: Username already exists
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async createPlayer(req, _reply) {
+		console.log("createPlayer", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: getCurrentPlayer
+	// URL: /players/me
+	// summary:	Get current player profile
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved player profile
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - id
+	//             - username
+	//             - displayName
+	//             - createdAt
+	//           properties:
+	//             id:
+	//               type: string
+	//               format: uuid
+	//               description: Unique player identifier
+	//             username:
+	//               type: string
+	//               minLength: 3
+	//               maxLength: 20
+	//               pattern: ^[a-zA-Z0-9_]+$
+	//               description: Unique username
+	//             displayName:
+	//               type: string
+	//               minLength: 1
+	//               maxLength: 50
+	//               description: Display name shown in-game
+	//             email:
+	//               type: string
+	//               format: email
+	//               description: Player's email address
+	//             avatarUrl:
+	//               type: string
+	//               format: uri
+	//               description: URL to player's avatar image
+	//             status:
+	//               type: string
+	//               enum:
+	//                 - online
+	//                 - offline
+	//                 - in_game
+	//                 - away
+	//               description: Current player status
+	//             createdAt:
+	//               type: string
+	//               format: date-time
+	//             updatedAt:
+	//               type: string
+	//               format: date-time
+	//           example:
+	//             id: 123e4567-e89b-12d3-a456-426614174000
+	//             username: pong_master
+	//             displayName: Pong Master
+	//             email: player@example.com
+	//             avatarUrl: https://cdn.example.com/avatars/123.png
+	//             status: online
+	//             createdAt: '2024-01-15T10:30:00Z'
+	//             updatedAt: '2024-01-20T14:22:00Z'
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async getCurrentPlayer(req, _reply) {
+		console.log("getCurrentPlayer", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: updateCurrentPlayer
+	// URL: /players/me
+	// summary:	Update current player profile
+	// req.body
+	//   content:
+	//     application/json:
+	//       schema:
+	//         type: object
+	//         properties:
+	//           displayName:
+	//             type: string
+	//             minLength: 1
+	//             maxLength: 50
+	//           email:
+	//             type: string
+	//             format: email
+	//
+	// valid responses
+	//   '200':
+	//     description: Player updated successfully
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - id
+	//             - username
+	//             - displayName
+	//             - createdAt
+	//           properties:
+	//             id:
+	//               type: string
+	//               format: uuid
+	//               description: Unique player identifier
+	//             username:
+	//               type: string
+	//               minLength: 3
+	//               maxLength: 20
+	//               pattern: ^[a-zA-Z0-9_]+$
+	//               description: Unique username
+	//             displayName:
+	//               type: string
+	//               minLength: 1
+	//               maxLength: 50
+	//               description: Display name shown in-game
+	//             email:
+	//               type: string
+	//               format: email
+	//               description: Player's email address
+	//             avatarUrl:
+	//               type: string
+	//               format: uri
+	//               description: URL to player's avatar image
+	//             status:
+	//               type: string
+	//               enum:
+	//                 - online
+	//                 - offline
+	//                 - in_game
+	//                 - away
+	//               description: Current player status
+	//             createdAt:
+	//               type: string
+	//               format: date-time
+	//             updatedAt:
+	//               type: string
+	//               format: date-time
+	//           example:
+	//             id: 123e4567-e89b-12d3-a456-426614174000
+	//             username: pong_master
+	//             displayName: Pong Master
+	//             email: player@example.com
+	//             avatarUrl: https://cdn.example.com/avatars/123.png
+	//             status: online
+	//             createdAt: '2024-01-15T10:30:00Z'
+	//             updatedAt: '2024-01-20T14:22:00Z'
+	//   '400':
+	//     description: Bad request - invalid input
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: VALIDATION_ERROR
+	//           message: Invalid request parameters
+	//           details:
+	//             field: username
+	//             reason: Username must be between 3 and 20 characters
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async updateCurrentPlayer(req, _reply) {
+		console.log("updateCurrentPlayer", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: deleteCurrentPlayer
+	// URL: /players/me
+	// summary:	Delete current player account
+	// valid responses
+	//   '204':
+	//     description: Player deleted successfully
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async deleteCurrentPlayer(req, _reply) {
+		console.log("deleteCurrentPlayer", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: getPlayerById
+	// URL: /players/:playerId
+	// summary:	Get player by ID
+	// req.params
+	//   type: object
+	//   properties:
+	//     playerId:
+	//       type: string
+	//       format: uuid
+	//       description: Unique player identifier
+	//   required:
+	//     - playerId
+	//
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved player profile
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - id
+	//             - username
+	//             - displayName
+	//           properties:
+	//             id:
+	//               type: string
+	//               format: uuid
+	//             username:
+	//               type: string
+	//             displayName:
+	//               type: string
+	//             avatarUrl:
+	//               type: string
+	//               format: uri
+	//             status:
+	//               type: string
+	//               enum:
+	//                 - online
+	//                 - offline
+	//                 - in_game
+	//                 - away
+	//               description: Current player status
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '404':
+	//     description: Resource not found
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: NOT_FOUND
+	//           message: Player not found
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async getPlayerById(req, _reply) {
+		console.log("getPlayerById", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: uploadAvatar
+	// URL: /players/me/avatar
+	// summary:	Upload player avatar
+	// req.body
+	//   content:
+	//     multipart/form-data:
+	//       schema:
+	//         type: object
+	//         required:
+	//           - avatar
+	//         properties:
+	//           avatar:
+	//             type: string
+	//             format: binary
+	//             description: Avatar image file (PNG, JPG, max 5MB)
+	//
+	// valid responses
+	//   '200':
+	//     description: Avatar uploaded successfully
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           properties:
+	//             avatarUrl:
+	//               type: string
+	//               format: uri
+	//   '400':
+	//     description: Bad request - invalid input
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: VALIDATION_ERROR
+	//           message: Invalid request parameters
+	//           details:
+	//             field: username
+	//             reason: Username must be between 3 and 20 characters
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '413':
+	//     description: File too large
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async uploadAvatar(req, _reply) {
+		console.log("uploadAvatar", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: deleteAvatar
+	// URL: /players/me/avatar
+	// summary:	Delete player avatar
+	// valid responses
+	//   '204':
+	//     description: Avatar deleted successfully
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async deleteAvatar(req, _reply) {
+		console.log("deleteAvatar", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: listFriends
+	// URL: /players/me/friends
+	// summary:	List friends
+	// req.query
+	//   type: object
+	//   properties:
+	//     page:
+	//       type: integer
+	//       minimum: 1
+	//       default: 1
+	//       description: Page number for pagination
+	//     limit:
+	//       type: integer
+	//       minimum: 1
+	//       maximum: 100
+	//       default: 20
+	//       description: Number of items per page
+	//     status:
+	//       type: string
+	//       enum:
+	//         - online
+	//         - offline
+	//         - in_game
+	//         - away
+	//       description: Filter by online status
+	//
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved friends list
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - friends
+	//             - pagination
+	//           properties:
+	//             friends:
+	//               type: array
+	//               items:
+	//                 type: object
+	//                 required:
+	//                   - id
+	//                   - player
+	//                   - friendsSince
+	//                 properties:
+	//                   id:
+	//                     type: string
+	//                     format: uuid
+	//                   player:
+	//                     type: object
+	//                     required:
+	//                       - id
+	//                       - username
+	//                       - displayName
+	//                     properties:
+	//                       id:
+	//                         type: string
+	//                         format: uuid
+	//                       username:
+	//                         type: string
+	//                       displayName:
+	//                         type: string
+	//                       avatarUrl:
+	//                         type: string
+	//                         format: uri
+	//                       status:
+	//                         type: string
+	//                         enum:
+	//                           - online
+	//                           - offline
+	//                           - in_game
+	//                           - away
+	//                         description: Current player status
+	//                   friendsSince:
+	//                     type: string
+	//                     format: date-time
+	//             pagination:
+	//               type: object
+	//               required:
+	//                 - page
+	//                 - limit
+	//                 - total
+	//                 - totalPages
+	//               properties:
+	//                 page:
+	//                   type: integer
+	//                   minimum: 1
+	//                 limit:
+	//                   type: integer
+	//                   minimum: 1
+	//                 total:
+	//                   type: integer
+	//                   minimum: 0
+	//                 totalPages:
+	//                   type: integer
+	//                   minimum: 0
+	//                 hasNext:
+	//                   type: boolean
+	//                 hasPrevious:
+	//                   type: boolean
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async listFriends(req, _reply) {
+		console.log("listFriends", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: listFriendRequests
+	// URL: /players/me/friends/requests
+	// summary:	List friend requests
+	// req.query
+	//   type: object
+	//   properties:
+	//     direction:
+	//       type: string
+	//       enum:
+	//         - incoming
+	//         - outgoing
+	//       description: Filter by request direction
+	//
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved friend requests
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - requests
+	//           properties:
+	//             requests:
+	//               type: array
+	//               items:
+	//                 type: object
+	//                 required:
+	//                   - id
+	//                   - fromPlayer
+	//                   - toPlayer
+	//                   - status
+	//                   - createdAt
+	//                 properties:
+	//                   id:
+	//                     type: string
+	//                     format: uuid
+	//                   fromPlayer: &ref_0
+	//                     type: object
+	//                     required:
+	//                       - id
+	//                       - username
+	//                       - displayName
+	//                     properties:
+	//                       id:
+	//                         type: string
+	//                         format: uuid
+	//                       username:
+	//                         type: string
+	//                       displayName:
+	//                         type: string
+	//                       avatarUrl:
+	//                         type: string
+	//                         format: uri
+	//                       status:
+	//                         type: string
+	//                         enum:
+	//                           - online
+	//                           - offline
+	//                           - in_game
+	//                           - away
+	//                         description: Current player status
+	//                   toPlayer: *ref_0
+	//                   status:
+	//                     type: string
+	//                     enum:
+	//                       - pending
+	//                       - accepted
+	//                       - rejected
+	//                   createdAt:
+	//                     type: string
+	//                     format: date-time
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_1
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_1
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async listFriendRequests(req, _reply) {
+		console.log("listFriendRequests", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: sendFriendRequest
+	// URL: /players/me/friends/requests
+	// summary:	Send friend request
+	// req.body
+	//   content:
+	//     application/json:
+	//       schema:
+	//         type: object
+	//         required:
+	//           - targetPlayerId
+	//         properties:
+	//           targetPlayerId:
+	//             type: string
+	//             format: uuid
+	//
+	// valid responses
+	//   '201':
+	//     description: Friend request sent successfully
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - id
+	//             - fromPlayer
+	//             - toPlayer
+	//             - status
+	//             - createdAt
+	//           properties:
+	//             id:
+	//               type: string
+	//               format: uuid
+	//             fromPlayer: &ref_0
+	//               type: object
+	//               required:
+	//                 - id
+	//                 - username
+	//                 - displayName
+	//               properties:
+	//                 id:
+	//                   type: string
+	//                   format: uuid
+	//                 username:
+	//                   type: string
+	//                 displayName:
+	//                   type: string
+	//                 avatarUrl:
+	//                   type: string
+	//                   format: uri
+	//                 status:
+	//                   type: string
+	//                   enum:
+	//                     - online
+	//                     - offline
+	//                     - in_game
+	//                     - away
+	//                   description: Current player status
+	//             toPlayer: *ref_0
+	//             status:
+	//               type: string
+	//               enum:
+	//                 - pending
+	//                 - accepted
+	//                 - rejected
+	//             createdAt:
+	//               type: string
+	//               format: date-time
+	//   '400':
+	//     description: Bad request - invalid input
+	//     content:
+	//       application/json:
+	//         schema: &ref_1
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: VALIDATION_ERROR
+	//           message: Invalid request parameters
+	//           details:
+	//             field: username
+	//             reason: Username must be between 3 and 20 characters
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: *ref_1
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '404':
+	//     description: Target player not found
+	//     content:
+	//       application/json:
+	//         schema: *ref_1
+	//   '409':
+	//     description: Friend request already exists or already friends
+	//     content:
+	//       application/json:
+	//         schema: *ref_1
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_1
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async sendFriendRequest(req, _reply) {
+		console.log("sendFriendRequest", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: respondToFriendRequest
+	// URL: /players/me/friends/requests/:requestId
+	// summary:	Respond to friend request
+	// req.params
+	//   type: object
+	//   properties:
+	//     requestId:
+	//       type: string
+	//       format: uuid
+	//   required:
+	//     - requestId
+	//
+	// req.body
+	//   content:
+	//     application/json:
+	//       schema:
+	//         type: object
+	//         required:
+	//           - action
+	//         properties:
+	//           action:
+	//             type: string
+	//             enum:
+	//               - accept
+	//               - reject
+	//
+	// valid responses
+	//   '200':
+	//     description: Friend request processed
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - id
+	//             - fromPlayer
+	//             - toPlayer
+	//             - status
+	//             - createdAt
+	//           properties:
+	//             id:
+	//               type: string
+	//               format: uuid
+	//             fromPlayer: &ref_0
+	//               type: object
+	//               required:
+	//                 - id
+	//                 - username
+	//                 - displayName
+	//               properties:
+	//                 id:
+	//                   type: string
+	//                   format: uuid
+	//                 username:
+	//                   type: string
+	//                 displayName:
+	//                   type: string
+	//                 avatarUrl:
+	//                   type: string
+	//                   format: uri
+	//                 status:
+	//                   type: string
+	//                   enum:
+	//                     - online
+	//                     - offline
+	//                     - in_game
+	//                     - away
+	//                   description: Current player status
+	//             toPlayer: *ref_0
+	//             status:
+	//               type: string
+	//               enum:
+	//                 - pending
+	//                 - accepted
+	//                 - rejected
+	//             createdAt:
+	//               type: string
+	//               format: date-time
+	//   '400':
+	//     description: Bad request - invalid input
+	//     content:
+	//       application/json:
+	//         schema: &ref_1
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: VALIDATION_ERROR
+	//           message: Invalid request parameters
+	//           details:
+	//             field: username
+	//             reason: Username must be between 3 and 20 characters
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: *ref_1
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '404':
+	//     description: Resource not found
+	//     content:
+	//       application/json:
+	//         schema: *ref_1
+	//         example:
+	//           code: NOT_FOUND
+	//           message: Player not found
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_1
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async respondToFriendRequest(req, _reply) {
+		console.log("respondToFriendRequest", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: cancelFriendRequest
+	// URL: /players/me/friends/requests/:requestId
+	// summary:	Cancel friend request
+	// req.params
+	//   type: object
+	//   properties:
+	//     requestId:
+	//       type: string
+	//       format: uuid
+	//   required:
+	//     - requestId
+	//
+	// valid responses
+	//   '204':
+	//     description: Friend request cancelled
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '404':
+	//     description: Resource not found
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: NOT_FOUND
+	//           message: Player not found
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async cancelFriendRequest(req, _reply) {
+		console.log("cancelFriendRequest", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: removeFriend
+	// URL: /players/me/friends/:friendId
+	// summary:	Remove friend
+	// req.params
+	//   type: object
+	//   properties:
+	//     friendId:
+	//       type: string
+	//       format: uuid
+	//   required:
+	//     - friendId
+	//
+	// valid responses
+	//   '204':
+	//     description: Friend removed successfully
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '404':
+	//     description: Resource not found
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: NOT_FOUND
+	//           message: Player not found
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async removeFriend(req, _reply) {
+		console.log("removeFriend", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: listBlockedPlayers
+	// URL: /players/me/blocked
+	// summary:	List blocked players
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved blocked players
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           properties:
+	//             blocked:
+	//               type: array
+	//               items:
+	//                 type: object
+	//                 required:
+	//                   - id
+	//                   - username
+	//                   - displayName
+	//                 properties:
+	//                   id:
+	//                     type: string
+	//                     format: uuid
+	//                   username:
+	//                     type: string
+	//                   displayName:
+	//                     type: string
+	//                   avatarUrl:
+	//                     type: string
+	//                     format: uri
+	//                   status:
+	//                     type: string
+	//                     enum:
+	//                       - online
+	//                       - offline
+	//                       - in_game
+	//                       - away
+	//                     description: Current player status
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async listBlockedPlayers(req, _reply) {
+		console.log("listBlockedPlayers", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: blockPlayer
+	// URL: /players/me/blocked
+	// summary:	Block a player
+	// req.body
+	//   content:
+	//     application/json:
+	//       schema:
+	//         type: object
+	//         required:
+	//           - playerId
+	//         properties:
+	//           playerId:
+	//             type: string
+	//             format: uuid
+	//
+	// valid responses
+	//   '201':
+	//     description: Player blocked successfully
+	//   '400':
+	//     description: Bad request - invalid input
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: VALIDATION_ERROR
+	//           message: Invalid request parameters
+	//           details:
+	//             field: username
+	//             reason: Username must be between 3 and 20 characters
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '404':
+	//     description: Resource not found
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: NOT_FOUND
+	//           message: Player not found
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async blockPlayer(req, _reply) {
+		console.log("blockPlayer", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: unblockPlayer
+	// URL: /players/me/blocked/:playerId
+	// summary:	Unblock a player
+	// req.params
+	//   type: object
+	//   properties:
+	//     playerId:
+	//       type: string
+	//       format: uuid
+	//   required:
+	//     - playerId
+	//
+	// valid responses
+	//   '204':
+	//     description: Player unblocked successfully
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '404':
+	//     description: Resource not found
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: NOT_FOUND
+	//           message: Player not found
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async unblockPlayer(req, _reply) {
+		console.log("unblockPlayer", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: getCurrentPlayerStats
+	// URL: /players/me/statistics
+	// summary:	Get current player statistics
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved statistics
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - playerId
+	//             - gamesPlayed
+	//             - wins
+	//             - losses
+	//           properties:
+	//             playerId:
+	//               type: string
+	//               format: uuid
+	//             gamesPlayed:
+	//               type: integer
+	//               minimum: 0
+	//             wins:
+	//               type: integer
+	//               minimum: 0
+	//             losses:
+	//               type: integer
+	//               minimum: 0
+	//             draws:
+	//               type: integer
+	//               minimum: 0
+	//             winRate:
+	//               type: number
+	//               format: float
+	//               minimum: 0
+	//               maximum: 1
+	//               description: Win ratio (0.0 to 1.0)
+	//             totalPointsScored:
+	//               type: integer
+	//               minimum: 0
+	//             totalPointsConceded:
+	//               type: integer
+	//               minimum: 0
+	//             longestWinStreak:
+	//               type: integer
+	//               minimum: 0
+	//             currentWinStreak:
+	//               type: integer
+	//               minimum: 0
+	//             rank:
+	//               type: integer
+	//               minimum: 1
+	//               description: Global ranking position
+	//             eloRating:
+	//               type: integer
+	//               description: ELO rating score
+	//           example:
+	//             playerId: 123e4567-e89b-12d3-a456-426614174000
+	//             gamesPlayed: 150
+	//             wins: 95
+	//             losses: 50
+	//             draws: 5
+	//             winRate: 0.6333
+	//             totalPointsScored: 1250
+	//             totalPointsConceded: 890
+	//             longestWinStreak: 12
+	//             currentWinStreak: 3
+	//             rank: 42
+	//             eloRating: 1650
+	//             tournamentsWon: 2
+	//             tournamentsPlayed: 8
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async getCurrentPlayerStats(req, _reply) {
+		console.log("getCurrentPlayerStats", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: getPlayerStats
+	// URL: /players/:playerId/statistics
+	// summary:	Get player statistics
+	// req.params
+	//   type: object
+	//   properties:
+	//     playerId:
+	//       type: string
+	//       format: uuid
+	//       description: Unique player identifier
+	//   required:
+	//     - playerId
+	//
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved statistics
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - playerId
+	//             - gamesPlayed
+	//             - wins
+	//             - losses
+	//           properties:
+	//             playerId:
+	//               type: string
+	//               format: uuid
+	//             gamesPlayed:
+	//               type: integer
+	//               minimum: 0
+	//             wins:
+	//               type: integer
+	//               minimum: 0
+	//             losses:
+	//               type: integer
+	//               minimum: 0
+	//             draws:
+	//               type: integer
+	//               minimum: 0
+	//             winRate:
+	//               type: number
+	//               format: float
+	//               minimum: 0
+	//               maximum: 1
+	//               description: Win ratio (0.0 to 1.0)
+	//             totalPointsScored:
+	//               type: integer
+	//               minimum: 0
+	//             totalPointsConceded:
+	//               type: integer
+	//               minimum: 0
+	//             longestWinStreak:
+	//               type: integer
+	//               minimum: 0
+	//             currentWinStreak:
+	//               type: integer
+	//               minimum: 0
+	//             rank:
+	//               type: integer
+	//               minimum: 1
+	//               description: Global ranking position
+	//             eloRating:
+	//               type: integer
+	//               description: ELO rating score
+	//           example:
+	//             playerId: 123e4567-e89b-12d3-a456-426614174000
+	//             gamesPlayed: 150
+	//             wins: 95
+	//             losses: 50
+	//             draws: 5
+	//             winRate: 0.6333
+	//             totalPointsScored: 1250
+	//             totalPointsConceded: 890
+	//             longestWinStreak: 12
+	//             currentWinStreak: 3
+	//             rank: 42
+	//             eloRating: 1650
+	//             tournamentsWon: 2
+	//             tournamentsPlayed: 8
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '404':
+	//     description: Resource not found
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: NOT_FOUND
+	//           message: Player not found
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async getPlayerStats(req, _reply) {
+		console.log("getPlayerStats", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: getMatchHistory
+	// URL: /players/me/match-history
+	// summary:	Get match history
+	// req.query
+	//   type: object
+	//   properties:
+	//     page:
+	//       type: integer
+	//       minimum: 1
+	//       default: 1
+	//       description: Page number for pagination
+	//     limit:
+	//       type: integer
+	//       minimum: 1
+	//       maximum: 100
+	//       default: 20
+	//       description: Number of items per page
+	//     result:
+	//       type: string
+	//       enum:
+	//         - win
+	//         - loss
+	//         - draw
+	//       description: Filter by match result
+	//     gameMode:
+	//       type: string
+	//       enum:
+	//         - casual
+	//         - ranked
+	//         - ai
+	//       description: Filter by game mode
+	//
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved match history
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - matches
+	//             - pagination
+	//           properties:
+	//             matches:
+	//               type: array
+	//               items:
+	//                 type: object
+	//                 required:
+	//                   - playerScore
+	//                   - opponentScore
+	//                   - result
+	//                   - gameMode
+	//                   - playedAt
+	//                 properties:
+	//                   id:
+	//                     type: string
+	//                     format: uuid
+	//                   opponent:
+	//                     type: object
+	//                     required:
+	//                       - id
+	//                       - username
+	//                       - displayName
+	//                     properties:
+	//                       id:
+	//                         type: string
+	//                         format: uuid
+	//                       username:
+	//                         type: string
+	//                       displayName:
+	//                         type: string
+	//                       avatarUrl:
+	//                         type: string
+	//                         format: uri
+	//                       status:
+	//                         type: string
+	//                         enum:
+	//                           - online
+	//                           - offline
+	//                           - in_game
+	//                           - away
+	//                         description: Current player status
+	//                   playerScore:
+	//                     type: integer
+	//                     minimum: 0
+	//                   opponentScore:
+	//                     type: integer
+	//                     minimum: 0
+	//                   result:
+	//                     type: string
+	//                     enum:
+	//                       - win
+	//                       - loss
+	//                       - draw
+	//                   gameMode:
+	//                     type: string
+	//                     enum:
+	//                       - casual
+	//                       - ranked
+	//                       - ai
+	//                   duration:
+	//                     type: integer
+	//                     description: Match duration in seconds
+	//                   playedAt:
+	//                     type: string
+	//                     format: date-time
+	//             pagination:
+	//               type: object
+	//               required:
+	//                 - page
+	//                 - limit
+	//                 - total
+	//                 - totalPages
+	//               properties:
+	//                 page:
+	//                   type: integer
+	//                   minimum: 1
+	//                 limit:
+	//                   type: integer
+	//                   minimum: 1
+	//                 total:
+	//                   type: integer
+	//                   minimum: 0
+	//                 totalPages:
+	//                   type: integer
+	//                   minimum: 0
+	//                 hasNext:
+	//                   type: boolean
+	//                 hasPrevious:
+	//                   type: boolean
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async getMatchHistory(req, _reply) {
+		console.log("getMatchHistory", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: getGlobalRankings
+	// URL: /rankings
+	// summary:	Get global player rankings
+	// req.query
+	//   type: object
+	//   properties:
+	//     page:
+	//       type: integer
+	//       minimum: 1
+	//       default: 1
+	//       description: Page number for pagination
+	//     limit:
+	//       type: integer
+	//       minimum: 1
+	//       maximum: 100
+	//       default: 20
+	//       description: Number of items per page
+	//     period:
+	//       type: string
+	//       enum:
+	//         - all_time
+	//         - yearly
+	//         - monthly
+	//         - weekly
+	//       default: all_time
+	//       description: Time period for rankings
+	//
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved rankings
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - rankings
+	//             - pagination
+	//           properties:
+	//             rankings:
+	//               type: array
+	//               items:
+	//                 type: object
+	//                 required:
+	//                   - rank
+	//                   - playerId
+	//                   - eloRating
+	//                 properties:
+	//                   rank:
+	//                     type: integer
+	//                     minimum: 1
+	//                   playerId:
+	//                     type: string
+	//                     format: uuid
+	//                   username:
+	//                     type: string
+	//                   displayName:
+	//                     type: string
+	//                   avatarUrl:
+	//                     type: string
+	//                     format: uri
+	//                   eloRating:
+	//                     type: integer
+	//                   gamesPlayed:
+	//                     type: integer
+	//                   wins:
+	//                     type: integer
+	//                   losses:
+	//                     type: integer
+	//                   winRate:
+	//                     type: number
+	//                     format: float
+	//                     minimum: 0
+	//                     maximum: 1
+	//                   rankChange:
+	//                     type: integer
+	//                     description: Position change since last period (positive = moved up)
+	//             pagination:
+	//               type: object
+	//               required:
+	//                 - page
+	//                 - limit
+	//                 - total
+	//                 - totalPages
+	//               properties:
+	//                 page:
+	//                   type: integer
+	//                   minimum: 1
+	//                 limit:
+	//                   type: integer
+	//                   minimum: 1
+	//                 total:
+	//                   type: integer
+	//                   minimum: 0
+	//                 totalPages:
+	//                   type: integer
+	//                   minimum: 0
+	//                 hasNext:
+	//                   type: boolean
+	//                 hasPrevious:
+	//                   type: boolean
+	//             currentPlayerRank:
+	//               type: integer
+	//               description: The authenticated player's rank (if applicable)
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async getGlobalRankings(req, _reply) {
+		console.log("getGlobalRankings", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: getCurrentPlayerRanking
+	// URL: /rankings/me
+	// summary:	Get current player ranking
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved ranking
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - rank
+	//             - playerId
+	//             - eloRating
+	//           properties:
+	//             rank:
+	//               type: integer
+	//               minimum: 1
+	//             playerId:
+	//               type: string
+	//               format: uuid
+	//             username:
+	//               type: string
+	//             displayName:
+	//               type: string
+	//             avatarUrl:
+	//               type: string
+	//               format: uri
+	//             eloRating:
+	//               type: integer
+	//             gamesPlayed:
+	//               type: integer
+	//             wins:
+	//               type: integer
+	//             losses:
+	//               type: integer
+	//             winRate:
+	//               type: number
+	//               format: float
+	//               minimum: 0
+	//               maximum: 1
+	//             rankChange:
+	//               type: integer
+	//               description: Position change since last period (positive = moved up)
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async getCurrentPlayerRanking(req, _reply) {
+		console.log("getCurrentPlayerRanking", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: getPlayerRanking
+	// URL: /rankings/:playerId
+	// summary:	Get player ranking
+	// req.params
+	//   type: object
+	//   properties:
+	//     playerId:
+	//       type: string
+	//       format: uuid
+	//       description: Unique player identifier
+	//   required:
+	//     - playerId
+	//
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved ranking
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - rank
+	//             - playerId
+	//             - eloRating
+	//           properties:
+	//             rank:
+	//               type: integer
+	//               minimum: 1
+	//             playerId:
+	//               type: string
+	//               format: uuid
+	//             username:
+	//               type: string
+	//             displayName:
+	//               type: string
+	//             avatarUrl:
+	//               type: string
+	//               format: uri
+	//             eloRating:
+	//               type: integer
+	//             gamesPlayed:
+	//               type: integer
+	//             wins:
+	//               type: integer
+	//             losses:
+	//               type: integer
+	//             winRate:
+	//               type: number
+	//               format: float
+	//               minimum: 0
+	//               maximum: 1
+	//             rankChange:
+	//               type: integer
+	//               description: Position change since last period (positive = moved up)
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '404':
+	//     description: Resource not found
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: NOT_FOUND
+	//           message: Player not found
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async getPlayerRanking(req, _reply) {
+		console.log("getPlayerRanking", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: getLeaderboard
+	// URL: /leaderboard
+	// summary:	Get leaderboard
+	// req.query
+	//   type: object
+	//   properties:
+	//     page:
+	//       type: integer
+	//       minimum: 1
+	//       default: 1
+	//       description: Page number for pagination
+	//     limit:
+	//       type: integer
+	//       minimum: 1
+	//       maximum: 100
+	//       default: 20
+	//       description: Number of items per page
+	//     period:
+	//       type: string
+	//       enum:
+	//         - all_time
+	//         - monthly
+	//         - weekly
+	//         - daily
+	//       default: all_time
+	//       description: Time period for leaderboard
+	//     category:
+	//       type: string
+	//       enum:
+	//         - elo
+	//         - wins
+	//         - winrate
+	//         - games_played
+	//       default: elo
+	//       description: Leaderboard category
+	//
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved leaderboard
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           required:
+	//             - entries
+	//             - pagination
+	//           properties:
+	//             entries:
+	//               type: array
+	//               items:
+	//                 type: object
+	//                 required:
+	//                   - rank
+	//                   - player
+	//                   - eloRating
+	//                   - wins
+	//                   - losses
+	//                 properties:
+	//                   rank:
+	//                     type: integer
+	//                     minimum: 1
+	//                   player:
+	//                     type: object
+	//                     required:
+	//                       - id
+	//                       - username
+	//                       - displayName
+	//                     properties:
+	//                       id:
+	//                         type: string
+	//                         format: uuid
+	//                       username:
+	//                         type: string
+	//                       displayName:
+	//                         type: string
+	//                       avatarUrl:
+	//                         type: string
+	//                         format: uri
+	//                       status:
+	//                         type: string
+	//                         enum:
+	//                           - online
+	//                           - offline
+	//                           - in_game
+	//                           - away
+	//                         description: Current player status
+	//                   eloRating:
+	//                     type: integer
+	//                   wins:
+	//                     type: integer
+	//                   losses:
+	//                     type: integer
+	//                   winRate:
+	//                     type: number
+	//                     format: float
+	//             pagination:
+	//               type: object
+	//               required:
+	//                 - page
+	//                 - limit
+	//                 - total
+	//                 - totalPages
+	//               properties:
+	//                 page:
+	//                   type: integer
+	//                   minimum: 1
+	//                 limit:
+	//                   type: integer
+	//                   minimum: 1
+	//                 total:
+	//                   type: integer
+	//                   minimum: 0
+	//                 totalPages:
+	//                   type: integer
+	//                   minimum: 0
+	//                 hasNext:
+	//                   type: boolean
+	//                 hasPrevious:
+	//                   type: boolean
+	//             currentPlayerRank:
+	//               type: integer
+	//               description: The authenticated player's rank (if applicable)
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async getLeaderboard(req, _reply) {
+		console.log("getLeaderboard", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: getPreferences
+	// URL: /players/me/preferences
+	// summary:	Get player preferences
+	// valid responses
+	//   '200':
+	//     description: Successfully retrieved preferences
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           properties:
+	//             theme:
+	//               type: string
+	//               enum:
+	//                 - light
+	//                 - dark
+	//                 - system
+	//               default: system
+	//             language:
+	//               type: string
+	//               pattern: ^[a-z]{2}(-[A-Z]{2})?$
+	//               default: en
+	//               description: ISO 639-1 language code
+	//             soundEnabled:
+	//               type: boolean
+	//               default: true
+	//             musicEnabled:
+	//               type: boolean
+	//               default: true
+	//             soundVolume:
+	//               type: integer
+	//               minimum: 0
+	//               maximum: 100
+	//               default: 80
+	//             musicVolume:
+	//               type: integer
+	//               minimum: 0
+	//               maximum: 100
+	//               default: 50
+	//             notifications:
+	//               type: object
+	//               properties:
+	//                 friendRequests:
+	//                   type: boolean
+	//                   default: true
+	//                 gameInvites:
+	//                   type: boolean
+	//                   default: true
+	//                 tournamentUpdates:
+	//                   type: boolean
+	//                   default: false
+	//             gameSettings:
+	//               type: object
+	//               properties:
+	//                 paddleColor:
+	//                   type: string
+	//                   pattern: ^#[0-9A-Fa-f]{6}$
+	//                   default: '#FFFFFF'
+	//                 ballColor:
+	//                   type: string
+	//                   pattern: ^#[0-9A-Fa-f]{6}$
+	//                   default: '#FFFFFF'
+	//                 tableColor:
+	//                   type: string
+	//                   pattern: ^#[0-9A-Fa-f]{6}$
+	//                   default: '#000000'
+	//                 showFps:
+	//                   type: boolean
+	//                   default: false
+	//                 enablePowerUps:
+	//                   type: boolean
+	//                   default: true
+	//             privacy:
+	//               type: object
+	//               properties:
+	//                 showOnlineStatus:
+	//                   type: boolean
+	//                   default: true
+	//                 allowFriendRequests:
+	//                   type: boolean
+	//                   default: true
+	//                 showMatchHistory:
+	//                   type: boolean
+	//                   default: true
+	//                 showStatistics:
+	//                   type: boolean
+	//                   default: true
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async getPreferences(req, _reply) {
+		console.log("getPreferences", req.params);
+		return { key: "value" };
+	}
+
+	// Operation: updatePreferences
+	// URL: /players/me/preferences
+	// summary:	Update player preferences
+	// req.body
+	//   content:
+	//     application/json:
+	//       schema:
+	//         type: object
+	//         properties:
+	//           theme:
+	//             type: string
+	//             enum:
+	//               - light
+	//               - dark
+	//               - system
+	//           language:
+	//             type: string
+	//             pattern: ^[a-z]{2}(-[A-Z]{2})?$
+	//           soundEnabled:
+	//             type: boolean
+	//           musicEnabled:
+	//             type: boolean
+	//           soundVolume:
+	//             type: integer
+	//             minimum: 0
+	//             maximum: 100
+	//           musicVolume:
+	//             type: integer
+	//             minimum: 0
+	//             maximum: 100
+	//           notifications:
+	//             type: object
+	//             properties:
+	//               friendRequests:
+	//                 type: boolean
+	//                 default: true
+	//               gameInvites:
+	//                 type: boolean
+	//                 default: true
+	//               tournamentUpdates:
+	//                 type: boolean
+	//                 default: false
+	//           gameSettings:
+	//             type: object
+	//             properties:
+	//               paddleColor:
+	//                 type: string
+	//                 pattern: ^#[0-9A-Fa-f]{6}$
+	//                 default: '#FFFFFF'
+	//               ballColor:
+	//                 type: string
+	//                 pattern: ^#[0-9A-Fa-f]{6}$
+	//                 default: '#FFFFFF'
+	//               tableColor:
+	//                 type: string
+	//                 pattern: ^#[0-9A-Fa-f]{6}$
+	//                 default: '#000000'
+	//               showFps:
+	//                 type: boolean
+	//                 default: false
+	//               enablePowerUps:
+	//                 type: boolean
+	//                 default: true
+	//           privacy:
+	//             type: object
+	//             properties:
+	//               showOnlineStatus:
+	//                 type: boolean
+	//                 default: true
+	//               allowFriendRequests:
+	//                 type: boolean
+	//                 default: true
+	//               showMatchHistory:
+	//                 type: boolean
+	//                 default: true
+	//               showStatistics:
+	//                 type: boolean
+	//                 default: true
+	//
+	// valid responses
+	//   '200':
+	//     description: Preferences updated successfully
+	//     content:
+	//       application/json:
+	//         schema:
+	//           type: object
+	//           properties:
+	//             theme:
+	//               type: string
+	//               enum:
+	//                 - light
+	//                 - dark
+	//                 - system
+	//               default: system
+	//             language:
+	//               type: string
+	//               pattern: ^[a-z]{2}(-[A-Z]{2})?$
+	//               default: en
+	//               description: ISO 639-1 language code
+	//             soundEnabled:
+	//               type: boolean
+	//               default: true
+	//             musicEnabled:
+	//               type: boolean
+	//               default: true
+	//             soundVolume:
+	//               type: integer
+	//               minimum: 0
+	//               maximum: 100
+	//               default: 80
+	//             musicVolume:
+	//               type: integer
+	//               minimum: 0
+	//               maximum: 100
+	//               default: 50
+	//             notifications:
+	//               type: object
+	//               properties:
+	//                 friendRequests:
+	//                   type: boolean
+	//                   default: true
+	//                 gameInvites:
+	//                   type: boolean
+	//                   default: true
+	//                 tournamentUpdates:
+	//                   type: boolean
+	//                   default: false
+	//             gameSettings:
+	//               type: object
+	//               properties:
+	//                 paddleColor:
+	//                   type: string
+	//                   pattern: ^#[0-9A-Fa-f]{6}$
+	//                   default: '#FFFFFF'
+	//                 ballColor:
+	//                   type: string
+	//                   pattern: ^#[0-9A-Fa-f]{6}$
+	//                   default: '#FFFFFF'
+	//                 tableColor:
+	//                   type: string
+	//                   pattern: ^#[0-9A-Fa-f]{6}$
+	//                   default: '#000000'
+	//                 showFps:
+	//                   type: boolean
+	//                   default: false
+	//                 enablePowerUps:
+	//                   type: boolean
+	//                   default: true
+	//             privacy:
+	//               type: object
+	//               properties:
+	//                 showOnlineStatus:
+	//                   type: boolean
+	//                   default: true
+	//                 allowFriendRequests:
+	//                   type: boolean
+	//                   default: true
+	//                 showMatchHistory:
+	//                   type: boolean
+	//                   default: true
+	//                 showStatistics:
+	//                   type: boolean
+	//                   default: true
+	//   '400':
+	//     description: Bad request - invalid input
+	//     content:
+	//       application/json:
+	//         schema: &ref_0
+	//           type: object
+	//           required:
+	//             - code
+	//             - message
+	//           properties:
+	//             code:
+	//               type: string
+	//               description: Error code for client handling
+	//             message:
+	//               type: string
+	//               description: Human-readable error message
+	//             details:
+	//               type: object
+	//               additionalProperties: true
+	//               description: Additional error details
+	//         example:
+	//           code: VALIDATION_ERROR
+	//           message: Invalid request parameters
+	//           details:
+	//             field: username
+	//             reason: Username must be between 3 and 20 characters
+	//   '401':
+	//     description: Unauthorized - authentication required
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: UNAUTHORIZED
+	//           message: Authentication required
+	//   '500':
+	//     description: Internal server error
+	//     content:
+	//       application/json:
+	//         schema: *ref_0
+	//         example:
+	//           code: INTERNAL_ERROR
+	//           message: An unexpected error occurred
+	//
+
+	async updatePreferences(req, _reply) {
+		console.log("updatePreferences", req.params);
+		return { key: "value" };
+	}
+}

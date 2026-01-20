@@ -1,0 +1,1970 @@
+{
+	"openapi": "3.1.0",
+	"info": {
+		"title": "Player Service API",
+		"description": "Player/User Service for the Transcendence Pong application.\nHandles user profiles, friends, statistics, and preferences.\n",
+		"version": "1.0.0",
+		"contact": {
+			"name": "Transcendence Team"
+		},
+		"license": {
+			"name": "MIT",
+			"url": "https://opensource.org/licenses/MIT"
+		}
+	},
+	"servers": [
+		{
+			"url": "/api/v1",
+			"description": "API Gateway endpoint"
+		}
+	],
+	"tags": [
+		{
+			"name": "Players",
+			"description": "Player profile management"
+		},
+		{
+			"name": "Friends",
+			"description": "Friends and social features"
+		},
+		{
+			"name": "Statistics",
+			"description": "Player game statistics and rankings"
+		},
+		{
+			"name": "Preferences",
+			"description": "Player preferences and settings"
+		}
+	],
+	"security": [
+		{
+			"bearerAuth": []
+		}
+	],
+	"paths": {
+		"/players": {
+			"get": {
+				"tags": [
+					"Players"
+				],
+				"summary": "List all players",
+				"description": "Retrieve a paginated list of players",
+				"operationId": "listPlayers",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/PageParam"
+					},
+					{
+						"$ref": "#/components/parameters/LimitParam"
+					},
+					{
+						"name": "search",
+						"in": "query",
+						"description": "Search players by username or display name",
+						"schema": {
+							"type": "string",
+							"maxLength": 100
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved player list",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PlayerListResponse"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			},
+			"post": {
+				"tags": [
+					"Players"
+				],
+				"summary": "Create a new player",
+				"description": "Register a new player profile",
+				"operationId": "createPlayer",
+				"security": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreatePlayerRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Player created successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Player"
+								}
+							}
+						}
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"409": {
+						"description": "Username already exists",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
+								}
+							}
+						}
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/me": {
+			"get": {
+				"tags": [
+					"Players"
+				],
+				"summary": "Get current player profile",
+				"description": "Retrieve the authenticated player's profile",
+				"operationId": "getCurrentPlayer",
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved player profile",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Player"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			},
+			"patch": {
+				"tags": [
+					"Players"
+				],
+				"summary": "Update current player profile",
+				"description": "Update the authenticated player's profile",
+				"operationId": "updateCurrentPlayer",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdatePlayerRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Player updated successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Player"
+								}
+							}
+						}
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Players"
+				],
+				"summary": "Delete current player account",
+				"description": "Permanently delete the authenticated player's account",
+				"operationId": "deleteCurrentPlayer",
+				"responses": {
+					"204": {
+						"description": "Player deleted successfully"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/{playerId}": {
+			"get": {
+				"tags": [
+					"Players"
+				],
+				"summary": "Get player by ID",
+				"description": "Retrieve a specific player's public profile",
+				"operationId": "getPlayerById",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/PlayerIdParam"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved player profile",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PublicPlayer"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/me/avatar": {
+			"put": {
+				"tags": [
+					"Players"
+				],
+				"summary": "Upload player avatar",
+				"description": "Upload or update the player's avatar image",
+				"operationId": "uploadAvatar",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"required": [
+									"avatar"
+								],
+								"properties": {
+									"avatar": {
+										"type": "string",
+										"format": "binary",
+										"description": "Avatar image file (PNG, JPG, max 5MB)"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Avatar uploaded successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"avatarUrl": {
+											"type": "string",
+											"format": "uri"
+										}
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"413": {
+						"description": "File too large",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
+								}
+							}
+						}
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Players"
+				],
+				"summary": "Delete player avatar",
+				"description": "Remove the player's avatar image",
+				"operationId": "deleteAvatar",
+				"responses": {
+					"204": {
+						"description": "Avatar deleted successfully"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/me/friends": {
+			"get": {
+				"tags": [
+					"Friends"
+				],
+				"summary": "List friends",
+				"description": "Get the current player's friends list",
+				"operationId": "listFriends",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/PageParam"
+					},
+					{
+						"$ref": "#/components/parameters/LimitParam"
+					},
+					{
+						"name": "status",
+						"in": "query",
+						"description": "Filter by online status",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"online",
+								"offline",
+								"in_game",
+								"away"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved friends list",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FriendListResponse"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/me/friends/requests": {
+			"get": {
+				"tags": [
+					"Friends"
+				],
+				"summary": "List friend requests",
+				"description": "Get pending friend requests (sent and received)",
+				"operationId": "listFriendRequests",
+				"parameters": [
+					{
+						"name": "direction",
+						"in": "query",
+						"description": "Filter by request direction",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"incoming",
+								"outgoing"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved friend requests",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FriendRequestListResponse"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			},
+			"post": {
+				"tags": [
+					"Friends"
+				],
+				"summary": "Send friend request",
+				"description": "Send a friend request to another player",
+				"operationId": "sendFriendRequest",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": [
+									"targetPlayerId"
+								],
+								"properties": {
+									"targetPlayerId": {
+										"type": "string",
+										"format": "uuid"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Friend request sent successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FriendRequest"
+								}
+							}
+						}
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"404": {
+						"description": "Target player not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Friend request already exists or already friends",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
+								}
+							}
+						}
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/me/friends/requests/{requestId}": {
+			"patch": {
+				"tags": [
+					"Friends"
+				],
+				"summary": "Respond to friend request",
+				"description": "Accept or reject a friend request",
+				"operationId": "respondToFriendRequest",
+				"parameters": [
+					{
+						"name": "requestId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": [
+									"action"
+								],
+								"properties": {
+									"action": {
+										"type": "string",
+										"enum": [
+											"accept",
+											"reject"
+										]
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Friend request processed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FriendRequest"
+								}
+							}
+						}
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Friends"
+				],
+				"summary": "Cancel friend request",
+				"description": "Cancel a pending outgoing friend request",
+				"operationId": "cancelFriendRequest",
+				"parameters": [
+					{
+						"name": "requestId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Friend request cancelled"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/me/friends/{friendId}": {
+			"delete": {
+				"tags": [
+					"Friends"
+				],
+				"summary": "Remove friend",
+				"description": "Remove a player from friends list",
+				"operationId": "removeFriend",
+				"parameters": [
+					{
+						"name": "friendId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Friend removed successfully"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/me/blocked": {
+			"get": {
+				"tags": [
+					"Friends"
+				],
+				"summary": "List blocked players",
+				"description": "Get list of blocked players",
+				"operationId": "listBlockedPlayers",
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved blocked players",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"blocked": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/PublicPlayer"
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			},
+			"post": {
+				"tags": [
+					"Friends"
+				],
+				"summary": "Block a player",
+				"description": "Block a player to prevent interactions",
+				"operationId": "blockPlayer",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": [
+									"playerId"
+								],
+								"properties": {
+									"playerId": {
+										"type": "string",
+										"format": "uuid"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Player blocked successfully"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/me/blocked/{playerId}": {
+			"delete": {
+				"tags": [
+					"Friends"
+				],
+				"summary": "Unblock a player",
+				"description": "Remove a player from blocked list",
+				"operationId": "unblockPlayer",
+				"parameters": [
+					{
+						"name": "playerId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Player unblocked successfully"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/me/statistics": {
+			"get": {
+				"tags": [
+					"Statistics"
+				],
+				"summary": "Get current player statistics",
+				"description": "Retrieve the authenticated player's game statistics",
+				"operationId": "getCurrentPlayerStats",
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved statistics",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PlayerStatistics"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/{playerId}/statistics": {
+			"get": {
+				"tags": [
+					"Statistics"
+				],
+				"summary": "Get player statistics",
+				"description": "Retrieve a specific player's game statistics",
+				"operationId": "getPlayerStats",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/PlayerIdParam"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved statistics",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PlayerStatistics"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/me/match-history": {
+			"get": {
+				"tags": [
+					"Statistics"
+				],
+				"summary": "Get match history",
+				"description": "Retrieve the player's match history",
+				"operationId": "getMatchHistory",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/PageParam"
+					},
+					{
+						"$ref": "#/components/parameters/LimitParam"
+					},
+					{
+						"name": "result",
+						"in": "query",
+						"description": "Filter by match result",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"win",
+								"loss",
+								"draw"
+							]
+						}
+					},
+					{
+						"name": "gameMode",
+						"in": "query",
+						"description": "Filter by game mode",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"casual",
+								"ranked",
+								"ai"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved match history",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/MatchHistoryResponse"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/rankings": {
+			"get": {
+				"tags": [
+					"Statistics"
+				],
+				"summary": "Get global player rankings",
+				"description": "Retrieve global player rankings based on ELO and statistics",
+				"operationId": "getGlobalRankings",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/PageParam"
+					},
+					{
+						"$ref": "#/components/parameters/LimitParam"
+					},
+					{
+						"name": "period",
+						"in": "query",
+						"description": "Time period for rankings",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"all_time",
+								"yearly",
+								"monthly",
+								"weekly"
+							],
+							"default": "all_time"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved rankings",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RankingsResponse"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/rankings/me": {
+			"get": {
+				"tags": [
+					"Statistics"
+				],
+				"summary": "Get current player ranking",
+				"description": "Get the authenticated player's ranking position",
+				"operationId": "getCurrentPlayerRanking",
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved ranking",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PlayerRanking"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/rankings/{playerId}": {
+			"get": {
+				"tags": [
+					"Statistics"
+				],
+				"summary": "Get player ranking",
+				"description": "Get ranking information for a specific player",
+				"operationId": "getPlayerRanking",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/PlayerIdParam"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved ranking",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PlayerRanking"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/leaderboard": {
+			"get": {
+				"tags": [
+					"Statistics"
+				],
+				"summary": "Get leaderboard",
+				"description": "Retrieve the global player leaderboard",
+				"operationId": "getLeaderboard",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/PageParam"
+					},
+					{
+						"$ref": "#/components/parameters/LimitParam"
+					},
+					{
+						"name": "period",
+						"in": "query",
+						"description": "Time period for leaderboard",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"all_time",
+								"monthly",
+								"weekly",
+								"daily"
+							],
+							"default": "all_time"
+						}
+					},
+					{
+						"name": "category",
+						"in": "query",
+						"description": "Leaderboard category",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"elo",
+								"wins",
+								"winrate",
+								"games_played"
+							],
+							"default": "elo"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved leaderboard",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/LeaderboardResponse"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/players/me/preferences": {
+			"get": {
+				"tags": [
+					"Preferences"
+				],
+				"summary": "Get player preferences",
+				"description": "Retrieve the authenticated player's preferences",
+				"operationId": "getPreferences",
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved preferences",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PlayerPreferences"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			},
+			"patch": {
+				"tags": [
+					"Preferences"
+				],
+				"summary": "Update player preferences",
+				"description": "Update the authenticated player's preferences",
+				"operationId": "updatePreferences",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdatePreferencesRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Preferences updated successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PlayerPreferences"
+								}
+							}
+						}
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"securitySchemes": {
+			"bearerAuth": {
+				"type": "http",
+				"scheme": "bearer",
+				"bearerFormat": "JWT",
+				"description": "JWT token obtained from Auth Service"
+			}
+		},
+		"parameters": {
+			"PlayerIdParam": {
+				"name": "playerId",
+				"in": "path",
+				"required": true,
+				"description": "Unique player identifier",
+				"schema": {
+					"type": "string",
+					"format": "uuid"
+				}
+			},
+			"PageParam": {
+				"name": "page",
+				"in": "query",
+				"description": "Page number for pagination",
+				"schema": {
+					"type": "integer",
+					"minimum": 1,
+					"default": 1
+				}
+			},
+			"LimitParam": {
+				"name": "limit",
+				"in": "query",
+				"description": "Number of items per page",
+				"schema": {
+					"type": "integer",
+					"minimum": 1,
+					"maximum": 100,
+					"default": 20
+				}
+			}
+		},
+		"schemas": {
+			"Player": {
+				"type": "object",
+				"required": [
+					"id",
+					"username",
+					"displayName",
+					"createdAt"
+				],
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid",
+						"description": "Unique player identifier"
+					},
+					"username": {
+						"type": "string",
+						"minLength": 3,
+						"maxLength": 20,
+						"pattern": "^[a-zA-Z0-9_]+$",
+						"description": "Unique username"
+					},
+					"displayName": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 50,
+						"description": "Display name shown in-game"
+					},
+					"email": {
+						"type": "string",
+						"format": "email",
+						"description": "Player's email address"
+					},
+					"avatarUrl": {
+						"type": "string",
+						"format": "uri",
+						"description": "URL to player's avatar image"
+					},
+					"status": {
+						"$ref": "#/components/schemas/PlayerStatus"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"example": {
+					"id": "123e4567-e89b-12d3-a456-426614174000",
+					"username": "pong_master",
+					"displayName": "Pong Master",
+					"email": "player@example.com",
+					"avatarUrl": "https://cdn.example.com/avatars/123.png",
+					"status": "online",
+					"createdAt": "2024-01-15T10:30:00Z",
+					"updatedAt": "2024-01-20T14:22:00Z"
+				}
+			},
+			"PublicPlayer": {
+				"type": "object",
+				"required": [
+					"id",
+					"username",
+					"displayName"
+				],
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"username": {
+						"type": "string"
+					},
+					"displayName": {
+						"type": "string"
+					},
+					"avatarUrl": {
+						"type": "string",
+						"format": "uri"
+					},
+					"status": {
+						"$ref": "#/components/schemas/PlayerStatus"
+					}
+				}
+			},
+			"PlayerStatus": {
+				"type": "string",
+				"enum": [
+					"online",
+					"offline",
+					"in_game",
+					"away"
+				],
+				"description": "Current player status"
+			},
+			"CreatePlayerRequest": {
+				"type": "object",
+				"required": [
+					"username",
+					"email",
+					"password"
+				],
+				"properties": {
+					"username": {
+						"type": "string",
+						"minLength": 3,
+						"maxLength": 20,
+						"pattern": "^[a-zA-Z0-9_]+$"
+					},
+					"displayName": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 50
+					},
+					"email": {
+						"type": "string",
+						"format": "email"
+					},
+					"password": {
+						"type": "string",
+						"format": "password",
+						"minLength": 8,
+						"maxLength": 128
+					}
+				}
+			},
+			"UpdatePlayerRequest": {
+				"type": "object",
+				"properties": {
+					"displayName": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 50
+					},
+					"email": {
+						"type": "string",
+						"format": "email"
+					}
+				}
+			},
+			"PlayerListResponse": {
+				"type": "object",
+				"required": [
+					"players",
+					"pagination"
+				],
+				"properties": {
+					"players": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/PublicPlayer"
+						}
+					},
+					"pagination": {
+						"$ref": "#/components/schemas/Pagination"
+					}
+				}
+			},
+			"Friend": {
+				"type": "object",
+				"required": [
+					"id",
+					"player",
+					"friendsSince"
+				],
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"player": {
+						"$ref": "#/components/schemas/PublicPlayer"
+					},
+					"friendsSince": {
+						"type": "string",
+						"format": "date-time"
+					}
+				}
+			},
+			"FriendRequest": {
+				"type": "object",
+				"required": [
+					"id",
+					"fromPlayer",
+					"toPlayer",
+					"status",
+					"createdAt"
+				],
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"fromPlayer": {
+						"$ref": "#/components/schemas/PublicPlayer"
+					},
+					"toPlayer": {
+						"$ref": "#/components/schemas/PublicPlayer"
+					},
+					"status": {
+						"type": "string",
+						"enum": [
+							"pending",
+							"accepted",
+							"rejected"
+						]
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				}
+			},
+			"FriendListResponse": {
+				"type": "object",
+				"required": [
+					"friends",
+					"pagination"
+				],
+				"properties": {
+					"friends": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/Friend"
+						}
+					},
+					"pagination": {
+						"$ref": "#/components/schemas/Pagination"
+					}
+				}
+			},
+			"FriendRequestListResponse": {
+				"type": "object",
+				"required": [
+					"requests"
+				],
+				"properties": {
+					"requests": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/FriendRequest"
+						}
+					}
+				}
+			},
+			"PlayerStatistics": {
+				"type": "object",
+				"required": [
+					"playerId",
+					"gamesPlayed",
+					"wins",
+					"losses"
+				],
+				"properties": {
+					"playerId": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"gamesPlayed": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"wins": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"losses": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"draws": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"winRate": {
+						"type": "number",
+						"format": "float",
+						"minimum": 0,
+						"maximum": 1,
+						"description": "Win ratio (0.0 to 1.0)"
+					},
+					"totalPointsScored": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"totalPointsConceded": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"longestWinStreak": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"currentWinStreak": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"rank": {
+						"type": "integer",
+						"minimum": 1,
+						"description": "Global ranking position"
+					},
+					"eloRating": {
+						"type": "integer",
+						"description": "ELO rating score"
+					}
+				},
+				"example": {
+					"playerId": "123e4567-e89b-12d3-a456-426614174000",
+					"gamesPlayed": 150,
+					"wins": 95,
+					"losses": 50,
+					"draws": 5,
+					"winRate": 0.6333,
+					"totalPointsScored": 1250,
+					"totalPointsConceded": 890,
+					"longestWinStreak": 12,
+					"currentWinStreak": 3,
+					"rank": 42,
+					"eloRating": 1650,
+					"tournamentsWon": 2,
+					"tournamentsPlayed": 8
+				}
+			},
+			"MatchRecord": {
+				"type": "object",
+				"required": [
+					"playerScore",
+					"opponentScore",
+					"result",
+					"gameMode",
+					"playedAt"
+				],
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"opponent": {
+						"$ref": "#/components/schemas/PublicPlayer"
+					},
+					"playerScore": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"opponentScore": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"result": {
+						"type": "string",
+						"enum": [
+							"win",
+							"loss",
+							"draw"
+						]
+					},
+					"gameMode": {
+						"type": "string",
+						"enum": [
+							"casual",
+							"ranked",
+							"ai"
+						]
+					},
+					"duration": {
+						"type": "integer",
+						"description": "Match duration in seconds"
+					},
+					"playedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				}
+			},
+			"MatchHistoryResponse": {
+				"type": "object",
+				"required": [
+					"matches",
+					"pagination"
+				],
+				"properties": {
+					"matches": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/MatchRecord"
+						}
+					},
+					"pagination": {
+						"$ref": "#/components/schemas/Pagination"
+					}
+				}
+			},
+			"LeaderboardEntry": {
+				"type": "object",
+				"required": [
+					"rank",
+					"player",
+					"eloRating",
+					"wins",
+					"losses"
+				],
+				"properties": {
+					"rank": {
+						"type": "integer",
+						"minimum": 1
+					},
+					"player": {
+						"$ref": "#/components/schemas/PublicPlayer"
+					},
+					"eloRating": {
+						"type": "integer"
+					},
+					"wins": {
+						"type": "integer"
+					},
+					"losses": {
+						"type": "integer"
+					},
+					"winRate": {
+						"type": "number",
+						"format": "float"
+					}
+				}
+			},
+			"LeaderboardResponse": {
+				"type": "object",
+				"required": [
+					"entries",
+					"pagination"
+				],
+				"properties": {
+					"entries": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/LeaderboardEntry"
+						}
+					},
+					"pagination": {
+						"$ref": "#/components/schemas/Pagination"
+					},
+					"currentPlayerRank": {
+						"type": "integer",
+						"description": "The authenticated player's rank (if applicable)"
+					}
+				}
+			},
+			"RankingsResponse": {
+				"type": "object",
+				"required": [
+					"rankings",
+					"pagination"
+				],
+				"properties": {
+					"rankings": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/PlayerRanking"
+						}
+					},
+					"pagination": {
+						"$ref": "#/components/schemas/Pagination"
+					},
+					"currentPlayerRank": {
+						"type": "integer",
+						"description": "The authenticated player's rank (if applicable)"
+					}
+				}
+			},
+			"PlayerRanking": {
+				"type": "object",
+				"required": [
+					"rank",
+					"playerId",
+					"eloRating"
+				],
+				"properties": {
+					"rank": {
+						"type": "integer",
+						"minimum": 1
+					},
+					"playerId": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"username": {
+						"type": "string"
+					},
+					"displayName": {
+						"type": "string"
+					},
+					"avatarUrl": {
+						"type": "string",
+						"format": "uri"
+					},
+					"eloRating": {
+						"type": "integer"
+					},
+					"gamesPlayed": {
+						"type": "integer"
+					},
+					"wins": {
+						"type": "integer"
+					},
+					"losses": {
+						"type": "integer"
+					},
+					"winRate": {
+						"type": "number",
+						"format": "float",
+						"minimum": 0,
+						"maximum": 1
+					},
+					"rankChange": {
+						"type": "integer",
+						"description": "Position change since last period (positive = moved up)"
+					}
+				}
+			},
+			"PlayerPreferences": {
+				"type": "object",
+				"properties": {
+					"theme": {
+						"type": "string",
+						"enum": [
+							"light",
+							"dark",
+							"system"
+						],
+						"default": "system"
+					},
+					"language": {
+						"type": "string",
+						"pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+						"default": "en",
+						"description": "ISO 639-1 language code"
+					},
+					"soundEnabled": {
+						"type": "boolean",
+						"default": true
+					},
+					"musicEnabled": {
+						"type": "boolean",
+						"default": true
+					},
+					"soundVolume": {
+						"type": "integer",
+						"minimum": 0,
+						"maximum": 100,
+						"default": 80
+					},
+					"musicVolume": {
+						"type": "integer",
+						"minimum": 0,
+						"maximum": 100,
+						"default": 50
+					},
+					"notifications": {
+						"$ref": "#/components/schemas/NotificationPreferences"
+					},
+					"gameSettings": {
+						"$ref": "#/components/schemas/GamePreferences"
+					},
+					"privacy": {
+						"$ref": "#/components/schemas/PrivacyPreferences"
+					}
+				}
+			},
+			"NotificationPreferences": {
+				"type": "object",
+				"properties": {
+					"friendRequests": {
+						"type": "boolean",
+						"default": true
+					},
+					"gameInvites": {
+						"type": "boolean",
+						"default": true
+					},
+					"tournamentUpdates": {
+						"type": "boolean",
+						"default": false
+					}
+				}
+			},
+			"GamePreferences": {
+				"type": "object",
+				"properties": {
+					"paddleColor": {
+						"type": "string",
+						"pattern": "^#[0-9A-Fa-f]{6}$",
+						"default": "#FFFFFF"
+					},
+					"ballColor": {
+						"type": "string",
+						"pattern": "^#[0-9A-Fa-f]{6}$",
+						"default": "#FFFFFF"
+					},
+					"tableColor": {
+						"type": "string",
+						"pattern": "^#[0-9A-Fa-f]{6}$",
+						"default": "#000000"
+					},
+					"showFps": {
+						"type": "boolean",
+						"default": false
+					},
+					"enablePowerUps": {
+						"type": "boolean",
+						"default": true
+					}
+				}
+			},
+			"PrivacyPreferences": {
+				"type": "object",
+				"properties": {
+					"showOnlineStatus": {
+						"type": "boolean",
+						"default": true
+					},
+					"allowFriendRequests": {
+						"type": "boolean",
+						"default": true
+					},
+					"showMatchHistory": {
+						"type": "boolean",
+						"default": true
+					},
+					"showStatistics": {
+						"type": "boolean",
+						"default": true
+					}
+				}
+			},
+			"UpdatePreferencesRequest": {
+				"type": "object",
+				"properties": {
+					"theme": {
+						"type": "string",
+						"enum": [
+							"light",
+							"dark",
+							"system"
+						]
+					},
+					"language": {
+						"type": "string",
+						"pattern": "^[a-z]{2}(-[A-Z]{2})?$"
+					},
+					"soundEnabled": {
+						"type": "boolean"
+					},
+					"musicEnabled": {
+						"type": "boolean"
+					},
+					"soundVolume": {
+						"type": "integer",
+						"minimum": 0,
+						"maximum": 100
+					},
+					"musicVolume": {
+						"type": "integer",
+						"minimum": 0,
+						"maximum": 100
+					},
+					"notifications": {
+						"$ref": "#/components/schemas/NotificationPreferences"
+					},
+					"gameSettings": {
+						"$ref": "#/components/schemas/GamePreferences"
+					},
+					"privacy": {
+						"$ref": "#/components/schemas/PrivacyPreferences"
+					}
+				}
+			},
+			"Pagination": {
+				"type": "object",
+				"required": [
+					"page",
+					"limit",
+					"total",
+					"totalPages"
+				],
+				"properties": {
+					"page": {
+						"type": "integer",
+						"minimum": 1
+					},
+					"limit": {
+						"type": "integer",
+						"minimum": 1
+					},
+					"total": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"totalPages": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"hasNext": {
+						"type": "boolean"
+					},
+					"hasPrevious": {
+						"type": "boolean"
+					}
+				}
+			},
+			"Error": {
+				"type": "object",
+				"required": [
+					"code",
+					"message"
+				],
+				"properties": {
+					"code": {
+						"type": "string",
+						"description": "Error code for client handling"
+					},
+					"message": {
+						"type": "string",
+						"description": "Human-readable error message"
+					},
+					"details": {
+						"type": "object",
+						"additionalProperties": true,
+						"description": "Additional error details"
+					}
+				}
+			}
+		},
+		"responses": {
+			"BadRequest": {
+				"description": "Bad request - invalid input",
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/Error"
+						},
+						"example": {
+							"code": "VALIDATION_ERROR",
+							"message": "Invalid request parameters",
+							"details": {
+								"field": "username",
+								"reason": "Username must be between 3 and 20 characters"
+							}
+						}
+					}
+				}
+			},
+			"Unauthorized": {
+				"description": "Unauthorized - authentication required",
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/Error"
+						},
+						"example": {
+							"code": "UNAUTHORIZED",
+							"message": "Authentication required"
+						}
+					}
+				}
+			},
+			"NotFound": {
+				"description": "Resource not found",
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/Error"
+						},
+						"example": {
+							"code": "NOT_FOUND",
+							"message": "Player not found"
+						}
+					}
+				}
+			},
+			"InternalError": {
+				"description": "Internal server error",
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/Error"
+						},
+						"example": {
+							"code": "INTERNAL_ERROR",
+							"message": "An unexpected error occurred"
+						}
+					}
+				}
+			}
+		}
+	}
+}
