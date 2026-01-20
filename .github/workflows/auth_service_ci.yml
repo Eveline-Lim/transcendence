@@ -4,11 +4,19 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - 'services/auth_service/**'
   push:
+    paths:
+      - 'services/auth_service/**'
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/auth_service
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -18,11 +26,9 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: services/auth_service/package-lock.json
 
-      - run : cd services/auth_service
-      
-      - run: npm ci
+      - name: dependencies
+        run: npm ci
 
-      - run: npm test
-
+      - name: Run tests
+        run: npm test
