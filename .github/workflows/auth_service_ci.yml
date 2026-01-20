@@ -23,7 +23,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - run: cd services/auth_service
+      - run: ls
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
