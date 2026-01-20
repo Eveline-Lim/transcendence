@@ -6,8 +6,10 @@ on:
       - main
     paths:
       - 'services/auth_service/**'
+      - '.github/workflows/auth_service_ci.yml'
   push:
     paths:
+      - '.github/workflows/auth_service_ci.yml'
       - 'services/auth_service/**'
 
 jobs:
