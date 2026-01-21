@@ -6,7 +6,9 @@
 import { test } from "node:test";
 import Fastify from "fastify";
 import fastifyPlugin from "../index.js";
+import { createClient } from "redis";
 import { Service } from "../service.js";
+import assert from "node:assert";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 // import { GenericContainer, StartedTestContainer } from "testcontainers";
@@ -31,17 +33,25 @@ const email = "test@test.fr";
 const password = "Test1234!";
 const displayName = "Test User";
 const avatar = "https://example.com/avatar.png";
-const enable2FA = false;
+const has2FAEnabled = false;
 const currentPassword = "Test1234!";
 const newPassword = "NewPass1234!";
 const code = "123456";
 const refreshToken = "MY_REFRESH_TOKEN";
+const key = `user:${username}`;
 
 test("testing register", async (t) => {
 	const fastify = Fastify();
+
 	fastify.register(fastifyPlugin, opts);
 
-	// await fastify.ready();
+	await fastify.ready();
+
+	const redisClient = createClient();
+	await redisClient.connect();
+
+	// Clear everything in the current database
+	await redisClient.flushDb();
 
 	const res = await fastify.inject({
 		method: "POST",
@@ -52,11 +62,17 @@ test("testing register", async (t) => {
 			password,
 			email,
 			avatar,
-			enable2FA
+			has2FAEnabled
 		},
 	});
 	console.log(res.statusCode, res.payload);
-	t.assert.equal(res.statusCode, 201);
+
+	const stored = await redisClient.hGetAll(key);
+	console.log("DATAS STORED: ", stored);
+
+	await redisClient.quit();
+
+	assert.equal(res.statusCode, 201);
 });
 
 // test("testing login", async (t) => {

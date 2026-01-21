@@ -1,233 +1,44 @@
 // implementation of the operations in the openapi specification
-export class Service {
-	// Operation: register
-	// URL: /auth/register
-	// summary:	Register a new user
-	// req.body
-	//   content:
-	//     application/json:
-	//       schema:
-	//         type: object
-	//         required:
-	//           - email
-	//           - username
-	//           - password
-	//         properties:
-	//           email:
-	//             type: string
-	//             format: email
-	//             maxLength: 255
-	//           username:
-	//             type: string
-	//             minLength: 3
-	//             maxLength: 20
-	//             pattern: ^[a-zA-Z0-9_]+$
-	//           password:
-	//             type: string
-	//             minLength: 8
-	//             maxLength: 128
-	//             description: >-
-	//               Must contain at least one uppercase, lowercase, number, and special
-	//               character
-	//           displayName:
-	//             type: string
-	//             maxLength: 50
-	//
-	// valid responses
-	//   '201':
-	//     description: User registered successfully
-	//     content:
-	//       application/json:
-	//         schema:
-	//           type: object
-	//           properties:
-	//             accessToken:
-	//               type: string
-	//               description: JWT access token
-	//             refreshToken:
-	//               type: string
-	//               description: Refresh token for obtaining new access tokens
-	//             tokenType:
-	//               type: string
-	//               default: Bearer
-	//             expiresIn:
-	//               type: integer
-	//               description: Access token expiration time in seconds
-	//             user:
-	//               type: object
-	//               properties:
-	//                 id:
-	//                   type: string
-	//                   format: uuid
-	//                 email:
-	//                   type: string
-	//                   format: email
-	//                 username:
-	//                   type: string
-	//                 displayName:
-	//                   type: string
-	//                 avatarUrl:
-	//                   type: string
-	//                   format: uri
-	//                 has2FAEnabled:
-	//                   type: boolean
-	//             requires2FA:
-	//               type: boolean
-	//               description: Whether 2FA verification is required to complete login
-	//   '400':
-	//     description: Invalid request parameters
-	//     content:
-	//       application/json:
-	//         schema: &ref_0
-	//           type: object
-	//           required:
-	//             - code
-	//             - message
-	//           properties:
-	//             code:
-	//               type: string
-	//               description: Error code for client handling
-	//             message:
-	//               type: string
-	//               description: Human-readable error message
-	//             details:
-	//               type: object
-	//               additionalProperties: true
-	//               description: Additional error details
-	//   '409':
-	//     description: Email or username already exists
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//   '500':
-	//     description: Internal server error
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//
+import { createClient } from "redis";
 
+export class Service {
 	async register(req, reply) {
 		console.log("register", req.params);
 
-		let { username, displayName, password, email, avatar, enable2FA } = req.body;
-		console.log("BODY: ", req.body);
+		const { username, displayName, password, email, avatar, has2FAEnabled } = req.body;
+		// console.log("BODY: ", req.body);
 
-		reply.code(201).send();
-		// return {
-		// 	accessToken: "mock-access-token",
-		// 	refreshToken: "mock-refresh-token",
-		// 	tokenType: "Bearer",
-		// 	expiresIn: 3600,
-		// 	requires2FA: false,
-		// 	user: {
-		// 		id: "00000000-0000-0000-0000-000000000000",
-		// 		email: req.body.email,
-		// 		username: req.body.username,
-		// 		displayName: req.body.displayName,
-		// 		avatarUrl: null,
-		// 		has2FAEnabled: false
-		// 	}
-		// };
+		const client = createClient();
+
+		const key = `user:${username}`;
+
+		await client.connect();
+
+		const existingUser = await client.exists(key);
+		if (existingUser) {
+			return reply.code(409).send({
+				code: "USER_ALREADY_EXISTS",
+				message: "User already exists",
+			});
+		}
+
+		await client.hSet(key, {
+			username,
+			displayName,
+			password,
+			email,
+			avatar,
+			has2FAEnabled:  has2FAEnabled.toString()
+		});
+
+		await client.quit();
+
+		return reply.code(201).send({ status: "ok" });
 	}
-
-	// Operation: login
-	// URL: /auth/login
-	// summary:	Login with credentials
-	// req.body
-	//   content:
-	//     application/json:
-	//       schema:
-	//         type: object
-	//         required:
-	//           - identifier
-	//           - password
-	//         properties:
-	//           identifier:
-	//             type: string
-	//             description: Email or username
-	//           password:
-	//             type: string
-	//
-	// valid responses
-	//   '200':
-	//     description: Login successful
-	//     content:
-	//       application/json:
-	//         schema:
-	//           type: object
-	//           properties:
-	//             accessToken:
-	//               type: string
-	//               description: JWT access token
-	//             refreshToken:
-	//               type: string
-	//               description: Refresh token for obtaining new access tokens
-	//             tokenType:
-	//               type: string
-	//               default: Bearer
-	//             expiresIn:
-	//               type: integer
-	//               description: Access token expiration time in seconds
-	//             user:
-	//               type: object
-	//               properties:
-	//                 id:
-	//                   type: string
-	//                   format: uuid
-	//                 email:
-	//                   type: string
-	//                   format: email
-	//                 username:
-	//                   type: string
-	//                 displayName:
-	//                   type: string
-	//                 avatarUrl:
-	//                   type: string
-	//                   format: uri
-	//                 has2FAEnabled:
-	//                   type: boolean
-	//             requires2FA:
-	//               type: boolean
-	//               description: Whether 2FA verification is required to complete login
-	//   '400':
-	//     description: Invalid request parameters
-	//     content:
-	//       application/json:
-	//         schema: &ref_0
-	//           type: object
-	//           required:
-	//             - code
-	//             - message
-	//           properties:
-	//             code:
-	//               type: string
-	//               description: Error code for client handling
-	//             message:
-	//               type: string
-	//               description: Human-readable error message
-	//             details:
-	//               type: object
-	//               additionalProperties: true
-	//               description: Additional error details
-	//   '401':
-	//     description: Invalid credentials
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//   '429':
-	//     description: Too many login attempts
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//   '500':
-	//     description: Internal server error
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//
 
 	// async login(req, reply) {
 	// 	console.log("login", req.params);
+
 	// 	reply.code(200).send();
 	// }
 
