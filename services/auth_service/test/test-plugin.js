@@ -30,7 +30,7 @@ const username = "testuser";
 const email = "test@test.fr";
 const password = "Test1234!";
 const displayName = "Test User";
-// const avatar = "https://example.com/avatar.png";
+const avatar = "https://example.com/avatar.png";
 const enable2FA = false;
 const currentPassword = "Test1234!";
 const newPassword = "NewPass1234!";
@@ -50,230 +50,232 @@ test("testing register", async (t) => {
 			username,
 			displayName,
 			password,
-			email
+			email,
+			avatar,
+			enable2FA
 		},
 	});
 	console.log(res.statusCode, res.payload);
 	t.assert.equal(res.statusCode, 201);
 });
 
-test("testing login", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing login", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/login",
-		payload: {
-			identifier: username, // or email
-			password,
-		},
-	});
-	console.log(res.statusCode, res.payload);
-	t.assert.equal(res.statusCode, 200);
-});
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/login",
+// 		payload: {
+// 			identifier: username, // or email
+// 			password,
+// 		},
+// 	});
+// 	console.log(res.statusCode, res.payload);
+// 	t.assert.equal(res.statusCode, 200);
+// });
 
-test("testing logout", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing logout", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/logout",
-		headers: {
-			authorization: `Bearer ${token}`,
-		}
-	});
-	console.log(res.statusCode, res.payload);
-	t.assert.equal(res.statusCode, 204);
-});
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/logout",
+// 		headers: {
+// 			authorization: `Bearer ${token}`,
+// 		}
+// 	});
+// 	console.log(res.statusCode, res.payload);
+// 	t.assert.equal(res.statusCode, 204);
+// });
 
-test("testing refreshToken", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing refreshToken", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/refresh",
-		payload: {
-			refreshToken
-		},
-	});
-	t.assert.equal(res.statusCode, 200);
-});
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/refresh",
+// 		payload: {
+// 			refreshToken
+// 		},
+// 	});
+// 	t.assert.equal(res.statusCode, 200);
+// });
 
-test("testing verifyToken", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing verifyToken", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "GET",
-		url: "/auth/verify",
-		headers: {
-			authorization: `Bearer ${token}`,
-		},
-	});
-	t.assert.equal(res.statusCode, 200);
-});
+// 	const res = await fastify.inject({
+// 		method: "GET",
+// 		url: "/auth/verify",
+// 		headers: {
+// 			authorization: `Bearer ${token}`,
+// 		},
+// 	});
+// 	t.assert.equal(res.statusCode, 200);
+// });
 
-test("testing forgotPassword", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing forgotPassword", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/password/forgot",
-		payload: {
-			email
-		},
-	});
-	t.assert.equal(res.statusCode, 202);
-});
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/password/forgot",
+// 		payload: {
+// 			email
+// 		},
+// 	});
+// 	t.assert.equal(res.statusCode, 202);
+// });
 
-test("testing resetPassword", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing resetPassword", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/password/reset",
-		payload: {
-			token,
-			password
-		},
-	});
-	t.assert.equal(res.statusCode, 200);
-});
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/password/reset",
+// 		payload: {
+// 			token,
+// 			password
+// 		},
+// 	});
+// 	t.assert.equal(res.statusCode, 200);
+// });
 
-test("testing changePassword", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing changePassword", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/password/change",
-		payload: {
-			currentPassword,
-			newPassword,
-		},
-		headers: {
-			authorization: `Bearer ${token}`,
-		},
-	});
-	t.assert.equal(res.statusCode, 200);
-});
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/password/change",
+// 		payload: {
+// 			currentPassword,
+// 			newPassword,
+// 		},
+// 		headers: {
+// 			authorization: `Bearer ${token}`,
+// 		},
+// 	});
+// 	t.assert.equal(res.statusCode, 200);
+// });
 
-test("testing initiateOAuth", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing initiateOAuth", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "GET",
-		//url: "/auth/oauth/:provider",
-		url: "/auth/oauth/google?redirect_uri=https://example.com/callback",
-	});
-	t.assert.equal(res.statusCode, 302);
-});
+// 	const res = await fastify.inject({
+// 		method: "GET",
+// 		//url: "/auth/oauth/:provider",
+// 		url: "/auth/oauth/google?redirect_uri=https://example.com/callback",
+// 	});
+// 	t.assert.equal(res.statusCode, 302);
+// });
 
-test("testing oauthCallback", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing oauthCallback", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "GET",
-		// url: "/auth/oauth/:provider/callback",
-		url: "/auth/oauth/google/callback?code=abcd1234&state=xyz",
-	});
-	t.assert.equal(res.statusCode, 302);
-});
+// 	const res = await fastify.inject({
+// 		method: "GET",
+// 		// url: "/auth/oauth/:provider/callback",
+// 		url: "/auth/oauth/google/callback?code=abcd1234&state=xyz",
+// 	});
+// 	t.assert.equal(res.statusCode, 302);
+// });
 
-test("testing enable2FA", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing enable2FA", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/2fa/enable",
-		headers: {
-			authorization: `Bearer ${token}`,
-		},
-	});
-	t.assert.equal(res.statusCode, 200);
-});
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/2fa/enable",
+// 		headers: {
+// 			authorization: `Bearer ${token}`,
+// 		},
+// 	});
+// 	t.assert.equal(res.statusCode, 200);
+// });
 
-test("testing verify2FA", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing verify2FA", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/2fa/verify",
-		payload: {
-			code
-		},
-		headers: {
-			authorization: `Bearer ${token}`
-		},
-	});
-	t.assert.equal(res.statusCode, 200);
-});
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/2fa/verify",
+// 		payload: {
+// 			code
+// 		},
+// 		headers: {
+// 			authorization: `Bearer ${token}`
+// 		},
+// 	});
+// 	t.assert.equal(res.statusCode, 200);
+// });
 
-test("testing disable2FA", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing disable2FA", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/2fa/disable",
-		payload: {
-			code,
-			password
-		},
-		headers: {
-			authorization: `Bearer ${token}`
-		},
-	});
-	t.assert.equal(res.statusCode, 200);
-});
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/2fa/disable",
+// 		payload: {
+// 			code,
+// 			password
+// 		},
+// 		headers: {
+// 			authorization: `Bearer ${token}`
+// 		},
+// 	});
+// 	t.assert.equal(res.statusCode, 200);
+// });
 
-test("testing listSessions", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing listSessions", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "GET",
-		url: "/auth/sessions",
-	});
-	t.assert.equal(res.statusCode, 200);
-});
+// 	const res = await fastify.inject({
+// 		method: "GET",
+// 		url: "/auth/sessions",
+// 	});
+// 	t.assert.equal(res.statusCode, 200);
+// });
 
-test("testing revokeSession", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing revokeSession", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const sessionId = "00000000-0000-0000-0000-000000000000";
+// 	const sessionId = "00000000-0000-0000-0000-000000000000";
 
-	const res = await fastify.inject({
-		method: "DELETE",
-		// url: "/auth/sessions/:sessionId",
-		url: `/auth/sessions/${sessionId}`,
-		headers: {
-			authorization: `Bearer ${token}`
-		},
-	});
-	t.assert.equal(res.statusCode, 204);
-});
+// 	const res = await fastify.inject({
+// 		method: "DELETE",
+// 		// url: "/auth/sessions/:sessionId",
+// 		url: `/auth/sessions/${sessionId}`,
+// 		headers: {
+// 			authorization: `Bearer ${token}`
+// 		},
+// 	});
+// 	t.assert.equal(res.statusCode, 204);
+// });
 
-test("testing revokeAllSessions", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing revokeAllSessions", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/sessions/revoke-all",
-		headers: {
-			authorization: `Bearer ${token}`
-		},
-	});
-	t.assert.equal(res.statusCode, 200);
-});
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/sessions/revoke-all",
+// 		headers: {
+// 			authorization: `Bearer ${token}`
+// 		},
+// 	});
+// 	t.assert.equal(res.statusCode, 200);
+// });

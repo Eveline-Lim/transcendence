@@ -12,10 +12,12 @@
     "test": "test"
   },
   "dependencies": {
+    "@asyncapi/modelina": "^5.10.1",
     "@seriousme/openapi-schema-validator": "^2.7.0",
     "fastify-openapi-glue": "^4.10.0",
     "fastify-plugin": "^5.1.0",
-    "js-yaml": "^4.1.1"
+    "js-yaml": "^4.1.1",
+    "redis": "^5.10.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.10",

@@ -1,5 +1,4 @@
 // implementation of the operations in the openapi specification
-
 export class Service {
 	// Operation: register
 	// URL: /auth/register
@@ -109,22 +108,26 @@ export class Service {
 
 	async register(req, reply) {
 		console.log("register", req.params);
-		reply.code(201);
-		return {
-			accessToken: "mock-access-token",
-			refreshToken: "mock-refresh-token",
-			tokenType: "Bearer",
-			expiresIn: 3600,
-			requires2FA: false,
-			user: {
-				id: "00000000-0000-0000-0000-000000000000",
-				email: req.body.email,
-				username: req.body.username,
-				displayName: req.body.displayName,
-				avatarUrl: null,
-				has2FAEnabled: false
-			}
-		};
+
+		let { username, displayName, password, email, avatar, enable2FA } = req.body;
+		console.log("BODY: ", req.body);
+
+		reply.code(201).send();
+		// return {
+		// 	accessToken: "mock-access-token",
+		// 	refreshToken: "mock-refresh-token",
+		// 	tokenType: "Bearer",
+		// 	expiresIn: 3600,
+		// 	requires2FA: false,
+		// 	user: {
+		// 		id: "00000000-0000-0000-0000-000000000000",
+		// 		email: req.body.email,
+		// 		username: req.body.username,
+		// 		displayName: req.body.displayName,
+		// 		avatarUrl: null,
+		// 		has2FAEnabled: false
+		// 	}
+		// };
 	}
 
 	// Operation: login
@@ -223,10 +226,10 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async login(req, reply) {
-		console.log("login", req.params);
-		reply.code(200).send();
-	}
+	// async login(req, reply) {
+	// 	console.log("login", req.params);
+	// 	reply.code(200).send();
+	// }
 
 	// Operation: logout
 	// URL: /auth/logout
@@ -261,10 +264,10 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async logout(req, reply) {
-		console.log("logout", req.params);
-		reply.code(204).send();
-	}
+	// async logout(req, reply) {
+	// 	console.log("logout", req.params);
+	// 	reply.code(204).send();
+	// }
 
 	// Operation: refreshToken
 	// URL: /auth/refresh
@@ -348,25 +351,25 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async refreshToken(req, reply) {
-		console.log("refreshToken", req.params);
-		reply.code(200);
-		return {
-			accessToken: "mock-access-token",
-			refreshToken: "mock-refresh-token",
-			tokenType: "Bearer",
-			expiresIn: 3600,
-			requires2FA: false,
-			user: {
-				id: "00000000-0000-0000-0000-000000000000",
-				email: req.body.email,
-				username: req.body.username,
-				displayName: req.body.displayName,
-				avatarUrl: null,
-				has2FAEnabled: false
-			}
-		};
-	}
+	// async refreshToken(req, reply) {
+	// 	console.log("refreshToken", req.params);
+	// 	reply.code(200);
+	// 	return {
+	// 		accessToken: "mock-access-token",
+	// 		refreshToken: "mock-refresh-token",
+	// 		tokenType: "Bearer",
+	// 		expiresIn: 3600,
+	// 		requires2FA: false,
+	// 		user: {
+	// 			id: "00000000-0000-0000-0000-000000000000",
+	// 			email: req.body.email,
+	// 			username: req.body.username,
+	// 			displayName: req.body.displayName,
+	// 			avatarUrl: null,
+	// 			has2FAEnabled: false
+	// 		}
+	// 	};
+	// }
 
 	// Operation: verifyToken
 	// URL: /auth/verify
@@ -419,16 +422,16 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async verifyToken(req, reply) {
-		reply.code(200);
-		return {
-			valid: true,
-			userId: "00000000-0000-0000-0000-000000000000",
-			username: "testuser",
-			issuedAt: new Date().toISOString(),
-			expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-		};
-	}
+	// async verifyToken(req, reply) {
+	// 	reply.code(200);
+	// 	return {
+	// 		valid: true,
+	// 		userId: "00000000-0000-0000-0000-000000000000",
+	// 		username: "testuser",
+	// 		issuedAt: new Date().toISOString(),
+	// 		expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+	// 	};
+	// }
 
 	// Operation: forgotPassword
 	// URL: /auth/password/forgot
@@ -480,9 +483,9 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async forgotPassword(req, reply) {
-		reply.code(202).send();
-	}
+	// async forgotPassword(req, reply) {
+	// 	reply.code(202).send();
+	// }
 
 	// Operation: resetPassword
 	// URL: /auth/password/reset
@@ -539,9 +542,9 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async resetPassword(req, reply) {
-		reply.code(200).send();
-	}
+	// async resetPassword(req, reply) {
+	// 	reply.code(200).send();
+	// }
 
 	// Operation: changePassword
 	// URL: /auth/password/change
@@ -596,9 +599,9 @@ export class Service {
 	//       application/json:
 	//         schema: *ref_0
 
-	async changePassword(req, reply) {
-		reply.code(200).send();
-	}
+	// async changePassword(req, reply) {
+	// 	reply.code(200).send();
+	// }
 
 	// Operation: initiateOAuth
 	// URL: /auth/oauth/:provider
@@ -660,15 +663,15 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async initiateOAuth(req, reply) {
-		const { provider } = req.params;
-		const redirectUri = req.query.redirect_uri || "https://example.com/callback";
+	// async initiateOAuth(req, reply) {
+	// 	const { provider } = req.params;
+	// 	const redirectUri = req.query.redirect_uri || "https://example.com/callback";
 
-		console.log("initiateOAuth", provider, redirectUri);
+	// 	console.log("initiateOAuth", provider, redirectUri);
 
-		const oauthUrl = `https://oauth.example.com/${provider}?redirect_uri=${encodeURIComponent(redirectUri)}`;
-		return reply.redirect(oauthUrl);
-	}
+	// 	const oauthUrl = `https://oauth.example.com/${provider}?redirect_uri=${encodeURIComponent(redirectUri)}`;
+	// 	return reply.redirect(oauthUrl);
+	// }
 
 	// Operation: oauthCallback
 	// URL: /auth/oauth/:provider/callback
@@ -740,15 +743,15 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async oauthCallback(req, reply) {
-		const { provider } = req.params;
-		const { code, state } = req.query;
+	// async oauthCallback(req, reply) {
+	// 	const { provider } = req.params;
+	// 	const { code, state } = req.query;
 
-		console.log("oauthCallback", provider, code, state);
+	// 	console.log("oauthCallback", provider, code, state);
 
-		const redirectUrl = `https://myapp.example.com/auth/success?accessToken=mock-access-token&refreshToken=mock-refresh-token`;
-		return reply.redirect(redirectUrl);
-	}
+	// 	const redirectUrl = `https://myapp.example.com/auth/success?accessToken=mock-access-token&refreshToken=mock-refresh-token`;
+	// 	return reply.redirect(redirectUrl);
+	// }
 
 	// Operation: enable2FA
 	// URL: /auth/2fa/enable
@@ -805,19 +808,19 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async enable2FA(req, reply) {
-		console.log("enable2FA", req.params);
-		reply.code(200);
-		return {
-			secret: "MOCKTOTPSECRET",
-			qrCodeUrl: "https://example.com/qr.png",
-			 backupCodes: [
-				"BACKUP1",
-				"BACKUP2",
-				"BACKUP3"
-			]
-		};
-	}
+	// async enable2FA(req, reply) {
+	// 	console.log("enable2FA", req.params);
+	// 	reply.code(200);
+	// 	return {
+	// 		secret: "MOCKTOTPSECRET",
+	// 		qrCodeUrl: "https://example.com/qr.png",
+	// 		 backupCodes: [
+	// 			"BACKUP1",
+	// 			"BACKUP2",
+	// 			"BACKUP3"
+	// 		]
+	// 	};
+	// }
 
 	// Operation: verify2FA
 	// URL: /auth/2fa/verify
@@ -908,25 +911,25 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async verify2FA(req, reply) {
-		console.log("verify2FA", req.params);
-		reply.code(200);
-		return {
-			accessToken: "mock-access-token",
-			refreshToken: "mock-refresh-token",
-			tokenType: "Bearer",
-			expiresIn: 3600,
-			requires2FA: false,
-			user: {
-				id: "00000000-0000-0000-0000-000000000000",
-				email: req.body.email,
-				username: req.body.username,
-				displayName: req.body.displayName,
-				avatarUrl: null,
-				has2FAEnabled: false
-			}
-		};
-	}
+	// async verify2FA(req, reply) {
+	// 	console.log("verify2FA", req.params);
+	// 	reply.code(200);
+	// 	return {
+	// 		accessToken: "mock-access-token",
+	// 		refreshToken: "mock-refresh-token",
+	// 		tokenType: "Bearer",
+	// 		expiresIn: 3600,
+	// 		requires2FA: false,
+	// 		user: {
+	// 			id: "00000000-0000-0000-0000-000000000000",
+	// 			email: req.body.email,
+	// 			username: req.body.username,
+	// 			displayName: req.body.displayName,
+	// 			avatarUrl: null,
+	// 			has2FAEnabled: false
+	// 		}
+	// 	};
+	// }
 
 	// Operation: disable2FA
 	// URL: /auth/2fa/disable
@@ -983,10 +986,10 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async disable2FA(req, reply) {
-		console.log("disable2FA", req.params);
-		reply.code(200).send();
-	}
+	// async disable2FA(req, reply) {
+	// 	console.log("disable2FA", req.params);
+	// 	reply.code(200).send();
+	// }
 
 	// Operation: listSessions
 	// URL: /auth/sessions
@@ -1051,31 +1054,31 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async listSessions(req, reply) {
-		console.log("listSessions", req.params);
-		reply.code(200).send({
-			sessions: [
-				{
-					id: "00000000-0000-0000-0000-000000000000",
-					deviceInfo: "Chrome on Windows 10",
-					ipAddress: "127.0.0.1",
-					location: "Localhost",
-					createdAt: new Date(Date.now() - 3600_000).toISOString(), // 1 hour ago
-					lastActiveAt: new Date().toISOString(),
-					isCurrent: true
-				},
-				{
-					id: "11111111-1111-1111-1111-111111111111",
-					deviceInfo: "Firefox on macOS",
-					ipAddress: "192.168.0.10",
-					location: "Home",
-					createdAt: new Date(Date.now() - 7200_000).toISOString(), // 2 hours ago
-					lastActiveAt: new Date(Date.now() - 1800_000).toISOString(), // 30 min ago
-					isCurrent: false
-				}
-			]
-		});
-	}
+	// async listSessions(req, reply) {
+	// 	console.log("listSessions", req.params);
+	// 	reply.code(200).send({
+	// 		sessions: [
+	// 			{
+	// 				id: "00000000-0000-0000-0000-000000000000",
+	// 				deviceInfo: "Chrome on Windows 10",
+	// 				ipAddress: "127.0.0.1",
+	// 				location: "Localhost",
+	// 				createdAt: new Date(Date.now() - 3600_000).toISOString(), // 1 hour ago
+	// 				lastActiveAt: new Date().toISOString(),
+	// 				isCurrent: true
+	// 			},
+	// 			{
+	// 				id: "11111111-1111-1111-1111-111111111111",
+	// 				deviceInfo: "Firefox on macOS",
+	// 				ipAddress: "192.168.0.10",
+	// 				location: "Home",
+	// 				createdAt: new Date(Date.now() - 7200_000).toISOString(), // 2 hours ago
+	// 				lastActiveAt: new Date(Date.now() - 1800_000).toISOString(), // 30 min ago
+	// 				isCurrent: false
+	// 			}
+	// 		]
+	// 	});
+	// }
 
 	// Operation: revokeSession
 	// URL: /auth/sessions/:sessionId
@@ -1124,10 +1127,10 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async revokeSession(req, reply) {
-		console.log("revokeSession", req.params);
-		reply.code(204).send();
-	}
+	// async revokeSession(req, reply) {
+	// 	console.log("revokeSession", req.params);
+	// 	reply.code(204).send();
+	// }
 
 	// Operation: revokeAllSessions
 	// URL: /auth/sessions/revoke-all
@@ -1170,9 +1173,9 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	async revokeAllSessions(req, reply) {
-		console.log("revokeAllSessions", req.params);
-		const revokedCount = 5;
-		reply.code(200).send({ revokedCount });
-	}
+	// async revokeAllSessions(req, reply) {
+	// 	console.log("revokeAllSessions", req.params);
+	// 	const revokedCount = 5;
+	// 	reply.code(200).send({ revokedCount });
+	// }
 }
