@@ -1,48 +1,179 @@
 // implementation of the operations in the openapi specification
-import { createClient } from "redis";
+import { redisClient } from "./redisClient.js";
+import { validateInputs } from "./validators.js";
+import bcrypt from "bcrypt";
+import crypto from 'node:crypto';
+import jwt from "jsonwebtoken";
+
+const MAX_LOGIN_ATTEMPTS = 5; // per 15 minutes
+const RATE_LIMIT_WINDOW_SECONDS = 5 * 60;
+// const JWT_TTL_SECONDS = 60 * 60;    // 1h for logout token blacklist
+
+// const ACCESS_TOKEN_TTL = 60 * 15;        // 15 minutes
+// const REFRESH_TOKEN_TTL = 60 * 60 * 24 * 7; // 7 days
 
 export class Service {
+	// REGISTER
 	async register(req, reply) {
-		console.log("register", req.params);
-
 		const { username, displayName, password, email, avatar, has2FAEnabled } = req.body;
 		// console.log("BODY: ", req.body);
 
-		const client = createClient();
-
-		const key = `user:${username}`;
-
-		await client.connect();
-
-		const existingUser = await client.exists(key);
-		if (existingUser) {
-			return reply.code(409).send({
-				code: "USER_ALREADY_EXISTS",
-				message: "User already exists",
+		const validation = validateInputs({ username, email, password }, false);
+		if (!validation.success) {
+			return reply.code(400).send({
+				code: "INVALID_CREDENTIALS",
+				message: "Invalid fields",
 			});
 		}
 
-		await client.hSet(key, {
-			username,
-			displayName,
-			password,
-			email,
-			avatar,
-			has2FAEnabled:  has2FAEnabled.toString()
-		});
+		try {
+			const userKey = `user:${username}`;
+			console.log("userKey: ", userKey);
+			const emailKey = `email:${email}`;
+			console.log("emailKey: ", emailKey);
 
-		await client.quit();
+			// Check username uniqueness
+			const existingUser = await redisClient.exists(userKey);
+			if (existingUser) {
+				return reply.code(409).send({
+					code: "USER_ALREADY_EXISTS",
+					message: "Username already exists",
+				});
+			}
 
-		return reply.code(201).send({ status: "ok" });
+			// Check email uniqueness
+			const existingEmail = await redisClient.exists(emailKey);
+			if (existingEmail) {
+				return reply.code(409).send({
+					code: "EMAIL_ALREADY_EXISTS",
+					message: "Email already exists",
+				});
+			}
+
+			const hashedPassword = await bcrypt.hash(password, 10);
+			console.log("hashedPassword: ", hashedPassword);
+
+			const uuid = crypto.randomUUID();
+			console.log(uuid);
+
+			// Save user
+			await redisClient.hSet(userKey, {
+				uuid,
+				username,
+				displayName,
+				hashedPassword,
+				email,
+				avatar,
+				has2FAEnabled:  has2FAEnabled.toString()
+			});
+
+			await redisClient.set(emailKey, username);
+
+			return reply.code(201).send({
+				code: "USER_CREATED",
+				message: "User successfully registered",
+			});
+
+		} catch (error) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Unable to register user",
+			});
+		}
 	}
 
-	// async login(req, reply) {
-	// 	console.log("login", req.params);
+	// LOGIN
+	async login(req, reply) {
+		const { identifier, password } = req.body;
+		console.log("REQ BODY: ", req.body);
+		const ip = req.ip; // For rate limiting per IP
+		console.log("IP: ", ip);
 
-	// 	reply.code(200).send();
-	// }
+		const validation = validateInputs({ identifier, password }, true);
+		if (!validation.success) {
+			return reply.code(400).send({
+				code: "INVALID REQUEST PARAMETERS",
+				message: "Invalid fields",
+			});
+		}
 
-	// Operation: logout
+		try {
+			// Rate limit check
+			const rlKey = `login:rl:${identifier}:${ip}`;
+			console.log("rlKey: ", rlKey);
+			const attempts = await redisClient.incr(rlKey);
+			if (attempts === 1) {
+				await redisClient.expire(rlKey, RATE_LIMIT_WINDOW_SECONDS);
+			}
+			// console.log("attempts: ", attempts);
+			if (attempts > MAX_LOGIN_ATTEMPTS) {
+				return reply.code(429).send({
+					code: "TOO_MANY_ATTEMPTS",
+					message: "Too many login attempts. Try again later."
+				});
+			}
+
+			let username;
+
+			if (identifier.includes("@")) {
+				username = await redisClient.get(`email:${identifier}`);
+				if (!username) {
+					return reply.code(401).send({
+						code: "INVALID_CREDENTIALS",
+						message: "Invalid username/email or password",
+					});
+				}
+			} else {
+				username = identifier;
+			}
+
+			const userKey = `user:${username}`;
+			console.log("userKey: ", userKey);
+
+			const existingUser = await redisClient.exists(userKey);
+			if (!existingUser) {
+				return reply.code(401).send({
+					code: "INVALID_CREDENTIALS",
+					message: "Invalid username/email or password",
+				});
+			}
+
+			// Retrieve all user fields from Redis by username or email key.
+			const user = await redisClient.hGetAll(userKey);
+
+			// If the user exists, we compare the entered password with the stored hashed password.
+			const isMatch = await bcrypt.compare(password, user.hashedPassword);
+			if (!isMatch) {
+				return reply.code(401).send({
+					code: "INVALID_CREDENTIALS",
+					message: "Invalid username or password",
+				});
+			}
+
+			// Reset rate limite on success
+			await redisClient.del(rlKey);
+
+			return reply.code(200).send({
+				code: "LOGIN_SUCCESS",
+				message: "User successfully logged in",
+				user: {
+					id : user.uuid,
+					username: user.username,
+					displayName: user.displayName,
+					email: user.email,
+					avatar: user.avatar,
+					has2FAEnabled: user.has2FAEnabled,
+				},
+			});
+		} catch (error) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Unable to log in user",
+			});
+		}
+	}
+
+		// Operation: logout
 	// URL: /auth/logout
 	// summary:	Logout user
 	// valid responses
