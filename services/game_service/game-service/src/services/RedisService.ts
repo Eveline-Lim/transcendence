@@ -1,3 +1,7 @@
+  /***********/
+ /*	IMPORT	*/
+/***********/
+
 import Redis from 'ioredis';
 import { GameState } from '../models/GameState';
 
@@ -5,10 +9,10 @@ export class RedisService {
   private client: Redis;
 
   constructor() {
-    // Connexion à Redis sur le port 6380
+    // Connexion à Redis sur le port 6379
     this.client = new Redis({
       host: 'localhost',
-      port: 6380,
+      port: 6379,
     });
 
     // Gestion des événements
@@ -21,6 +25,11 @@ export class RedisService {
     });
   }
 
+// Fermeture propre
+async disconnect(): Promise<void> {
+	await this.client.quit();
+}
+
   // Sauvegarder une donnée
   async set(key: string, value: string): Promise<void> {
     await this.client.set(key, value);
@@ -31,22 +40,22 @@ export class RedisService {
     return await this.client.get(key);
   }
 
-  // ===== Méthodes pour GameState =====
-  async setGameState(gameId: string, state: GameState): Promise<void> {
-    await this.client.setex(//set expiration
-      `game:${gameId}`,
-      3600, // TTL = 1 heure (la partie expire après 1h)
-      JSON.stringify(state)
-    );
-  }
+//   // ===== Méthodes pour GameState =====
+//   async setGameState(gameId: string, state: GameState): Promise<void> {
+//     await this.client.setex(//set expiration
+//       `game:${gameId}`,
+//       3600, // TTL = 1 heure (la partie expire après 1h)
+//       JSON.stringify(state)
+//     );
+//   }
 
-  async getGameState(gameId: string): Promise<GameState | null> {
-    const data = await this.client.get(`game:${gameId}`);
-    return data ? JSON.parse(data) : null;
-  }
+//   async getGameState(gameId: string): Promise<GameState | null> {
+//     const data = await this.client.get(`game:${gameId}`);
+//     return data ? JSON.parse(data) : null;
+//   }
 
-  // Supprimer une donnée
-  async delete(key: string): Promise<void> {
-    await this.client.del(key);
-  }
+//   // Supprimer une donnée
+//   async delete(key: string): Promise<void> {
+//     await this.client.del(key);
+//   }
 }
