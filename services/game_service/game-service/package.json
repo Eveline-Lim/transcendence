@@ -1,0 +1,32 @@
+{
+  "name": "game-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "dev:clean": "kill-9 $(lsof -ti:3001) 2>/dev/null || nodemon --exec ts-node src/index.ts",
+    "kill:port": "kill -9 $(lsof -ti:3001) 2>/dev/null || echo 'Port 3001 already free'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "ioredis": "^5.9.2",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/ioredis": "^5.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.0.10",
+    "@types/socket.io": "^3.0.2",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.11",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
