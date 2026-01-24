@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pong Test Client</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <style>
+    body { 
+      font-family: monospace; 
+      padding: 20px;
+      background: #1e1e1e;
+      color: #fff;
+    }
+    button { 
+      margin: 5px; 
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #007acc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:hover {
+      background: #005a9e;
+    }
+    input {
+      padding: 10px;
+      margin: 5px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #2d2d2d;
+      color: white;
+    }
+    #log { 
+      background: #2d2d2d; 
+      padding: 15px; 
+      height: 400px; 
+      overflow-y: auto; 
+      margin-top: 20px;
+      border-radius: 4px;
+      font-size: 14px;
+      line-height: 1.6;
+	  white-space: pre-wrap;
+    }
+    h1 {
+      color: #4ec9b0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Pong WebSocket Test</h1>
+  
+  <div>
+    <input type="text" id="playerId" placeholder="Player ID" value="alice">
+  </div>
+  
+  <div>
+    <button onclick="testPing()"> Test Ping</button>
+  </div>
+  
+  <div id="log"></div>
+
+  <script>
+    const socket = io('http://localhost:3001');
+    
+    socket.on('connect', () => {
+      log('Connected to server (ID: ' + socket.id + ')');
+    });
+    
+    socket.on('pong', (data) => {
+      log('Received pong: ' + JSON.stringify(data));
+    });
+    
+    socket.on('disconnect', () => {
+      log('Disconnected from server');
+    });
+    
+    socket.on('error', (error) => {
+      log('Error: ' + error);
+    });
+    
+    function testPing() {
+      log('Sending ping...');
+      socket.emit('ping');
+    }
+    
+    function log(message) {
+      const logDiv = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      logDiv.innerHTML += `[${time}] ${message}\n`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+  </script>
+</body>
+</html>
