@@ -6,6 +6,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Mutex;
 use tokio::sync::oneshot;
 use tokio_tungstenite::WebSocketStream;
+use tokio_tungstenite::tungstenite::Message;
 
 // Define a type alias for our socket
 type WsStream = WebSocketStream<TcpStream>;
@@ -41,7 +42,7 @@ async fn accept_connection(stream: TcpStream, waiting_room: SharedWaitingRoom) {
     let addr = stream.peer_addr().expect("addr");
 
     // Handshake first
-    let ws_stream = match tokio_tungstenite::accept_async(stream).await {
+    let mut ws_stream = match tokio_tungstenite::accept_async(stream).await {
         Ok(ws) => ws,
         Err(e) => {
             error!("Handshake failed: {}", e);
@@ -57,13 +58,20 @@ async fn accept_connection(stream: TcpStream, waiting_room: SharedWaitingRoom) {
         info!("Found opponent! Starting match...");
         let sender = guard.take().unwrap();
 
-        if let Err(_) = sender.send(ws_stream) {}
+        if let Err(my_stream) = sender.send(ws_stream) {
+            info!("Got an error to join waiting with player 1");
+            let (tx, rx) = oneshot::channel::<WsStream>();
+            *guard = Some(tx);
+            drop(guard);
+            wait_in_queue(my_stream, rx, waiting_room).await;
+        }
     } else {
         info!("No opponent found. Waiting in lobby...");
+        let _ = ws_stream.send(Message::Text("Hi".into())).await;
         let (tx, rx) = oneshot::channel::<WsStream>();
         *guard = Some(tx);
         drop(guard);
-        wait_in_queue(ws_stream, rx, waiting_room);
+        wait_in_queue(ws_stream, rx, waiting_room).await;
     }
     // The lock is released here automatically when 'guard' goes out of scope.
 }
@@ -73,7 +81,18 @@ async fn wait_in_queue(
     rx: oneshot::Receiver<WsStream>,
     waiting_room: SharedWaitingRoom,
 ) {
-    
+    tokio::select! {
+        Ok(opponent) = rx => {
+            info!("Two player connected");
+            tokio::spawn(handle_match(ws_stream, opponent));
+    }
+        _ = ws_stream.next() => {
+            info!("Player 1 deconnected");
+            let mut waiter = waiting_room.lock().await;
+            *waiter = None;
+            drop(waiter);
+        }
+    };
 }
 
 async fn handle_match(player1: WsStream, player2: WsStream) {
