@@ -30,13 +30,12 @@ const username = "testuser";
 const email = "test@test.fr";
 const password = "Test1234!";
 const displayName = "Test User";
-const avatar = "https://example.com/avatar.png";
+const avatarUrl = "https://example.com/avatar.png";
 const has2FAEnabled = false;
 const currentPassword = "Test1234!";
 const newPassword = "NewPass1234!";
 const code = "123456";
 const token = "MY_JWT";
-const refreshToken = "MY_REFRESH_TOKEN";
 const key = `user:${username}`;
 const emailKey = `email:${email}`;
 
@@ -56,7 +55,7 @@ test("testing register", async (t) => {
 			displayName,
 			password,
 			email,
-			avatar,
+			avatarUrl,
 			has2FAEnabled
 		},
 	});
@@ -67,7 +66,7 @@ test("testing register", async (t) => {
 
 	assert.equal(res.statusCode, 201);
 	await fastify.close();
-	await redisClient.quit();
+	// await redisClient.quit();
 });
 
 test("testing login", async (t) => {

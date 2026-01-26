@@ -1,21 +1,20 @@
 // implementation of the operations in the openapi specification
 import { redisClient } from "./redisClient.js";
-import { validateInputs } from "./validators.js";
+import { validateInputs } from "./utils/validators.js";
 import bcrypt from "bcrypt";
 import crypto from 'node:crypto';
 import jwt from "jsonwebtoken";
 
 const MAX_LOGIN_ATTEMPTS = 5; // per 15 minutes
 const RATE_LIMIT_WINDOW_SECONDS = 5 * 60;
-// const JWT_TTL_SECONDS = 60 * 60;    // 1h for logout token blacklist
-
-// const ACCESS_TOKEN_TTL = 60 * 15;        // 15 minutes
-// const REFRESH_TOKEN_TTL = 60 * 60 * 24 * 7; // 7 days
+const ACCESS_TOKEN = 60 * 24; // 24h
+const REFRESH_TOKEN = 60 * 60 * 24; // 24h in seconds
+// const JWT_TTL_SECONDS = 60 * 60; // 1h for logout token blacklist
 
 export class Service {
 	// REGISTER
 	async register(req, reply) {
-		const { username, displayName, password, email, avatar, has2FAEnabled } = req.body;
+		const { username, displayName, password, email, avatarUrl, has2FAEnabled } = req.body;
 		// console.log("BODY: ", req.body);
 
 		const validation = validateInputs({ username, email, password }, false);
@@ -28,9 +27,9 @@ export class Service {
 
 		try {
 			const userKey = `user:${username}`;
-			console.log("userKey: ", userKey);
+			// console.log("userKey: ", userKey);
 			const emailKey = `email:${email}`;
-			console.log("emailKey: ", emailKey);
+			// console.log("emailKey: ", emailKey);
 
 			// Check username uniqueness
 			const existingUser = await redisClient.exists(userKey);
@@ -51,7 +50,7 @@ export class Service {
 			}
 
 			const hashedPassword = await bcrypt.hash(password, 10);
-			console.log("hashedPassword: ", hashedPassword);
+			// console.log("hashedPassword: ", hashedPassword);
 
 			const uuid = crypto.randomUUID();
 			console.log(uuid);
@@ -63,8 +62,8 @@ export class Service {
 				displayName,
 				hashedPassword,
 				email,
-				avatar,
-				has2FAEnabled:  has2FAEnabled.toString()
+				avatarUrl,
+				has2FAEnabled: has2FAEnabled.toString()
 			});
 
 			await redisClient.set(emailKey, username);
@@ -85,9 +84,9 @@ export class Service {
 	// LOGIN
 	async login(req, reply) {
 		const { identifier, password } = req.body;
-		console.log("REQ BODY: ", req.body);
+		// console.log("REQ BODY: ", req.body);
 		const ip = req.ip; // For rate limiting per IP
-		console.log("IP: ", ip);
+		// console.log("IP: ", ip);
 
 		const validation = validateInputs({ identifier, password }, true);
 		if (!validation.success) {
@@ -109,7 +108,7 @@ export class Service {
 			if (attempts > MAX_LOGIN_ATTEMPTS) {
 				return reply.code(429).send({
 					code: "TOO_MANY_ATTEMPTS",
-					message: "Too many login attempts. Try again later."
+					message: "Too many login attempts. Try again in five minutes."
 				});
 			}
 
@@ -137,7 +136,6 @@ export class Service {
 					message: "Invalid username/email or password",
 				});
 			}
-
 			// Retrieve all user fields from Redis by username or email key.
 			const user = await redisClient.hGetAll(userKey);
 
@@ -153,17 +151,48 @@ export class Service {
 			// Reset rate limite on success
 			await redisClient.del(rlKey);
 
+			// Access Token (short-lived JWT)
+			const accessToken = jwt.sign(
+				{
+					userId: user.uuid,
+					username: user.username,
+				},
+				// process.env.ACCESS_TOKEN_SECRET,
+				"RANDOM ACCESS TOKEN",
+				{ expiresIn: '24h' }
+			);
+			console.log("ACCESS TOKEN: ", accessToken);
+
+			// Refresh Token
+			// Generate a random salt (64 bytes)
+			const refreshToken = crypto.randomBytes(64).toString("hex");
+
+			// Store refresh token in Redis
+			await redisClient.set(
+				`refresh:${refreshToken}`,
+				user.uuid,
+				{ EX: REFRESH_TOKEN }
+			);
+			console.log("REFRESH TOKEN: ", refreshToken);
+
+			const requires2FA = user.has2FAEnabled === "1";
+
 			return reply.code(200).send({
 				code: "LOGIN_SUCCESS",
 				message: "User successfully logged in",
+				accessToken,
+				refreshToken,
+				tokenType: "Bearer",
+				expiresIn : 900, // 15 minutes in seconds
 				user: {
 					id : user.uuid,
 					username: user.username,
 					displayName: user.displayName,
 					email: user.email,
-					avatar: user.avatar,
+					avatarUrl: user.avatar,
 					has2FAEnabled: user.has2FAEnabled,
 				},
+				requires2FA
 			});
 		} catch (error) {
 			return reply.code(500).send({
