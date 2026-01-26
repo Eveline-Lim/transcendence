@@ -35,8 +35,7 @@ const has2FAEnabled = false;
 const currentPassword = "Test1234!";
 const newPassword = "NewPass1234!";
 const code = "123456";
-const token = "MY_JWT";
-const key = `user:${username}`;
+const token = "MY_TOKEN";
 const emailKey = `email:${email}`;
 
 test("testing register", async (t) => {
@@ -85,55 +84,32 @@ test("testing login", async (t) => {
 	console.log(res.statusCode, res.payload);
 	assert.equal(res.statusCode, 200);
 	await fastify.close();
-	await redisClient.quit();
+	//await redisClient.quit();
 });
 
-// test("testing logout", async (t) => {
-// 	const fastify = Fastify();
-// 	fastify.register(fastifyPlugin, opts);
-// 	await fastify.ready();
+test("testing logout", async (t) => {
+	const fastify = Fastify();
+	fastify.register(fastifyPlugin, opts);
+	await fastify.ready();
 
-// 	const res = await fastify.inject({
-// 		method: "POST",
-// 		url: "/auth/logout",
-// 		headers: {
-// 			authorization: `Bearer ${token}`,
-// 		}
-// 	});
-// 	console.log(res.statusCode, res.payload);
-// 	assert.equal(res.statusCode, 204);
+	const res = await fastify.inject({
+		method: "POST",
+		url: "/auth/logout",
+		headers: {
+			authorization: `Bearer ${token}`,
+		}
+	});
+	console.log(res.statusCode, res.payload);
+	assert.equal(res.statusCode, 204);
+	await fastify.close();
+	// await redisClient.quit();
 
-// 	// // Check that the token is blacklisted in Redis
-// 	// const isBlacklisted = await redisClient.get(`blacklist:${jwtToken}`);
-// 	// assert.equal(isBlacklisted, "1");
-// });
+	// Check that the token is blacklisted in Redis
+	// const isBlacklisted = await redisClient.get(`blacklist:${token}`);
+	// console.log("Blacklisted: ", isBlacklisted);
+	// assert.equal(isBlacklisted, "1");
+});
 
-
-// // test("testing login rate limiting", async (t) => {
-// // 	const fastify = Fastify();
-// // 	fastify.register(fastifyPlugin, opts);
-// // 	await fastify.ready();
-
-// // 	const wrongPassword = "WrongPass123!";
-
-// // 	// Attempt MAX_LOGIN_ATTEMPTS + 1 times with wrong password
-// // 	let lastResponse;
-// // 	for (let i = 0; i <= MAX_LOGIN_ATTEMPTS; i++) {
-// // 		lastResponse = await fastify.inject({
-// // 			method: "POST",
-// // 			url: "/auth/login",
-// // 			payload: {
-// // 				identifier: username,
-// // 				password: wrongPassword,
-// // 			},
-// // 		});
-// // 	}
-
-// // 	// The last attempt should return 429
-// // 	assert.equal(lastResponse.statusCode, 429);
-// // 	const payload = JSON.parse(lastResponse.payload);
-// // 	assert.equal(payload.code, "TOO_MANY_ATTEMPTS");
-// // });
 
 // test("testing refresh token", async () => {
 // 	const fastify = Fastify();

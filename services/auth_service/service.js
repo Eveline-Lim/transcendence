@@ -9,7 +9,7 @@ const MAX_LOGIN_ATTEMPTS = 5; // per 15 minutes
 const RATE_LIMIT_WINDOW_SECONDS = 5 * 60;
 const ACCESS_TOKEN = 60 * 24; // 24h
 const REFRESH_TOKEN = 60 * 60 * 24; // 24h in seconds
-// const JWT_TTL_SECONDS = 60 * 60; // 1h for logout token blacklist
+const JWT_TTL_SECONDS = 60 * 60; // 1h for logout token blacklist
 
 export class Service {
 	// REGISTER
@@ -158,7 +158,7 @@ export class Service {
 					username: user.username,
 				},
 				// process.env.ACCESS_TOKEN_SECRET,
-				"RANDOM ACCESS TOKEN",
+				"RANDOM_ACCESS_TOKEN",
 				{ expiresIn: '24h' }
 			);
 			console.log("ACCESS TOKEN: ", accessToken);
@@ -202,43 +202,49 @@ export class Service {
 		}
 	}
 
-		// Operation: logout
-	// URL: /auth/logout
-	// summary:	Logout user
-	// valid responses
-	//   '204':
-	//     description: Logout successful
-	//   '401':
-	//     description: Authentication required or token invalid
-	//     content:
-	//       application/json:
-	//         schema: &ref_0
-	//           type: object
-	//           required:
-	//             - code
-	//             - message
-	//           properties:
-	//             code:
-	//               type: string
-	//               description: Error code for client handling
-	//             message:
-	//               type: string
-	//               description: Human-readable error message
-	//             details:
-	//               type: object
-	//               additionalProperties: true
-	//               description: Additional error details
-	//   '500':
-	//     description: Internal server error
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//
+	// LOGOUT
+	async logout(req, reply) {
+		try {
+			const token = req.headers.authorization?.split(" ")[1];
+			console.log("LOGOUT TOKEN: ", token);
+			if (!token) {
+				return reply.code(401).send({
+					code: "AUTH_REQUIRED",
+					message: "Authentication required",
+				});
+			}
 
-	// async logout(req, reply) {
-	// 	console.log("logout", req.params);
-	// 	reply.code(204).send();
-	// }
+			let decoded;
+			try {
+				decoded = jwt.verify(token, "RANDOM_ACCESS_TOKEN");
+			} catch (error) {
+				return reply.code(401).send({
+					code: "AUTH_REQUIRED/INVALID_TOKEN",
+					message: "Invalid or expired token",
+				});
+			}
+
+			// Hash token before blacklisting ?
+			// const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+			// Add JWT token to blacklist
+			await redisClient.set(
+				`blacklist:${token}`,
+				"1",
+				{ EX: JWT_TTL_SECONDS }
+			);
+
+			reply.code(204).send({
+				code: "LOGOUT_SUCCESS",
+				message: "User successfully logged out",
+			});
+		} catch (error) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Unable to log out user",
+			});
+		}
+	}
 
 	// Operation: refreshToken
 	// URL: /auth/refresh
