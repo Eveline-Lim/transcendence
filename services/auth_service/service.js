@@ -250,75 +250,75 @@ export class Service {
 		}
 	}
 
-	// REFRESH TOKEN
-	async refreshToken(req, reply) {
-		const { refreshToken } = req.body;
-		console.log("REFRESH TOKEN: ", refreshToken);
-		if (!refreshToken) {
-			return reply.code(400).send({
-				code: "INVALID_REQUEST",
-				message: "Refresh token required",
-			});
-		}
+	// // REFRESH TOKEN
+	// async refreshToken(req, reply) {
+	// 	const { refreshToken } = req.body;
+	// 	console.log("REFRESH TOKEN: ", refreshToken);
+	// 	if (!refreshToken) {
+	// 		return reply.code(400).send({
+	// 			code: "INVALID_REQUEST",
+	// 			message: "Refresh token required",
+	// 		});
+	// 	}
 
-		try {
-			const userId = await redisClient.get(`refresh:${refreshToken}`);
-			console.log("refreshtoken storedRefreshToken: ", userId);
-			if (!userId) {
-				return reply.code(401).send({
-					code: "INVALID_REFRESH_TOKEN",
-					message: "Invalid or expired refresh token",
-				});
-			}
+	// 	try {
+	// 		const userId = await redisClient.get(`refresh:${refreshToken}`);
+	// 		console.log("refreshtoken storedRefreshToken: ", userId);
+	// 		if (!userId) {
+	// 			return reply.code(401).send({
+	// 				code: "INVALID_REFRESH_TOKEN",
+	// 				message: "Invalid or expired refresh token",
+	// 			});
+	// 		}
 
-			await redisClient.del(`refresh:${refreshToken}`);
+	// 		await redisClient.del(`refresh:${refreshToken}`);
 
-			const newRefreshToken = crypto.randomBytes(64).toString("hex");
-			console.log("NEW REFRESH TOKEN: ", newRefreshToken);
+	// 		const newRefreshToken = crypto.randomBytes(64).toString("hex");
+	// 		console.log("NEW REFRESH TOKEN: ", newRefreshToken);
 
-			const user = await redisClient.hGetAll(`user:${userId}`);
-			console.log("user: ", user);
+	// 		const user = await redisClient.hGetAll(`user:${userId}`);
+	// 		console.log("user: ", user);
 
-			await redisClient.set(
-				`refresh:${newRefreshToken}`,
-				user.id,
-				{ EX: REFRESH_TOKEN_TTL }
-			);
+	// 		await redisClient.set(
+	// 			`refresh:${newRefreshToken}`,
+	// 			user.id,
+	// 			{ EX: REFRESH_TOKEN_TTL }
+	// 		);
 
-			const accessToken = jwt.sign(
-				{
-					userId: userId,
-					username: user.username
-				},
-				process.env.SECRET_TOKEN,
-				{ expiresIn: ACCESS_TOKEN_TTL }
-			);
+	// 		const accessToken = jwt.sign(
+	// 			{
+	// 				userId: userId,
+	// 				username: user.username
+	// 			},
+	// 			process.env.SECRET_TOKEN,
+	// 			{ expiresIn: ACCESS_TOKEN_TTL }
+	// 		);
 
-			const requires2FA = user.has2FAEnabled === "1";
-			console.log("requires2FA: ", requires2FA);
+	// 		const requires2FA = user.has2FAEnabled === "1";
+	// 		console.log("requires2FA: ", requires2FA);
 
-			return reply.code(200).send({
-				accessToken,
-				refreshToken: newRefreshToken,
-				tokenType: "Bearer",
-				expiresIn: 900,
-				user: {
-					id: user.id,
-					username: user.username,
-					displayName: user.displayName,
-					email: user.email,
-					avatarUrl: user.avatarUrl,
-					has2FAEnabled: user.has2FAEnabled,
-				},
-				requires2FA
-			});
-		} catch (err) {
-			return reply.code(500).send({
-				code: "INTERNAL_ERROR",
-				message: "Unable to refresh token",
-			});
-		}
-	}
+	// 		return reply.code(200).send({
+	// 			accessToken,
+	// 			refreshToken: newRefreshToken,
+	// 			tokenType: "Bearer",
+	// 			expiresIn: 900,
+	// 			user: {
+	// 				id: user.id,
+	// 				username: user.username,
+	// 				displayName: user.displayName,
+	// 				email: user.email,
+	// 				avatarUrl: user.avatarUrl,
+	// 				has2FAEnabled: user.has2FAEnabled,
+	// 			},
+	// 			requires2FA
+	// 		});
+	// 	} catch (err) {
+	// 		return reply.code(500).send({
+	// 			code: "INTERNAL_ERROR",
+	// 			message: "Unable to refresh token",
+	// 		});
+	// 	}
+	// }
 
 	// Operation: verifyToken
 	// URL: /auth/verify
@@ -432,9 +432,66 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	// async forgotPassword(req, reply) {
-	// 	reply.code(202).send();
-	// }
+	async forgotPassword(req, reply) {
+		const { email } = req.body;
+		console.log("REQ BODY email: ", req.body);
+		if (!email) {
+			return reply.code(400).send({
+				code: "INVALID_CREDENTIALS",
+				message: "Invalid request parameters",
+			});
+		}
+		const ip = req.ip;
+
+		try {
+			// Rate limit check
+			const rlKey = `login:rl:${email}:${ip}`;
+			console.log("rlKey: ", rlKey);
+			const attempts = await redisClient.incr(rlKey);
+			if (attempts === 1) {
+				await redisClient.expire(rlKey, RATE_LIMIT_WINDOW_SECONDS);
+			}
+			// console.log("attempts: ", attempts);
+			if (attempts > MAX_LOGIN_ATTEMPTS) {
+				return reply.code(429).send({
+					code: "TOO_MANY_ATTEMPTS",
+					message: "Too many login attempts. Try again in five minutes."
+				});
+			}
+
+			const username = await redisClient.get(`email:${email}`);
+			if (!username) {
+				return reply.code(401).send({
+					code: "INVALID_CREDENTIALS",
+					message: "Invalid username/email or password",
+				});
+			}
+
+			const userKey = `user:${username}`;
+			console.log("userKey: ", userKey);
+
+			const existingUser = await redisClient.exists(userKey);
+			if (!existingUser) {
+				return reply.code(401).send({
+					code: "INVALID_CREDENTIALS",
+					message: "Invalid email",
+				});
+			}
+
+			// Reset rate limite on success
+			await redisClient.del(rlKey);
+
+			return reply.code(202).send({
+				code: "PASSWORD_RESET_EMAIL_SENT_SUCCESS",
+				message: "Password reset email sent",
+			});
+		} catch (error) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Unable to log in user",
+			});
+		}
+	}
 
 	// Operation: resetPassword
 	// URL: /auth/password/reset

@@ -114,28 +114,28 @@ test("testing logout", async (t) => {
 	// assert.equal(isBlacklisted, "1");
 });
 
-test("testing refresh token", async () => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
-	await fastify.ready();
+// test("testing refresh token", async () => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
+// 	await fastify.ready();
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/refresh",
-		payload: { refreshToken },
-	});
-	assert.equal(res.statusCode, 200);
-	await fastify.close();
-	await redisClient.quit();
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/refresh",
+// 		payload: { refreshToken },
+// 	});
+// 	assert.equal(res.statusCode, 200);
+// 	await fastify.close();
+// 	await redisClient.quit();
 
-	// const oldTokenExists = await redisClient.exists(`refresh:${refreshToken}`);
-	// assert.equal(oldTokenExists, 0); // old token must be revoked
+// 	// const oldTokenExists = await redisClient.exists(`refresh:${refreshToken}`);
+// 	// assert.equal(oldTokenExists, 0); // old token must be revoked
 
-	// const newTokenExists = await redisClient.exists(
-	// 	`refresh:${body.refreshToken}`
-	// );
-	// assert.equal(newTokenExists, 1); // new token must exist
-});
+// 	// const newTokenExists = await redisClient.exists(
+// 	// 	`refresh:${body.refreshToken}`
+// 	// );
+// 	// assert.equal(newTokenExists, 1); // new token must exist
+// });
 
 
 // test("testing verifyToken", async (t) => {
@@ -152,23 +152,20 @@ test("testing refresh token", async () => {
 // 	t.assert.equal(res.statusCode, 200);
 // });
 
-// test("testing forgotPassword", async (t) => {
-// 	const fastify = Fastify();
-// 	fastify.register(fastifyPlugin, opts);
-// 	await fastify.ready();
+test("testing forgotPassword", async (t) => {
+	const fastify = Fastify();
+	fastify.register(fastifyPlugin, opts);
+	await fastify.ready();
 
-// 	// Clean Redis
-// 	await redisClient.flushDb();
-
-// 	const res = await fastify.inject({
-// 		method: "POST",
-// 		url: "/auth/password/forgot",
-// 		payload: {
-// 			email
-// 		},
-// 	});
-// 	t.assert.equal(res.statusCode, 202);
-// });
+	const res = await fastify.inject({
+		method: "POST",
+		url: "/auth/password/forgot",
+		payload: {
+			email
+		},
+	});
+	assert.equal(res.statusCode, 202);
+});
 
 // // test("testing resetPassword", async (t) => {
 // // 	const fastify = Fastify();
