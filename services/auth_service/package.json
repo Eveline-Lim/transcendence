@@ -15,6 +15,7 @@
     "@asyncapi/modelina": "^5.10.1",
     "@seriousme/openapi-schema-validator": "^2.7.0",
     "bcrypt": "^6.0.0",
+    "dotenv": "^17.2.3",
     "fastify-openapi-glue": "^4.10.0",
     "fastify-plugin": "^5.1.0",
     "js-yaml": "^4.1.1",

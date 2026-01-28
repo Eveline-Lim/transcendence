@@ -35,7 +35,9 @@ const has2FAEnabled = false;
 const currentPassword = "Test1234!";
 const newPassword = "NewPass1234!";
 const code = "123456";
-const token = "MY_TOKEN";
+// const token = "MY_TOKEN";
+const token = process.env.ACCESS_TOKEN;
+const userKey = `user:${username}`;
 const emailKey = `email:${email}`;
 
 test("testing register", async (t) => {
@@ -60,7 +62,7 @@ test("testing register", async (t) => {
 	});
 	console.log(res.statusCode, res.payload);
 
-	const stored = await redisClient.hGetAll(key);
+	const stored = await redisClient.hGetAll(userKey);
 	console.log("User stored in Redis: ", stored);
 
 	assert.equal(res.statusCode, 201);
@@ -102,7 +104,7 @@ test("testing logout", async (t) => {
 	console.log(res.statusCode, res.payload);
 	assert.equal(res.statusCode, 204);
 	await fastify.close();
-	// await redisClient.quit();
+	await redisClient.quit();
 
 	// Check that the token is blacklisted in Redis
 	// const isBlacklisted = await redisClient.get(`blacklist:${token}`);

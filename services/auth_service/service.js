@@ -2,6 +2,7 @@
 import { redisClient } from "./redisClient.js";
 import { validateInputs } from "./utils/validators.js";
 import bcrypt from "bcrypt";
+import dotenv from "dotenv";
 import crypto from 'node:crypto';
 import jwt from "jsonwebtoken";
 
@@ -10,6 +11,8 @@ const RATE_LIMIT_WINDOW_SECONDS = 5 * 60;
 const ACCESS_TOKEN = 60 * 24; // 24h
 const REFRESH_TOKEN = 60 * 60 * 24; // 24h in seconds
 const JWT_TTL_SECONDS = 60 * 60; // 1h for logout token blacklist
+
+dotenv.config();
 
 export class Service {
 	// REGISTER
@@ -49,11 +52,11 @@ export class Service {
 				});
 			}
 
-			const hashedPassword = await bcrypt.hash(password, 10);
-			// console.log("hashedPassword: ", hashedPassword);
-
 			const uuid = crypto.randomUUID();
 			console.log(uuid);
+
+			const hashedPassword = await bcrypt.hash(password, 10);
+			// console.log("hashedPassword: ", hashedPassword);
 
 			// Save user
 			await redisClient.hSet(userKey, {
@@ -85,7 +88,8 @@ export class Service {
 	async login(req, reply) {
 		const { identifier, password } = req.body;
 		// console.log("REQ BODY: ", req.body);
-		const ip = req.ip; // For rate limiting per IP
+		// For rate limiting per IP
+		const ip = req.ip;
 		// console.log("IP: ", ip);
 
 		const validation = validateInputs({ identifier, password }, true);
@@ -157,11 +161,10 @@ export class Service {
 					userId: user.uuid,
 					username: user.username,
 				},
-				// process.env.ACCESS_TOKEN_SECRET,
-				"RANDOM_ACCESS_TOKEN",
+				process.env.SECRET_TOKEN,
 				{ expiresIn: '24h' }
 			);
-			console.log("ACCESS TOKEN: ", accessToken);
+			//console.log("ACCESS TOKEN: ", accessToken);
 
 			// Refresh Token
 			// Generate a random salt (64 bytes)
@@ -173,7 +176,7 @@ export class Service {
 				user.uuid,
 				{ EX: REFRESH_TOKEN }
 			);
-			console.log("REFRESH TOKEN: ", refreshToken);
+			//console.log("REFRESH TOKEN: ", refreshToken);
 
 			const requires2FA = user.has2FAEnabled === "1";
 
@@ -206,7 +209,7 @@ export class Service {
 	async logout(req, reply) {
 		try {
 			const token = req.headers.authorization?.split(" ")[1];
-			console.log("LOGOUT TOKEN: ", token);
+			// console.log("LOGOUT TOKEN: ", token);
 			if (!token) {
 				return reply.code(401).send({
 					code: "AUTH_REQUIRED",
@@ -216,7 +219,7 @@ export class Service {
 
 			let decoded;
 			try {
-				decoded = jwt.verify(token, "RANDOM_ACCESS_TOKEN");
+				decoded = jwt.verify(token, process.env.SECRET_TOKEN);
 			} catch (error) {
 				return reply.code(401).send({
 					code: "AUTH_REQUIRED/INVALID_TOKEN",
