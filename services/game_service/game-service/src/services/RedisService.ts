@@ -6,39 +6,40 @@ import Redis from 'ioredis';
 import { GameState } from '../models/GameState';
 
 export class RedisService {
-  private client: Redis;
+	private client: Redis;
 
-  constructor() {
-    // Connexion à Redis sur le port 6379
-    this.client = new Redis({
-      host: 'localhost',
-      port: 6379,
-    });
+	constructor() {
+		// Connexion à Redis sur le port 6379
+		this.client = new Redis({
+			host: 'localhost',
+			port: 6379,
+		});
 
-    // Gestion des événements
-    this.client.on('connect', () => {
-      console.log('Connected to Redis');
-    });
+		// Gestion des événements
+		this.client.on('connect', () => {
+			console.log('Connected to Redis');
+		});
 
-    this.client.on('error', (err) => {
-      console.error('Redis error:', err);
-    });
-  }
+		this.client.on('error', (err) => {
+			console.error('Redis error:', err);
+		});
+	}
 
-// Fermeture propre
-async disconnect(): Promise<void> {
-	await this.client.quit();
+	// Fermeture propre
+	async disconnect(): Promise<void> {
+		await this.client.quit();
+	}
+
+	// Sauvegarder une donnée
+	async set(key: string, value: string): Promise<void> {
+		await this.client.set(key, value);
+	}
+
+	// Récupérer une donnée
+	async get(key: string): Promise<string | null> {
+		return await this.client.get(key);
+	}
 }
-
-  // Sauvegarder une donnée
-  async set(key: string, value: string): Promise<void> {
-    await this.client.set(key, value);
-  }
-
-  // Récupérer une donnée
-  async get(key: string): Promise<string | null> {
-    return await this.client.get(key);
-  }
 
 //   // ===== Méthodes pour GameState =====
 //   async setGameState(gameId: string, state: GameState): Promise<void> {
@@ -58,4 +59,3 @@ async disconnect(): Promise<void> {
 //   async delete(key: string): Promise<void> {
 //     await this.client.del(key);
 //   }
-}
