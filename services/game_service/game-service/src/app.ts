@@ -29,7 +29,7 @@ export const io = new Server(httpServer, {
 app.use(express.json());
 
 //configuration pour les routes
-app.use('/', debugRouter);
+app.use('/test', debugRouter);
 app.use('/api', gameRouter);
 
 //configure les websocket
