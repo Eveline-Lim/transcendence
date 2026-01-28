@@ -8,9 +8,9 @@ import jwt from "jsonwebtoken";
 
 const MAX_LOGIN_ATTEMPTS = 5; // per 15 minutes
 const RATE_LIMIT_WINDOW_SECONDS = 5 * 60;
-const ACCESS_TOKEN = 60 * 24; // 24h
-const REFRESH_TOKEN = 60 * 60 * 24; // 24h in seconds
-const JWT_TTL_SECONDS = 60 * 60; // 1h for logout token blacklist
+const ACCESS_TOKEN_TTL = 60 * 24; // 24h
+const REFRESH_TOKEN_TTL = 60 * 60 * 24; // 24h in seconds
+const JWT_TTL = 60 * 60; // 1h for logout token blacklist
 
 dotenv.config();
 
@@ -18,7 +18,7 @@ export class Service {
 	// REGISTER
 	async register(req, reply) {
 		const { username, displayName, password, email, avatarUrl, has2FAEnabled } = req.body;
-		// console.log("BODY: ", req.body);
+		console.log("BODY: ", req.body);
 
 		const validation = validateInputs({ username, email, password }, false);
 		if (!validation.success) {
@@ -30,9 +30,9 @@ export class Service {
 
 		try {
 			const userKey = `user:${username}`;
-			// console.log("userKey: ", userKey);
+			console.log("userKey: ", userKey);
 			const emailKey = `email:${email}`;
-			// console.log("emailKey: ", emailKey);
+			console.log("emailKey: ", emailKey);
 
 			// Check username uniqueness
 			const existingUser = await redisClient.exists(userKey);
@@ -53,20 +53,20 @@ export class Service {
 			}
 
 			const uuid = crypto.randomUUID();
-			console.log(uuid);
+			console.log("UUID: ", uuid);
 
 			const hashedPassword = await bcrypt.hash(password, 10);
 			// console.log("hashedPassword: ", hashedPassword);
 
 			// Save user
-			await redisClient.hSet(userKey, {
-				uuid,
+			await redisClient.hSet(`user:${username}`, {
+				id: uuid,
 				username,
 				displayName,
 				hashedPassword,
 				email,
 				avatarUrl,
-				has2FAEnabled: has2FAEnabled.toString()
+				has2FAEnabled: has2FAEnabled ? "1" : "0"
 			});
 
 			await redisClient.set(emailKey, username);
@@ -158,13 +158,13 @@ export class Service {
 			// Access Token (short-lived JWT)
 			const accessToken = jwt.sign(
 				{
-					userId: user.uuid,
+					userId: user.id,
 					username: user.username,
 				},
 				process.env.SECRET_TOKEN,
-				{ expiresIn: '24h' }
+				{ expiresIn: ACCESS_TOKEN_TTL }
 			);
-			//console.log("ACCESS TOKEN: ", accessToken);
+			console.log("ACCESS TOKEN: ", accessToken);
 
 			// Refresh Token
 			// Generate a random salt (64 bytes)
@@ -173,10 +173,11 @@ export class Service {
 			// Store refresh token in Redis
 			await redisClient.set(
 				`refresh:${refreshToken}`,
-				user.uuid,
-				{ EX: REFRESH_TOKEN }
+				user.id,
+				{ EX: REFRESH_TOKEN_TTL }
 			);
-			//console.log("REFRESH TOKEN: ", refreshToken);
+			const storedRefreshToken = await redisClient.get(`refresh:${refreshToken}`);
+			console.log("storedRefreshToken: ", storedRefreshToken);
 
 			const requires2FA = user.has2FAEnabled === "1";
 
@@ -209,7 +210,7 @@ export class Service {
 	async logout(req, reply) {
 		try {
 			const token = req.headers.authorization?.split(" ")[1];
-			// console.log("LOGOUT TOKEN: ", token);
+			console.log("LOGOUT TOKEN: ", token);
 			if (!token) {
 				return reply.code(401).send({
 					code: "AUTH_REQUIRED",
@@ -234,7 +235,7 @@ export class Service {
 			await redisClient.set(
 				`blacklist:${token}`,
 				"1",
-				{ EX: JWT_TTL_SECONDS }
+				{ EX: JWT_TTL }
 			);
 
 			reply.code(204).send({
@@ -249,107 +250,75 @@ export class Service {
 		}
 	}
 
-	// Operation: refreshToken
-	// URL: /auth/refresh
-	// summary:	Refresh access token
-	// req.body
-	//   content:
-	//     application/json:
-	//       schema:
-	//         type: object
-	//         required:
-	//           - refreshToken
-	//         properties:
-	//           refreshToken:
-	//             type: string
-	//
-	// valid responses
-	//   '200':
-	//     description: Token refreshed successfully
-	//     content:
-	//       application/json:
-	//         schema:
-	//           type: object
-	//           properties:
-	//             accessToken:
-	//               type: string
-	//               description: JWT access token
-	//             refreshToken:
-	//               type: string
-	//               description: Refresh token for obtaining new access tokens
-	//             tokenType:
-	//               type: string
-	//               default: Bearer
-	//             expiresIn:
-	//               type: integer
-	//               description: Access token expiration time in seconds
-	//             user:
-	//               type: object
-	//               properties:
-	//                 id:
-	//                   type: string
-	//                   format: uuid
-	//                 email:
-	//                   type: string
-	//                   format: email
-	//                 username:
-	//                   type: string
-	//                 displayName:
-	//                   type: string
-	//                 avatarUrl:
-	//                   type: string
-	//                   format: uri
-	//                 has2FAEnabled:
-	//                   type: boolean
-	//             requires2FA:
-	//               type: boolean
-	//               description: Whether 2FA verification is required to complete login
-	//   '401':
-	//     description: Invalid or expired refresh token
-	//     content:
-	//       application/json:
-	//         schema: &ref_0
-	//           type: object
-	//           required:
-	//             - code
-	//             - message
-	//           properties:
-	//             code:
-	//               type: string
-	//               description: Error code for client handling
-	//             message:
-	//               type: string
-	//               description: Human-readable error message
-	//             details:
-	//               type: object
-	//               additionalProperties: true
-	//               description: Additional error details
-	//   '500':
-	//     description: Internal server error
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//
+	// REFRESH TOKEN
+	async refreshToken(req, reply) {
+		const { refreshToken } = req.body;
+		console.log("REFRESH TOKEN: ", refreshToken);
+		if (!refreshToken) {
+			return reply.code(400).send({
+				code: "INVALID_REQUEST",
+				message: "Refresh token required",
+			});
+		}
 
-	// async refreshToken(req, reply) {
-	// 	console.log("refreshToken", req.params);
-	// 	reply.code(200);
-	// 	return {
-	// 		accessToken: "mock-access-token",
-	// 		refreshToken: "mock-refresh-token",
-	// 		tokenType: "Bearer",
-	// 		expiresIn: 3600,
-	// 		requires2FA: false,
-	// 		user: {
-	// 			id: "00000000-0000-0000-0000-000000000000",
-	// 			email: req.body.email,
-	// 			username: req.body.username,
-	// 			displayName: req.body.displayName,
-	// 			avatarUrl: null,
-	// 			has2FAEnabled: false
-	// 		}
-	// 	};
-	// }
+		try {
+			const userId = await redisClient.get(`refresh:${refreshToken}`);
+			console.log("refreshtoken storedRefreshToken: ", userId);
+			if (!userId) {
+				return reply.code(401).send({
+					code: "INVALID_REFRESH_TOKEN",
+					message: "Invalid or expired refresh token",
+				});
+			}
+
+			await redisClient.del(`refresh:${refreshToken}`);
+
+			const newRefreshToken = crypto.randomBytes(64).toString("hex");
+			console.log("NEW REFRESH TOKEN: ", newRefreshToken);
+
+			const user = await redisClient.hGetAll(`user:${userId}`);
+			console.log("user: ", user);
+
+			await redisClient.set(
+				`refresh:${newRefreshToken}`,
+				user.id,
+				{ EX: REFRESH_TOKEN_TTL }
+			);
+
+			const accessToken = jwt.sign(
+				{
+					userId: userId,
+					username: user.username
+				},
+				process.env.SECRET_TOKEN,
+				{ expiresIn: ACCESS_TOKEN_TTL }
+			);
+
+			const requires2FA = user.has2FAEnabled === "1";
+			console.log("requires2FA: ", requires2FA);
+
+			return reply.code(200).send({
+				accessToken,
+				refreshToken: newRefreshToken,
+				tokenType: "Bearer",
+				expiresIn: 900,
+				user: {
+					id: user.id,
+					username: user.username,
+					displayName: user.displayName,
+					email: user.email,
+					avatarUrl: user.avatarUrl,
+					has2FAEnabled: user.has2FAEnabled,
+				},
+				requires2FA
+			});
+		} catch (err) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Unable to refresh token",
+			});
+		}
+	}
 
 	// Operation: verifyToken
 	// URL: /auth/verify
