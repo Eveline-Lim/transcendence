@@ -45,7 +45,7 @@ rooms:{roomId} → {player1_id, player2_id, status, score}
 channel:game:{roomId} → pour synchroniser les instances
 ```
 
-Redis permet la persistance des donnees en cas de crasch server
+Redis permet la persistance des donnees en cas de crash server
 
 #### Gestion des deconnexions:
 *	Mettre la partie en pause pendant X secondes

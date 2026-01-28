@@ -22,9 +22,9 @@ export class WebsocketService {
 
 			this.handlePing(socket);
 			this.handleDisconnect(socket);
-			// this.handleJoinGame(socket);      // ← À ajouter
-			// this.handlePlayerMove(socket);    // ← À ajouter
-			// this.handleError(socket);         // ← À ajouter
+			// this.handleJoinGame(socket);      // À ajouter
+			// this.handlePlayerMove(socket);    // À ajouter
+			// this.handleError(socket);         // À ajouter
 		});
 	}
 

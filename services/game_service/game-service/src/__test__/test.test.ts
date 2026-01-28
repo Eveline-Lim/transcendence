@@ -1,7 +1,7 @@
 import { sum } from '../app';
 
 afterAll(async () => {
-	await new Promise(resolve => setTimeout(resolve, 1));
+	await new Promise(resolve => setTimeout(resolve, 10));
 });
 
 test('adds 1 + 2 to equal 3', () => {
