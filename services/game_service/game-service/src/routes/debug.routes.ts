@@ -3,7 +3,7 @@
 /***********/
 
 import{ Router } from 'express';
-import { redis } from './game.routes'
+import { redis } from '../services/RedisInstance'
 import path from 'path';
 
 /* ------------------------------------------------- */
@@ -22,7 +22,7 @@ debugRouter.get('/patate', (req, res) => {
 });
 
 // Nouvelle route : sauvegarder dans Redis
-debugRouter.post('/test/save', async (req, res) => {
+debugRouter.post('/save', async (req, res) => {
 	if (!redis) return res.status(503).json({ error: 'Redis unavailable' })
 	const { key, value } = req.body;
 	await redis.set(key, value);
@@ -30,7 +30,7 @@ debugRouter.post('/test/save', async (req, res) => {
 });
 
 // Nouvelle route : lire depuis Redis
-debugRouter.get('/test/get/:key', async (req, res) => {
+debugRouter.get('/get/:key', async (req, res) => {
 	if (!redis) return res.status(503).json({ error: 'Redis unavailable' })
 	const value = await redis.get(req.params.key);
 	res.json({ key: req.params.key, value });

@@ -39,23 +39,68 @@ export class RedisService {
 	async get(key: string): Promise<string | null> {
 		return await this.client.get(key);
 	}
+
+	async createGame(gameId: string, player1_id: string, player2_id: string): Promise<void> {
+		
+		if (!this.client) throw new Error('Redis nos initialized');
+
+		const gameState: GameState = {
+			gameId: gameId,
+			player1_id,
+			player2_id,
+			status: 'waiting',
+			score: { player1: 0, player2: 0},
+			ball: { x: 50, y: 50, vx: 5, vy: 0},
+			paddles: { player1: 50, player2: 50},
+			created_at: Date.now(),
+		};
+
+		await this.client.setex(
+			`game:${gameId}`,
+			3600,
+			JSON.stringify(gameState)
+		);
+	}
+
+	//return GameState avec JSON.parse
+	async getGameState(gameId: string): Promise<GameState | null> {
+
+		if (!this.client) throw new Error('Redis nos initialized');
+
+		const data = await this.client.get(`game:${gameId}`);
+		return data ? JSON.parse(data) : null;
+	}
+
+	async updateGameState(gameId: string, gameState: GameState): Promise<void> {
+
+		if (!this.client) throw new Error('Redis nos initialized');
+
+		gameState.updated_at = Date.now();
+
+		await this.client.setex(
+			`game:${gameId}`,
+			3600,
+			JSON.stringify(gameState)
+		);
+	}
+
+	async deleteGame(gameId: string): Promise<void> {
+		if (!this.client) throw new Error('Redis not initialized');
+	
+		await this.client.del(`game:${gameId}`);
+	}
+
+	// create an Index player <=> id game
+	async setPlayerGame(playerId: string, gameId: string): Promise<void> {
+		if (!this.client) throw new Error('Redis not initialized');
+		
+		await this.client.setex(`player:${playerId}:game`, 3600, gameId);
+	}
+
+	// get ID game of the player
+	async getPlayerGame(playerId: string): Promise<string | null> {
+		if (!this.client) throw new Error('Redis not initialized');
+		
+		return await this.client.get(`player:${playerId}:game`);
+	}
 }
-
-//   // ===== Méthodes pour GameState =====
-//   async setGameState(gameId: string, state: GameState): Promise<void> {
-//     await this.client.setex(//set expiration
-//       `game:${gameId}`,
-//       3600, // TTL = 1 heure (la partie expire après 1h)
-//       JSON.stringify(state)
-//     );
-//   }
-
-//   async getGameState(gameId: string): Promise<GameState | null> {
-//     const data = await this.client.get(`game:${gameId}`);
-//     return data ? JSON.parse(data) : null;
-//   }
-
-//   // Supprimer une donnée
-//   async delete(key: string): Promise<void> {
-//     await this.client.del(key);
-//   }
