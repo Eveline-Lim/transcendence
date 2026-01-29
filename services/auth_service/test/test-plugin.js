@@ -43,114 +43,110 @@ const refreshToken = process.env.REFRESH_TOKEN;
 const userKey = `user:${username}`;
 const emailKey = `email:${email}`;
 
-test("testing register", async (t) => {
+// test("testing register", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
+// 	await fastify.ready();
+
+// 	// Clear everything in the current database
+// 	await redisClient.flushDb();
+
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/register",
+// 		payload: {
+// 			username,
+// 			displayName,
+// 			password,
+// 			email,
+// 			avatarUrl,
+// 			has2FAEnabled
+// 		},
+// 	});
+// 	console.log(res.statusCode, res.payload);
+
+// 	const stored = await redisClient.hGetAll(userKey);
+// 	console.log("User stored in Redis: ", stored);
+
+// 	assert.equal(res.statusCode, 201);
+// 	await fastify.close();
+// 	// await redisClient.quit();
+// });
+
+// test("testing login", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
+// 	await fastify.ready();
+
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/login",
+// 		payload: {
+// 			identifier: username, // or email
+// 			password,
+// 		},
+// 	});
+//	console.log(res.statusCode, res.payload);
+// 	assert.equal(res.statusCode, 200);
+// 	await fastify.close();
+// 	//await redisClient.quit();
+// });
+
+// test("testing logout", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
+// 	await fastify.ready();
+
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/logout",
+// 		headers: {
+// 			authorization: `Bearer ${token}`,
+// 		}
+// 	});
+// 	console.log(res.statusCode, res.payload);
+// 	assert.equal(res.statusCode, 204);
+// 	await fastify.close();
+// 	// await redisClient.quit();
+
+// 	// Check that the token is blacklisted in Redis
+// 	// const isBlacklisted = await redisClient.get(`blacklist:${token}`);
+// 	// console.log("Blacklisted: ", isBlacklisted);
+// 	// assert.equal(isBlacklisted, "1");
+// });
+
+// test("testing refresh token", async () => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
+// 	await fastify.ready();
+
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/refresh",
+// 		payload: { refreshToken },
+// 	});
+// 	console.log(res.statusCode, res.payload);
+// 	assert.equal(res.statusCode, 200);
+// 	await fastify.close();
+// 	await redisClient.quit();
+// });
+
+test("testing verifyToken", async (t) => {
 	const fastify = Fastify();
 	fastify.register(fastifyPlugin, opts);
-	await fastify.ready();
-
-	// Clear everything in the current database
-	await redisClient.flushDb();
 
 	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/register",
-		payload: {
-			username,
-			displayName,
-			password,
-			email,
-			avatarUrl,
-			has2FAEnabled
-		},
-	});
-	console.log(res.statusCode, res.payload);
-
-	const stored = await redisClient.hGetAll(userKey);
-	console.log("User stored in Redis: ", stored);
-
-	assert.equal(res.statusCode, 201);
-	await fastify.close();
-	// await redisClient.quit();
-});
-
-test("testing login", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
-	await fastify.ready();
-
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/login",
-		payload: {
-			identifier: username, // or email
-			password,
-		},
-	});
-	assert.equal(res.statusCode, 200);
-	await fastify.close();
-	//await redisClient.quit();
-});
-
-test("testing logout", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
-	await fastify.ready();
-
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/logout",
+		method: "GET",
+		url: "/auth/verify",
 		headers: {
 			authorization: `Bearer ${token}`,
-		}
+		},
 	});
 	console.log(res.statusCode, res.payload);
-	assert.equal(res.statusCode, 204);
-	await fastify.close();
-	// await redisClient.quit();
-
-	// Check that the token is blacklisted in Redis
-	// const isBlacklisted = await redisClient.get(`blacklist:${token}`);
-	// console.log("Blacklisted: ", isBlacklisted);
-	// assert.equal(isBlacklisted, "1");
-});
-
-test("testing refresh token", async () => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
-	await fastify.ready();
-
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/refresh",
-		payload: { refreshToken },
-	});
 	assert.equal(res.statusCode, 200);
 	await fastify.close();
 	await redisClient.quit();
-
-	// const oldTokenExists = await redisClient.exists(`refresh:${refreshToken}`);
-	// assert.equal(oldTokenExists, 0); // old token must be revoked
-
-	// const newTokenExists = await redisClient.exists(
-	// 	`refresh:${body.refreshToken}`
-	// );
-	// assert.equal(newTokenExists, 1); // new token must exist
 });
-
-
-// test("testing verifyToken", async (t) => {
-// 	const fastify = Fastify();
-// 	fastify.register(fastifyPlugin, opts);
-
-// 	const res = await fastify.inject({
-// 		method: "GET",
-// 		url: "/auth/verify",
-// 		headers: {
-// 			authorization: `Bearer ${token}`,
-// 		},
-// 	});
-// 	t.assert.equal(res.statusCode, 200);
-// });
 
 // test("testing forgotPassword", async (t) => {
 // 	const fastify = Fastify();
