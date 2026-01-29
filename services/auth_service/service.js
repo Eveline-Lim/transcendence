@@ -1,6 +1,6 @@
 // implementation of the operations in the openapi specification
 import { redisClient } from "./redisClient.js";
-import { validateEmail, validateInputs } from "./utils/validators.js";
+import { validateEmail, validateInputs, validatePassword } from "./utils/validators.js";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import crypto from 'node:crypto';
@@ -371,123 +371,129 @@ export class Service {
 	// }
 
 	// FORGOT PASSWORD
-	async forgotPassword(req, reply) {
-		const { email } = req.body;
-		console.log("REQ BODY email: ", req.body);
-		if (!email) {
-			return reply.code(400).send({
-				code: "INVALID_CREDENTIALS",
-				message: "Invalid request parameters",
-			});
-		}
+	// async forgotPassword(req, reply) {
+	// 	const { email } = req.body;
+	// 	console.log("REQ BODY email: ", req.body);
+	// 	if (!email) {
+	// 		return reply.code(400).send({
+	// 			code: "INVALID_CREDENTIALS",
+	// 			message: "Invalid request parameters",
+	// 		});
+	// 	}
 
-		const validation = validateEmail(email);
+	// 	const validation = validateEmail(email);
+	// 	if (!validation) {
+	// 		return reply.code(400).send({
+	// 			code: "INVALID_CREDENTIALS",
+	// 			message: "Invalid field",
+	// 		});
+	// 	}
+	// 	const ip = req.ip;
+
+	// 	try {
+	// 		// Rate limit check
+	// 		const rlKey = `login:rl:${email}:${ip}`;
+	// 		console.log("rlKey: ", rlKey);
+	// 		const attempts = await redisClient.incr(rlKey);
+	// 		if (attempts === 1) {
+	// 			await redisClient.expire(rlKey, RATE_LIMIT_WINDOW_SECONDS);
+	// 		}
+	// 		// console.log("attempts: ", attempts);
+	// 		if (attempts > MAX_LOGIN_ATTEMPTS) {
+	// 			return reply.code(429).send({
+	// 				code: "TOO_MANY_ATTEMPTS",
+	// 				message: "Too many login attempts. Try again in five minutes."
+	// 			});
+	// 		}
+
+	// 		// Return 202 to avoid revealing whether the email exists
+	// 		const username = await redisClient.get(`email:${email}`);
+	// 		if (!username) {
+	// 			return reply.code(202).send({
+	// 				code: "PASSWORD_RESET_EMAIL_SENT_SUCCESS",
+	// 				message: "If an account exists for this email address, a password reset link has been sent.",
+	// 			});
+	// 		}
+
+	// 		// Reset rate limite on success
+	// 		await redisClient.del(rlKey);
+
+	// 		return reply.code(202).send({
+	// 			code: "PASSWORD_RESET_EMAIL_SENT_SUCCESS",
+	// 			message: "Password reset email sent",
+	// 		});
+	// 	} catch (error) {
+	// 		return reply.code(500).send({
+	// 			code: "INTERNAL_ERROR",
+	// 			message: "Unable to log in user",
+	// 		});
+	// 	}
+	// }
+
+	// RESET PASSWORD
+	async resetPassword(req, reply) {
+		const { token, password } = req.body;
+		console.log("REQ BODY:", req.body);
+
+		const validation = validatePassword(password);
 		if (!validation) {
 			return reply.code(400).send({
 				code: "INVALID_CREDENTIALS",
-				message: "Invalid field",
+				message: "Invalid fields",
 			});
 		}
-		const ip = req.ip;
 
 		try {
-			// Rate limit check
-			const rlKey = `login:rl:${email}:${ip}`;
-			console.log("rlKey: ", rlKey);
-			const attempts = await redisClient.incr(rlKey);
-			if (attempts === 1) {
-				await redisClient.expire(rlKey, RATE_LIMIT_WINDOW_SECONDS);
-			}
-			// console.log("attempts: ", attempts);
-			if (attempts > MAX_LOGIN_ATTEMPTS) {
-				return reply.code(429).send({
-					code: "TOO_MANY_ATTEMPTS",
-					message: "Too many login attempts. Try again in five minutes."
+			// Look up user by token
+			const userId = await redisClient.get(`resetToken:${token}`);
+			console.log("userId: ", userId);
+			if (!userId) {
+				return reply.code(401).send({
+					code: "INVALID_TOKEN",
+					message: "Invalid or expired reset token",
 				});
 			}
-
-			// Return 202 to avoid revealing whether the email exists
-			const username = await redisClient.get(`email:${email}`);
+			const username = await redisClient.get(`userid:${userId}`);
+			console.log("username: ", username);
 			if (!username) {
-				return reply.code(202).send({
-					code: "PASSWORD_RESET_EMAIL_SENT_SUCCESS",
-					message: "If an account exists for this email address, a password reset link has been sent.",
+				return reply.code(401).send({
+					code: "USER_NOT_FOUND",
+					message: "User does not exist",
 				});
 			}
 
-			// Reset rate limite on success
-			await redisClient.del(rlKey);
+			const userKey = `user:${username}`;
+			const user = await redisClient.hGetAll(userKey);
+			if (!user || !user.hashedPassword) {
+				return reply.code(401).send({
+					code: "USER_NOT_FOUND",
+					message: "User does not exist",
+				});
+			}
+			// Hash new password
+			const hashedPassword = await bcrypt.hash(password, 10);
+			// console.log("hasedPassword: ", hashedPassword);
 
-			return reply.code(202).send({
-				code: "PASSWORD_RESET_EMAIL_SENT_SUCCESS",
-				message: "Password reset email sent",
+			// Update user
+			await redisClient.hSet(userKey, {...user, hashedPassword,});
+
+			// const userUpdated = await redisClient.hGetAll(userKey);
+			// console.log("userUpdated: ", userUpdated);
+
+			// Delete token
+			await redisClient.del(`resetToken:${token}`);
+
+			return reply.code(200).send({
+				code: "PASSWORD_RESET_SUCCESS",
+				message: "Password successfully reset",
 			});
 		} catch (error) {
 			return reply.code(500).send({
 				code: "INTERNAL_ERROR",
-				message: "Unable to log in user",
+				message: "Unable to reset password",
 			});
 		}
 	}
-
-	// Operation: resetPassword
-	// URL: /auth/password/reset
-	// summary:	Reset password
-	// req.body
-	//   content:
-	//     application/json:
-	//       schema:
-	//         type: object
-	//         required:
-	//           - token
-	//           - password
-	//         properties:
-	//           token:
-	//             type: string
-	//             description: Password reset token from email
-	//           password:
-	//             type: string
-	//             minLength: 8
-	//             maxLength: 128
-	//
-	// valid responses
-	//   '200':
-	//     description: Password reset successful
-	//   '400':
-	//     description: Invalid request parameters
-	//     content:
-	//       application/json:
-	//         schema: &ref_0
-	//           type: object
-	//           required:
-	//             - code
-	//             - message
-	//           properties:
-	//             code:
-	//               type: string
-	//               description: Error code for client handling
-	//             message:
-	//               type: string
-	//               description: Human-readable error message
-	//             details:
-	//               type: object
-	//               additionalProperties: true
-	//               description: Additional error details
-	//   '401':
-	//     description: Invalid or expired reset token
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//   '500':
-	//     description: Internal server error
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//
-
-	// async resetPassword(req, reply) {
-	// 	reply.code(200).send();
-	// }
 
 	// Operation: changePassword
 	// URL: /auth/password/change

@@ -28,17 +28,18 @@ const opts = {
 	service,
 };
 
-const uuid = "User1";
+const uuid = "c96e0c64-de34-4dbd-8640-5527837fc8af";
 const username = "testuser";
 const email = "test@test.fr";
 const password = "Test1234!";
+const token = "123456";
 const displayName = "Test User";
 const avatarUrl = "https://example.com/avatar.png";
 const has2FAEnabled = false;
 const currentPassword = "Test1234!";
 const newPassword = "NewPass1234!";
 const code = "123456";
-const token = process.env.ACCESS_TOKEN;
+//const token = process.env.ACCESS_TOKEN;
 const refreshToken = process.env.REFRESH_TOKEN;
 const userKey = `user:${username}`;
 const emailKey = `email:${email}`;
@@ -148,38 +149,44 @@ const emailKey = `email:${email}`;
 // 	await redisClient.quit();
 // });
 
-test("testing forgotPassword", async (t) => {
+// test("testing forgotPassword", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
+// 	await fastify.ready();
+
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/password/forgot",
+// 		payload: {
+// 			email
+// 		},
+// 	});
+// 	console.log(res.statusCode, res.payload);
+// 	assert.equal(res.statusCode, 202);
+// 	await fastify.close();
+// 	// await redisClient.quit();
+// });
+
+test("testing resetPassword", async (t) => {
 	const fastify = Fastify();
 	fastify.register(fastifyPlugin, opts);
-	await fastify.ready();
+
+	await redisClient.set(`resetToken:${token}`, uuid, { EX: 3600 });
 
 	const res = await fastify.inject({
 		method: "POST",
-		url: "/auth/password/forgot",
+		url: "/auth/password/reset",
 		payload: {
-			email
+			token,
+			password: newPassword
 		},
 	});
+
 	console.log(res.statusCode, res.payload);
-	assert.equal(res.statusCode, 202);
+	assert.equal(res.statusCode, 200);
 	await fastify.close();
-	// await redisClient.quit();
+	await redisClient.quit();
 });
-
-// // test("testing resetPassword", async (t) => {
-// // 	const fastify = Fastify();
-// // 	fastify.register(fastifyPlugin, opts);
-
-// // 	const res = await fastify.inject({
-// // 		method: "POST",
-// // 		url: "/auth/password/reset",
-// // 		payload: {
-// // 			token,
-// // 			password
-// // 		},
-// // 	});
-// // 	t.assert.equal(res.statusCode, 200);
-// // });
 
 // // test("testing changePassword", async (t) => {
 // // 	const fastify = Fastify();
