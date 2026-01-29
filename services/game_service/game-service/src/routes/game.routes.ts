@@ -47,6 +47,5 @@ gameRouter.post('/create-game', async (req, res) => {
 		console.error('Error creating game:', error);
 		res.status(500).json({ error: 'Failed to create game' });
 	}
-	// res.json("Thanks Mate :3\nJ'espere que c'est assez cringe, des bisous");
 
 })

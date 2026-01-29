@@ -5,6 +5,10 @@
 import Redis from 'ioredis';
 import { GameState } from '../models/GameState';
 
+  /***********/
+ /*	CLASS	*/
+/***********/
+
 export class RedisService {
 	private client: Redis;
 
@@ -40,6 +44,7 @@ export class RedisService {
 		return await this.client.get(key);
 	}
 
+
 	async createGame(gameId: string, player1_id: string, player2_id: string): Promise<void> {
 		
 		if (!this.client) throw new Error('Redis nos initialized');
@@ -53,6 +58,7 @@ export class RedisService {
 			ball: { x: 50, y: 50, vx: 5, vy: 0},
 			paddles: { player1: 50, player2: 50},
 			created_at: Date.now(),
+			inputs: { player1_up: false, player1_down: false,player2_up: false,player2_down: false },
 		};
 
 		await this.client.setex(
