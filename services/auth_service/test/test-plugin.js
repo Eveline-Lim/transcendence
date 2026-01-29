@@ -131,37 +131,40 @@ const emailKey = `email:${email}`;
 // 	await redisClient.quit();
 // });
 
-test("testing verifyToken", async (t) => {
+// test("testing verifyToken", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
+
+// 	const res = await fastify.inject({
+// 		method: "GET",
+// 		url: "/auth/verify",
+// 		headers: {
+// 			authorization: `Bearer ${token}`,
+// 		},
+// 	});
+// 	console.log(res.statusCode, res.payload);
+// 	assert.equal(res.statusCode, 200);
+// 	await fastify.close();
+// 	await redisClient.quit();
+// });
+
+test("testing forgotPassword", async (t) => {
 	const fastify = Fastify();
 	fastify.register(fastifyPlugin, opts);
+	await fastify.ready();
 
 	const res = await fastify.inject({
-		method: "GET",
-		url: "/auth/verify",
-		headers: {
-			authorization: `Bearer ${token}`,
+		method: "POST",
+		url: "/auth/password/forgot",
+		payload: {
+			email
 		},
 	});
 	console.log(res.statusCode, res.payload);
-	assert.equal(res.statusCode, 200);
+	assert.equal(res.statusCode, 202);
 	await fastify.close();
-	await redisClient.quit();
+	// await redisClient.quit();
 });
-
-// test("testing forgotPassword", async (t) => {
-// 	const fastify = Fastify();
-// 	fastify.register(fastifyPlugin, opts);
-// 	await fastify.ready();
-
-// 	const res = await fastify.inject({
-// 		method: "POST",
-// 		url: "/auth/password/forgot",
-// 		payload: {
-// 			email
-// 		},
-// 	});
-// 	assert.equal(res.statusCode, 202);
-// });
 
 // // test("testing resetPassword", async (t) => {
 // // 	const fastify = Fastify();
