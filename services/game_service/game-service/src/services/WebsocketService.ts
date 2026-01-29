@@ -25,7 +25,7 @@ export class WebsocketService {
 			this.handlePing(socket);
 			this.handleDisconnect(socket);
 			this.handleJoinGame(socket);
-			// this.handlePlayerMove(socket);    // À ajouter
+			this.handlePlayerInput(socket);    // In progress
 			// this.handleError(socket);         // À ajouter
 		});
 	}
@@ -90,5 +90,41 @@ export class WebsocketService {
 				socket.emit('error', {message: 'Failed to join game'});
 			}
 		});
+	}
+
+	private handlePlayerInput(socket: Socket) {
+		socket.on('paddle-input', async (data: {player_id: string, action: string}) => {
+			try {
+				const { player_id, action } = data;
+
+				const gameId = await redis!.getPlayerGame(player_id);
+				if (!gameId) return;
+
+				const gameState = await redis!.getGameState(gameId);
+				if (!gameState) return;
+
+				const isPlayerOne = (player_id === gameState.player1_id);
+
+				switch(action) {
+					case 'up-pressed':
+						if (isPlayerOne) gameState.inputs.player1_up = true;
+						else gameState.inputs.player2_up = true;
+					case 'up-released':
+						if (isPlayerOne) gameState.inputs.player1_up = false;
+						else gameState.inputs.player2_up = false;
+					case 'down-pressed':
+						if (isPlayerOne) gameState.inputs.player1_down = true;
+						else gameState.inputs.player2_down = true;
+					case 'down-released':
+						if (isPlayerOne) gameState.inputs.player1_down = false;
+						else gameState.inputs.player2_down = false;
+				}
+
+				await redis!.updateGameState(gameId, gameState);
+			}
+			catch(error) {
+				console.error('Error in Player-input', error);
+			}
+		})
 	}
 }
