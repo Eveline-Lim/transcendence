@@ -32,14 +32,14 @@ const uuid = "c96e0c64-de34-4dbd-8640-5527837fc8af";
 const username = "testuser";
 const email = "test@test.fr";
 const password = "Test1234!";
-const token = "123456";
+// const token = "123456";
 const displayName = "Test User";
 const avatarUrl = "https://example.com/avatar.png";
 const has2FAEnabled = false;
 const currentPassword = "Test1234!";
-const newPassword = "NewPass1234!";
+const newPassword = "Helloworld";
 const code = "123456";
-//const token = process.env.ACCESS_TOKEN;
+const token = process.env.ACCESS_TOKEN;
 const refreshToken = process.env.REFRESH_TOKEN;
 const userKey = `user:${username}`;
 const emailKey = `email:${email}`;
@@ -87,7 +87,7 @@ const emailKey = `email:${email}`;
 // 			password,
 // 		},
 // 	});
-//	console.log(res.statusCode, res.payload);
+// 	console.log(res.statusCode, res.payload);
 // 	assert.equal(res.statusCode, 200);
 // 	await fastify.close();
 // 	//await redisClient.quit();
@@ -167,56 +167,59 @@ const emailKey = `email:${email}`;
 // 	// await redisClient.quit();
 // });
 
-test("testing resetPassword", async (t) => {
+// test("testing resetPassword", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
+
+// 	await redisClient.set(`resetToken:${token}`, uuid, { EX: 3600 });
+
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/password/reset",
+// 		payload: {
+// 			token,
+// 			password: newPassword
+// 		},
+// 	});
+
+// 	console.log(res.statusCode, res.payload);
+// 	assert.equal(res.statusCode, 200);
+// 	await fastify.close();
+// 	await redisClient.quit();
+// });
+
+test("testing changePassword", async (t) => {
 	const fastify = Fastify();
 	fastify.register(fastifyPlugin, opts);
 
-	await redisClient.set(`resetToken:${token}`, uuid, { EX: 3600 });
-
 	const res = await fastify.inject({
 		method: "POST",
-		url: "/auth/password/reset",
+		url: "/auth/password/change",
 		payload: {
-			token,
-			password: newPassword
+			currentPassword,
+			newPassword,
+		},
+		headers: {
+			authorization: `Bearer ${token}`,
 		},
 	});
-
 	console.log(res.statusCode, res.payload);
 	assert.equal(res.statusCode, 200);
 	await fastify.close();
 	await redisClient.quit();
 });
 
-// // test("testing changePassword", async (t) => {
-// // 	const fastify = Fastify();
-// // 	fastify.register(fastifyPlugin, opts);
+// test("testing initiateOAuth", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-// // 	const res = await fastify.inject({
-// // 		method: "POST",
-// // 		url: "/auth/password/change",
-// // 		payload: {
-// // 			currentPassword,
-// // 			newPassword,
-// // 		},
-// // 		headers: {
-// // 			authorization: `Bearer ${token}`,
-// // 		},
-// // 	});
-// // 	t.assert.equal(res.statusCode, 200);
-// // });
-
-// // test("testing initiateOAuth", async (t) => {
-// // 	const fastify = Fastify();
-// // 	fastify.register(fastifyPlugin, opts);
-
-// // 	const res = await fastify.inject({
-// // 		method: "GET",
-// // 		//url: "/auth/oauth/:provider",
-// // 		url: "/auth/oauth/google?redirect_uri=https://example.com/callback",
-// // 	});
-// // 	t.assert.equal(res.statusCode, 302);
-// // });
+// 	const res = await fastify.inject({
+// 		method: "GET",
+// 		//url: "/auth/oauth/:provider",
+// 		url: "/auth/oauth/google?redirect_uri=https://example.com/callback",
+// 	});
+// 	t.assert.equal(res.statusCode, 302);
+// });
 
 // // test("testing oauthCallback", async (t) => {
 // // 	const fastify = Fastify();

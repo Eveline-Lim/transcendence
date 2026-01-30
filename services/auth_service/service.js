@@ -431,37 +431,99 @@ export class Service {
 	// }
 
 	// RESET PASSWORD
-	async resetPassword(req, reply) {
-		const { token, password } = req.body;
+	// async resetPassword(req, reply) {
+	// 	const { token, password } = req.body;
+	// 	console.log("REQ BODY:", req.body);
+
+	// 	const validation = validatePassword(password);
+	// 	if (!validation) {
+	// 		return reply.code(400).send({
+	// 			code: "INVALID_CREDENTIALS",
+	// 			message: "Invalid fields",
+	// 		});
+	// 	}
+
+	// 	try {
+	// 		// Look up user by token
+	// 		const userId = await redisClient.get(`resetToken:${token}`);
+	// 		console.log("userId: ", userId);
+	// 		if (!userId) {
+	// 			return reply.code(401).send({
+	// 				code: "INVALID_TOKEN",
+	// 				message: "Invalid or expired reset token",
+	// 			});
+	// 		}
+	// 		const username = await redisClient.get(`userid:${userId}`);
+	// 		console.log("username: ", username);
+	// 		if (!username) {
+	// 			return reply.code(401).send({
+	// 				code: "USER_NOT_FOUND",
+	// 				message: "User does not exist",
+	// 			});
+	// 		}
+
+	// 		const userKey = `user:${username}`;
+	// 		const user = await redisClient.hGetAll(userKey);
+	// 		if (!user || !user.hashedPassword) {
+	// 			return reply.code(401).send({
+	// 				code: "USER_NOT_FOUND",
+	// 				message: "User does not exist",
+	// 			});
+	// 		}
+	// 		// Hash new password
+	// 		const hashedPassword = await bcrypt.hash(password, 10);
+	// 		// console.log("hasedPassword: ", hashedPassword);
+
+	// 		// Update user
+	// 		await redisClient.hSet(userKey, {...user, hashedPassword,});
+
+	// 		// const userUpdated = await redisClient.hGetAll(userKey);
+	// 		// console.log("userUpdated: ", userUpdated);
+
+	// 		// Delete token
+	// 		await redisClient.del(`resetToken:${token}`);
+
+	// 		return reply.code(200).send({
+	// 			code: "PASSWORD_RESET_SUCCESS",
+	// 			message: "Password successfully reset",
+	// 		});
+	// 	} catch (error) {
+	// 		return reply.code(500).send({
+	// 			code: "INTERNAL_ERROR",
+	// 			message: "Unable to reset password",
+	// 		});
+	// 	}
+	// }
+
+	// CHANGE PASSWORD
+	async changePassword(req, reply) {
+		const { currentPassword, newPassword } = req.body;
 		console.log("REQ BODY:", req.body);
 
-		const validation = validatePassword(password);
-		if (!validation) {
+		if (!validatePassword(newPassword)) {
 			return reply.code(400).send({
 				code: "INVALID_CREDENTIALS",
 				message: "Invalid fields",
 			});
 		}
-
 		try {
-			// Look up user by token
-			const userId = await redisClient.get(`resetToken:${token}`);
-			console.log("userId: ", userId);
-			if (!userId) {
+			const token = req.headers.authorization?.split(" ")[1];
+			if (!token) {
+				return reply.code(401).send({
+					code: "AUTH_REQUIRED",
+					message: "Authentication required",
+				});
+			}
+			let decoded;
+			try {
+				decoded = jwt.verify(token, process.env.SECRET_TOKEN);
+			} catch {
 				return reply.code(401).send({
 					code: "INVALID_TOKEN",
-					message: "Invalid or expired reset token",
+					message: "Invalid or expired token",
 				});
 			}
-			const username = await redisClient.get(`userid:${userId}`);
-			console.log("username: ", username);
-			if (!username) {
-				return reply.code(401).send({
-					code: "USER_NOT_FOUND",
-					message: "User does not exist",
-				});
-			}
-
+			const username = decoded.username;
 			const userKey = `user:${username}`;
 			const user = await redisClient.hGetAll(userKey);
 			if (!user || !user.hashedPassword) {
@@ -470,87 +532,42 @@ export class Service {
 					message: "User does not exist",
 				});
 			}
+			console.log("CURRENT PASSWORD: ", currentPassword);
+			console.log("DB PASSWORD: ", user.hashedPassword);
+			// Verify current password
+			const isValid = await bcrypt.compare(currentPassword, user.hashedPassword);
+			if (!isValid) {
+				return reply.code(401).send({
+					code: "INVALID_CREDENTIALS",
+					message: "Current password is incorrect",
+				});
+			}
+			// Prevent same password reuse
+			const isSame = await bcrypt.compare(newPassword, user.hashedPassword);
+			if (isSame) {
+				return reply.code(400).send({
+				code: "PASSWORD_UNCHANGED",
+				message: "New password must be different from current password",
+				});
+			}
 			// Hash new password
-			const hashedPassword = await bcrypt.hash(password, 10);
-			// console.log("hasedPassword: ", hashedPassword);
-
+			const hashedPassword = await bcrypt.hash(newPassword, 10);
 			// Update user
-			await redisClient.hSet(userKey, {...user, hashedPassword,});
-
-			// const userUpdated = await redisClient.hGetAll(userKey);
-			// console.log("userUpdated: ", userUpdated);
-
-			// Delete token
-			await redisClient.del(`resetToken:${token}`);
-
+			await redisClient.hSet(userKey, {
+				...user,
+				hashedPassword,
+			});
 			return reply.code(200).send({
-				code: "PASSWORD_RESET_SUCCESS",
-				message: "Password successfully reset",
+				code: "PASSWORD_CHANGE_SUCCESS",
+				message: "Password successfully changed",
 			});
 		} catch (error) {
 			return reply.code(500).send({
 				code: "INTERNAL_ERROR",
-				message: "Unable to reset password",
+				message: "Unable to change password",
 			});
 		}
 	}
-
-	// Operation: changePassword
-	// URL: /auth/password/change
-	// summary:	Change password
-	// req.body
-	//   content:
-	//     application/json:
-	//       schema:
-	//         type: object
-	//         required:
-	//           - currentPassword
-	//           - newPassword
-	//         properties:
-	//           currentPassword:
-	//             type: string
-	//           newPassword:
-	//             type: string
-	//             minLength: 8
-	//             maxLength: 128
-	//
-	// valid responses
-	//   '200':
-	//     description: Password changed successfully
-	//   '400':
-	//     description: Invalid request parameters
-	//     content:
-	//       application/json:
-	//         schema: &ref_0
-	//           type: object
-	//           required:
-	//             - code
-	//             - message
-	//           properties:
-	//             code:
-	//               type: string
-	//               description: Error code for client handling
-	//             message:
-	//               type: string
-	//               description: Human-readable error message
-	//             details:
-	//               type: object
-	//               additionalProperties: true
-	//               description: Additional error details
-	//   '401':
-	//     description: Authentication required or token invalid
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//   '500':
-	//     description: Internal server error
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-
-	// async changePassword(req, reply) {
-	// 	reply.code(200).send();
-	// }
 
 	// Operation: initiateOAuth
 	// URL: /auth/oauth/:provider
