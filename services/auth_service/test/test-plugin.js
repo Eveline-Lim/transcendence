@@ -38,7 +38,7 @@ const avatarUrl = "https://example.com/avatar.png";
 const has2FAEnabled = false;
 const currentPassword = "Test1234!";
 const newPassword = "Helloworld";
-const code = "119258";
+const code = "931842";
 const token = process.env.ACCESS_TOKEN;
 const refreshToken = process.env.REFRESH_TOKEN;
 const userKey = `user:${username}`;
@@ -271,23 +271,23 @@ test("testing verify2FA", async (t) => {
 	await redisClient.quit();
 });
 
-// // test("testing disable2FA", async (t) => {
-// // 	const fastify = Fastify();
-// // 	fastify.register(fastifyPlugin, opts);
+// test("testing disable2FA", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-// // 	const res = await fastify.inject({
-// // 		method: "POST",
-// // 		url: "/auth/2fa/disable",
-// // 		payload: {
-// // 			code,
-// // 			password
-// // 		},
-// // 		headers: {
-// // 			authorization: `Bearer ${token}`
-// // 		},
-// // 	});
-// // 	t.assert.equal(res.statusCode, 200);
-// // });
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/2fa/disable",
+// 		payload: {
+// 			code,
+// 			password
+// 		},
+// 		headers: {
+// 			authorization: `Bearer ${token}`
+// 		},
+// 	});
+// 	assert.equal(res.statusCode, 200);
+// });
 
 // // test("testing listSessions", async (t) => {
 // // 	const fastify = Fastify();

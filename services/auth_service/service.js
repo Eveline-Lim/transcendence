@@ -854,6 +854,8 @@ export class Service {
 			  });
 			}
 
+			await redisClient.hSet(userKey, "has2FAEnabled", "1");
+
 			// Access Token (short-lived JWT)
 			const accessToken = jwt.sign(
 				{
@@ -890,9 +892,9 @@ export class Service {
 					displayName: user.displayName,
 					email: user.email,
 					avatarUrl: user.avatar,
-					has2FAEnabled: true,
+					has2FAEnabled: "1",
 				},
-				requires2FA: false,
+				requires2FA: "false",
 			});
 		} catch (error) {
 			console.log("error: ", error);
@@ -959,7 +961,7 @@ export class Service {
 	//
 
 	// async disable2FA(req, reply) {
-	// 	console.log("disable2FA", req.params);
+
 	// 	reply.code(200).send();
 	// }
 
