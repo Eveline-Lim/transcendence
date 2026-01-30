@@ -38,7 +38,7 @@ const avatarUrl = "https://example.com/avatar.png";
 const has2FAEnabled = false;
 const currentPassword = "Test1234!";
 const newPassword = "Helloworld";
-const code = "123456";
+const code = "119258";
 const token = process.env.ACCESS_TOKEN;
 const refreshToken = process.env.REFRESH_TOKEN;
 const userKey = `user:${username}`;
@@ -234,15 +234,35 @@ const qrCodeUrl = "https://example.com/qrCode.png";
 // // 	t.assert.equal(res.statusCode, 302);
 // // });
 
-test("testing enable2FA", async (t) => {
+// test("testing enable2FA", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
+
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/2fa/enable",
+// 		headers: {
+// 			authorization: `Bearer ${token}`,
+// 		},
+// 	});
+// 	console.log(res.statusCode, res.payload);
+// 	assert.equal(res.statusCode, 200);
+// 	await fastify.close();
+// 	//await redisClient.quit();
+// });
+
+test("testing verify2FA", async (t) => {
 	const fastify = Fastify();
 	fastify.register(fastifyPlugin, opts);
 
 	const res = await fastify.inject({
 		method: "POST",
-		url: "/auth/2fa/enable",
+		url: "/auth/2fa/verify",
+		payload: {
+			code
+		},
 		headers: {
-			authorization: `Bearer ${token}`,
+			authorization: `Bearer ${token}`
 		},
 	});
 	console.log(res.statusCode, res.payload);
@@ -250,45 +270,6 @@ test("testing enable2FA", async (t) => {
 	await fastify.close();
 	await redisClient.quit();
 });
-
-// // test("testing verify2FA", async (t) => {
-// // 	const fastify = Fastify();
-// // 	fastify.register(fastifyPlugin, opts);
-
-// // 	const res = await fastify.inject({
-// // 		method: "POST",
-// // 		url: "/auth/2fa/verify",
-// // 		payload: {
-// // 			code
-// // 		},
-// // 		headers: {
-// // 			authorization: `Bearer ${token}`
-// // 		},
-// // 	});
-// // 	t.assert.equal(res.statusCode, 200);
-// // });
-
-// test("verify2FA activates 2FA", async () => {
-//   const secret = speakeasy.generateSecret();
-//   const token = speakeasy.totp({
-//     secret: secret.base32,
-//     encoding: "base32",
-//   });
-
-//   await redisClient.hSet(`2fa:pending:${username}`, {
-//     secret: secret.base32,
-//     backupCodes: "[]",
-//   });
-
-//   const res = await fastify.inject({
-//     method: "POST",
-//     url: "/auth/2fa/verify",
-//     headers: { authorization: `Bearer ${accessToken}` },
-//     payload: { code: token },
-//   });
-
-//   assert.equal(res.statusCode, 200);
-// });
 
 // // test("testing disable2FA", async (t) => {
 // // 	const fastify = Fastify();
