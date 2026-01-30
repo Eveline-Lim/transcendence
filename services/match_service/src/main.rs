@@ -7,6 +7,9 @@ use tokio::sync::Mutex;
 use tokio::sync::oneshot;
 use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::tungstenite::Message;
+pub mod casual_queue;
+
+
 
 // Define a type alias for our socket
 type WsStream = WebSocketStream<TcpStream>;
