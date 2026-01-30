@@ -43,6 +43,7 @@ const token = process.env.ACCESS_TOKEN;
 const refreshToken = process.env.REFRESH_TOKEN;
 const userKey = `user:${username}`;
 const emailKey = `email:${email}`;
+const qrCodeUrl = "https://example.com/qrCode.png";
 
 // test("testing register", async (t) => {
 // 	const fastify = Fastify();
@@ -188,26 +189,26 @@ const emailKey = `email:${email}`;
 // 	await redisClient.quit();
 // });
 
-test("testing changePassword", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing changePassword", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/password/change",
-		payload: {
-			currentPassword,
-			newPassword,
-		},
-		headers: {
-			authorization: `Bearer ${token}`,
-		},
-	});
-	console.log(res.statusCode, res.payload);
-	assert.equal(res.statusCode, 200);
-	await fastify.close();
-	await redisClient.quit();
-});
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/password/change",
+// 		payload: {
+// 			currentPassword,
+// 			newPassword,
+// 		},
+// 		headers: {
+// 			authorization: `Bearer ${token}`,
+// 		},
+// 	});
+// 	console.log(res.statusCode, res.payload);
+// 	assert.equal(res.statusCode, 200);
+// 	await fastify.close();
+// 	await redisClient.quit();
+// });
 
 // test("testing initiateOAuth", async (t) => {
 // 	const fastify = Fastify();
@@ -233,39 +234,22 @@ test("testing changePassword", async (t) => {
 // // 	t.assert.equal(res.statusCode, 302);
 // // });
 
-// test("enable2FA returns QR code and backup codes", async () => {
-// 	const fastify = Fastify();
-//   const res = await fastify.inject({
-//     method: "POST",
-//     url: "/auth/2fa/enable",
-//     headers: {
-//       authorization: `Bearer ${token}`,
-//     },
-//   });
+test("testing enable2FA", async (t) => {
+	const fastify = Fastify();
+	fastify.register(fastifyPlugin, opts);
 
-//   assert.equal(res.statusCode, 200);
-
-//   const body = JSON.parse(res.payload);
-//   assert.ok(body.secret);
-//   assert.ok(body.qrCodeUrl);
-//   assert.equal(body.backupCodes.length, 8);
-// });
-
-// test("enable2FA fails if already enabled", async () => {
-//   await redisClient.hSet(`user:${username}`, {
-//     has2FAEnabled: "true",
-//   });
-
-//   const res = await fastify.inject({
-//     method: "POST",
-//     url: "/auth/2fa/enable",
-//     headers: {
-//       authorization: `Bearer ${accessToken}`,
-//     },
-//   });
-
-//   assert.equal(res.statusCode, 409);
-// });
+	const res = await fastify.inject({
+		method: "POST",
+		url: "/auth/2fa/enable",
+		headers: {
+			authorization: `Bearer ${token}`,
+		},
+	});
+	console.log(res.statusCode, res.payload);
+	assert.equal(res.statusCode, 200);
+	await fastify.close();
+	await redisClient.quit();
+});
 
 // // test("testing verify2FA", async (t) => {
 // // 	const fastify = Fastify();

@@ -5,6 +5,9 @@ import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import crypto from 'node:crypto';
 import jwt from "jsonwebtoken";
+import speakeasy from "speakeasy";
+import qrcode from "qrcode";
+import { generateBackupCodes } from "./utils/generateBackupCodes.js";
 
 const MAX_LOGIN_ATTEMPTS = 5; // per 15 minutes
 const RATE_LIMIT_WINDOW_SECONDS = 5 * 60;
@@ -496,78 +499,78 @@ export class Service {
 	// }
 
 	// CHANGE PASSWORD
-	async changePassword(req, reply) {
-		const { currentPassword, newPassword } = req.body;
-		console.log("REQ BODY:", req.body);
+	// async changePassword(req, reply) {
+	// 	const { currentPassword, newPassword } = req.body;
+	// 	console.log("REQ BODY:", req.body);
 
-		if (!validatePassword(newPassword)) {
-			return reply.code(400).send({
-				code: "INVALID_CREDENTIALS",
-				message: "Invalid fields",
-			});
-		}
-		try {
-			const token = req.headers.authorization?.split(" ")[1];
-			if (!token) {
-				return reply.code(401).send({
-					code: "AUTH_REQUIRED",
-					message: "Authentication required",
-				});
-			}
-			let decoded;
-			try {
-				decoded = jwt.verify(token, process.env.SECRET_TOKEN);
-			} catch {
-				return reply.code(401).send({
-					code: "INVALID_TOKEN",
-					message: "Invalid or expired token",
-				});
-			}
-			const username = decoded.username;
-			const userKey = `user:${username}`;
-			const user = await redisClient.hGetAll(userKey);
-			if (!user || !user.hashedPassword) {
-				return reply.code(401).send({
-					code: "USER_NOT_FOUND",
-					message: "User does not exist",
-				});
-			}
-			console.log("CURRENT PASSWORD: ", currentPassword);
-			console.log("DB PASSWORD: ", user.hashedPassword);
-			// Verify current password
-			const isValid = await bcrypt.compare(currentPassword, user.hashedPassword);
-			if (!isValid) {
-				return reply.code(401).send({
-					code: "INVALID_CREDENTIALS",
-					message: "Current password is incorrect",
-				});
-			}
-			// Prevent same password reuse
-			const isSame = await bcrypt.compare(newPassword, user.hashedPassword);
-			if (isSame) {
-				return reply.code(400).send({
-				code: "PASSWORD_UNCHANGED",
-				message: "New password must be different from current password",
-				});
-			}
-			// Hash new password
-			const hashedPassword = await bcrypt.hash(newPassword, 10);
-			// Update user
-			await redisClient.hSet(userKey, {
-				...user,
-				hashedPassword,
-			});
-			return reply.code(200).send({
-				code: "PASSWORD_CHANGE_SUCCESS",
-				message: "Password successfully changed",
-			});
-		} catch (error) {
-			return reply.code(500).send({
-				code: "INTERNAL_ERROR",
-				message: "Unable to change password",
-			});
-		}
-	}
+	// 	if (!validatePassword(newPassword)) {
+	// 		return reply.code(400).send({
+	// 			code: "INVALID_CREDENTIALS",
+	// 			message: "Invalid fields",
+	// 		});
+	// 	}
+	// 	try {
+	// 		const token = req.headers.authorization?.split(" ")[1];
+	// 		if (!token) {
+	// 			return reply.code(401).send({
+	// 				code: "AUTH_REQUIRED",
+	// 				message: "Authentication required",
+	// 			});
+	// 		}
+	// 		let decoded;
+	// 		try {
+	// 			decoded = jwt.verify(token, process.env.SECRET_TOKEN);
+	// 		} catch {
+	// 			return reply.code(401).send({
+	// 				code: "INVALID_TOKEN",
+	// 				message: "Invalid or expired token",
+	// 			});
+	// 		}
+	// 		const username = decoded.username;
+	// 		const userKey = `user:${username}`;
+	// 		const user = await redisClient.hGetAll(userKey);
+	// 		if (!user || !user.hashedPassword) {
+	// 			return reply.code(401).send({
+	// 				code: "USER_NOT_FOUND",
+	// 				message: "User does not exist",
+	// 			});
+	// 		}
+	// 		console.log("CURRENT PASSWORD: ", currentPassword);
+	// 		console.log("DB PASSWORD: ", user.hashedPassword);
+	// 		// Verify current password
+	// 		const isValid = await bcrypt.compare(currentPassword, user.hashedPassword);
+	// 		if (!isValid) {
+	// 			return reply.code(401).send({
+	// 				code: "INVALID_CREDENTIALS",
+	// 				message: "Current password is incorrect",
+	// 			});
+	// 		}
+	// 		// Prevent same password reuse
+	// 		const isSame = await bcrypt.compare(newPassword, user.hashedPassword);
+	// 		if (isSame) {
+	// 			return reply.code(400).send({
+	// 			code: "PASSWORD_UNCHANGED",
+	// 			message: "New password must be different from current password",
+	// 			});
+	// 		}
+	// 		// Hash new password
+	// 		const hashedPassword = await bcrypt.hash(newPassword, 10);
+	// 		// Update user
+	// 		await redisClient.hSet(userKey, {
+	// 			...user,
+	// 			hashedPassword,
+	// 		});
+	// 		return reply.code(200).send({
+	// 			code: "PASSWORD_CHANGE_SUCCESS",
+	// 			message: "Password successfully changed",
+	// 		});
+	// 	} catch (error) {
+	// 		return reply.code(500).send({
+	// 			code: "INTERNAL_ERROR",
+	// 			message: "Unable to change password",
+	// 		});
+	// 	}
+	// }
 
 	// Operation: initiateOAuth
 	// URL: /auth/oauth/:provider
@@ -719,74 +722,78 @@ export class Service {
 	// 	return reply.redirect(redirectUrl);
 	// }
 
-	// Operation: enable2FA
-	// URL: /auth/2fa/enable
-	// summary:	Enable 2FA
-	// valid responses
-	//   '200':
-	//     description: 2FA setup initiated
-	//     content:
-	//       application/json:
-	//         schema:
-	//           type: object
-	//           properties:
-	//             secret:
-	//               type: string
-	//               description: TOTP secret key
-	//             qrCodeUrl:
-	//               type: string
-	//               format: uri
-	//               description: URL to QR code image for authenticator app
-	//             backupCodes:
-	//               type: array
-	//               items:
-	//                 type: string
-	//               description: One-time backup codes
-	//   '401':
-	//     description: Authentication required or token invalid
-	//     content:
-	//       application/json:
-	//         schema: &ref_0
-	//           type: object
-	//           required:
-	//             - code
-	//             - message
-	//           properties:
-	//             code:
-	//               type: string
-	//               description: Error code for client handling
-	//             message:
-	//               type: string
-	//               description: Human-readable error message
-	//             details:
-	//               type: object
-	//               additionalProperties: true
-	//               description: Additional error details
-	//   '409':
-	//     description: 2FA already enabled
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//   '500':
-	//     description: Internal server error
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//
+	// ENABLE2FA
+	async enable2FA(req, reply) {
+		try {
+			const token = req.headers.authorization?.split(" ")[1];
+			if (!token) {
+				return reply.code(401).send({
+					code: "AUTH_REQUIRED",
+					message: "Authentication required",
+				});
+			}
 
-	// async enable2FA(req, reply) {
-	// 	console.log("enable2FA", req.params);
-	// 	reply.code(200);
-	// 	return {
-	// 		secret: "MOCKTOTPSECRET",
-	// 		qrCodeUrl: "https://example.com/qr.png",
-	// 		 backupCodes: [
-	// 			"BACKUP1",
-	// 			"BACKUP2",
-	// 			"BACKUP3"
-	// 		]
-	// 	};
-	// }
+			let decoded;
+			try {
+				decoded = jwt.verify(token, process.env.SECRET_TOKEN);
+			} catch {
+				return reply.code(401).send({
+					code: "INVALID_TOKEN",
+					message: "Invalid or expired token",
+				});
+			}
+
+			const username = decoded.username;
+			const userKey = `user:${username}`;
+			const user = await redisClient.hGetAll(userKey);
+			if (!user || !user.hashedPassword) {
+				return reply.code(401).send({
+					code: "USER_NOT_FOUND",
+					message: "User does not exist",
+				});
+			}
+
+			console.log("has2FAEnabled: ", user.has2FAEnabled);
+			const has2FAEnabled = user.has2FAEnabled === "true";
+			if (has2FAEnabled) {
+				return reply.code(409).send({
+					code: "2FA_ALREADY_ENABLED",
+					message: "2FA already enabled",
+				});
+			}
+
+			// Generate TOTP secret
+			const secret = speakeasy.generateSecret({ name: "Transcendence" });
+			console.log("secret: ", secret);
+
+			// Generate QR code
+			const qrCodeUrl = await qrcode.toDataURL(secret.otpauth_url);
+			console.log("qrcode: ", qrCodeUrl);
+
+
+			// Generate and hashed backup codes
+			const { codes, backupCodes } = generateBackupCodes();
+			console.log("codes: ", codes);
+
+			// Store 2FA data
+			await redisClient.hSet(userKey, {
+				twoFASecret: secret.base32,
+				twoFABackupCodes: JSON.stringify(backupCodes),
+				has2FAEnabled: "false",
+			});
+
+			return reply.code(200).send({
+				secret: secret.base32,
+				qrCodeUrl,
+				backupCodes,
+			});
+		} catch (error) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Unable to enable 2FA",
+			});
+		}
+	}
 
 	// Operation: verify2FA
 	// URL: /auth/2fa/verify
