@@ -7,12 +7,14 @@ use tokio::sync::Mutex;
 use tokio::sync::oneshot;
 use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::tungstenite::Message;
+use uuid::Uuid;
 pub mod casual_queue;
-
-
+pub mod ranked_queue;
 
 // Define a type alias for our socket
 type WsStream = WebSocketStream<TcpStream>;
+
+pub type Player = (Uuid, WsStream);
 
 // The "Waiting Room" is just an Option wrapping a single waiting player.
 // We wrap it in Arc<Mutex<...>> so it can be shared across threads.
