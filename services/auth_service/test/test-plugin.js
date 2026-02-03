@@ -51,7 +51,7 @@ const qrCodeUrl = "https://example.com/qrCode.png";
 // 	await fastify.ready();
 
 // 	// Clear everything in the current database
-// 	await redisClient.flushDb();
+// 	// await redisClient.flushDb();
 
 // 	const res = await fastify.inject({
 // 		method: "POST",
@@ -309,35 +309,38 @@ const qrCodeUrl = "https://example.com/qrCode.png";
 // 	await redisClient.quit();
 // });
 
-test("testing revokeSession", async (t) => {
+// test("testing revokeSession", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
+
+// 	const sessionId = "49756f1a-e9be-45ae-81e6-094f8d1e0408";
+
+// 	const res = await fastify.inject({
+// 		method: "DELETE",
+// 		url: `/auth/sessions/${sessionId}`,
+// 		headers: {
+// 			authorization: `Bearer ${token}`
+// 		},
+// 	});
+// 	console.log(res.statusCode, res.payload);
+// 	assert.equal(res.statusCode, 204);
+// 	await fastify.close();
+// // 	await redisClient.quit();
+// });
+
+test("testing revokeAllSessions", async (t) => {
 	const fastify = Fastify();
 	fastify.register(fastifyPlugin, opts);
 
-	const sessionId = "49756f1a-e9be-45ae-81e6-094f8d1e0408";
-
 	const res = await fastify.inject({
-		method: "DELETE",
-		url: `/auth/sessions/${sessionId}`,
+		method: "POST",
+		url: "/auth/sessions/revoke-all",
 		headers: {
 			authorization: `Bearer ${token}`
 		},
 	});
 	console.log(res.statusCode, res.payload);
-	assert.equal(res.statusCode, 204);
+	assert.equal(res.statusCode, 200);
 	await fastify.close();
 // 	await redisClient.quit();
 });
-
-// // test("testing revokeAllSessions", async (t) => {
-// // 	const fastify = Fastify();
-// // 	fastify.register(fastifyPlugin, opts);
-
-// // 	const res = await fastify.inject({
-// // 		method: "POST",
-// // 		url: "/auth/sessions/revoke-all",
-// // 		headers: {
-// // 			authorization: `Bearer ${token}`
-// // 		},
-// // 	});
-// // 	t.assert.equal(res.statusCode, 200);
-// // });

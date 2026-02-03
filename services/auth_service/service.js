@@ -1074,7 +1074,81 @@ export class Service {
 	// }
 
 	// REVOKE SESSION
-	async revokeSession(req, reply) {
+	// async revokeSession(req, reply) {
+	// 	try {
+	// 		const token = req.headers.authorization.split(" ")[1];
+	// 		if (!token) {
+	// 			return reply.code(401).send({
+	// 				code: "AUTH_REQUIRED",
+	// 				message: "Authentication required",
+	// 			});
+	// 		}
+
+	// 		let decoded;
+	// 		try {
+	// 			decoded = jwt.verify(token, process.env.SECRET_TOKEN);
+	// 		} catch {
+	// 			return reply.code(401).send({
+	// 				code: "INVALID_TOKEN",
+	// 				message: "Invalid or expired token",
+	// 			});
+	// 		}
+	// 		const { username } = decoded;
+	// 		if (!username) {
+	// 			return reply.code(401).send({
+	// 				code: "INVALID_TOKEN",
+	// 				message: "Token invalid",
+	// 		  });
+	// 		}
+	// 		const { sessionId } = req.params;
+	// 		// const sessionId = "49756f1a-e9be-45ae-81e6-094f8d1e0408";
+	// 		if (!sessionId) {
+	// 			return reply.code(400).send({
+	// 				code: "INVALID_REQUEST_PARAMETERS",
+	// 				message: "Session ID is required",
+	// 			});
+	// 		}
+	// 		// Check if the session exists
+	// 		const sessionKey = `session:${sessionId}`;
+	// 		const session = await redisClient.hGetAll(sessionKey);
+	// 		console.log("session: ", session);
+	// 		if (!session || Object.keys(session).length === 0){
+	// 			return reply.code(404).send({
+	// 				code: "SESSION_NOT_FOUND",
+	// 				message: "Ressource not found",
+	// 			});
+	// 		}
+
+	// 		// Check if the session belongs to the user
+	// 		const userSessionsKey = `user:sessions:${username}`;
+	// 		const belongsToUser = await redisClient.sIsMember(
+	// 			userSessionsKey,
+	// 			sessionId
+	// 		);
+	// 		if (!belongsToUser) {
+	// 			return reply.code(404).send({
+	// 				code: "SESSION_NOT_FOUND",
+	// 				message: "Resource not found",
+	// 			});
+	// 		}
+
+	// 		// Delete the session
+	// 		await redisClient
+	// 			.multi()
+	// 			.del(sessionKey)
+	// 			.sRem(userSessionsKey, sessionId)
+	// 			.exec();
+
+	// 		return reply.code(204).send();
+	// 	} catch (error) {
+	// 		return reply.code(500).send({
+	// 			code: "INTERNAL_ERROR",
+	// 			message: "Internal server error",
+	// 		});
+	// 	}
+	// }
+
+	async revokeAllSessions(req, reply) {
 		try {
 			const token = req.headers.authorization.split(" ")[1];
 			if (!token) {
@@ -1093,105 +1167,41 @@ export class Service {
 					message: "Invalid or expired token",
 				});
 			}
-			const { username } = decoded;
-			if (!username) {
+
+			const { username, sessionId: currentSessionId } = decoded;
+			if (!username || !currentSessionId) {
 				return reply.code(401).send({
 					code: "INVALID_TOKEN",
 					message: "Token invalid",
-			  });
-			}
-			const { sessionId } = req.params;
-			// const sessionId = "49756f1a-e9be-45ae-81e6-094f8d1e0408";
-			if (!sessionId) {
-				return reply.code(400).send({
-					code: "INVALID_REQUEST_PARAMETERS",
-					message: "Session ID is required",
-				});
-			}
-			// Check if the session exists
-			const sessionKey = `session:${sessionId}`;
-			const session = await redisClient.hGetAll(sessionKey);
-			console.log("session: ", session);
-			if (!session || Object.keys(session).length === 0){
-				return reply.code(404).send({
-					code: "SESSION_NOT_FOUND",
-					message: "Ressource not found",
 				});
 			}
 
-			// Check if the session belongs to the user
-			const userSessionsKey = `user:sessions:${username}`;
-			const belongsToUser = await redisClient.sIsMember(
-				userSessionsKey,
-				sessionId
-			);
-			if (!belongsToUser) {
-				return reply.code(404).send({
-					code: "SESSION_NOT_FOUND",
-					message: "Resource not found",
-				});
-			}
+			// Retrieve all sessions for the current user
+			const sessionIds = await redisClient.sMembers(`user:sessions:${username}`);
+			console.log("sessioNIds: ", sessionIds);
 
-			// Delete the session
-			await redisClient
-				.multi()
-				.del(sessionKey)
-				.sRem(userSessionsKey, sessionId)
-				.exec();
+			// Filter the current session
+			const sessionsToRevoke = sessionIds.filter(id => id !== currentSessionId);
+			console.log("sessionsToRevoke: ", sessionsToRevoke);
 
-			return reply.code(204).send();
+			// Delete all the other sessions
+			const multi = redisClient.multi();
+			sessionsToRevoke.forEach(id => {
+				multi.del(`session:${id}`);
+				multi.sRem(`user:sessions:${username}`, id);
+			});
+			await multi.exec();
+
+			console.log("count: ", sessionsToRevoke.length);
+			// Return the number of revoked sessions
+			return reply.code(200).send({
+				revokedCount: sessionsToRevoke.length
+			});
 		} catch (error) {
 			return reply.code(500).send({
 				code: "INTERNAL_ERROR",
-				message: "Internal server error",
+				message: "Unable to revoke sessions",
 			});
 		}
 	}
-
-	// Operation: revokeAllSessions
-	// URL: /auth/sessions/revoke-all
-	// summary:	Revoke all sessions
-	// valid responses
-	//   '200':
-	//     description: All other sessions revoked
-	//     content:
-	//       application/json:
-	//         schema:
-	//           type: object
-	//           properties:
-	//             revokedCount:
-	//               type: integer
-	//               description: Number of sessions revoked
-	//   '401':
-	//     description: Authentication required or token invalid
-	//     content:
-	//       application/json:
-	//         schema: &ref_0
-	//           type: object
-	//           required:
-	//             - code
-	//             - message
-	//           properties:
-	//             code:
-	//               type: string
-	//               description: Error code for client handling
-	//             message:
-	//               type: string
-	//               description: Human-readable error message
-	//             details:
-	//               type: object
-	//               additionalProperties: true
-	//               description: Additional error details
-	//   '500':
-	//     description: Internal server error
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//
-
-	// async revokeAllSessions(req, reply) {
-	// 	console.log("revokeAllSessions", req.params);
-	// 	const revokedCount = 5;
-	// 	reply.code(200).send({ revokedCount });
-	// }
 }
