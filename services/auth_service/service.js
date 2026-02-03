@@ -1,6 +1,6 @@
 // implementation of the operations in the openapi specification
 import { redisClient } from "./redisClient.js";
-import { validateEmail, validateInputs, validatePassword } from "./utils/validators.js";
+import { validateEmail, validateInputs, validatePassword, validate2FACode } from "./utils/validators.js";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import crypto from 'node:crypto';
@@ -796,19 +796,129 @@ export class Service {
 	// }
 
 	// VERIFY 2FA
-	async verify2FA(req, reply) {
-		const { code } = req.body;
-		console.log("code: ", code);
+	// async verify2FA(req, reply) {
+	// 	const { code } = req.body;
+	// 	console.log("code: ", code);
 
-		// code validation
-		if (!code) {
-			return reply.code(401).send({
+	// 	// const validation = validate2FACode(code);
+	// 	// if (!validation) {
+	// 	// 	return reply.code(401).send({
+	// 	// 		code: "INVALID_CREDENTIALS",
+	// 	// 		message: "Invalid 2FA code",
+	// 	// 	});
+	// 	// }
+	// 	try {
+	// 		const token = req.headers.authorization?.split(" ")[1];
+	// 		if (!token) {
+	// 			return reply.code(401).send({
+	// 				code: "AUTH_REQUIRED",
+	// 				message: "Authentication required",
+	// 			});
+	// 		}
+
+	// 		let decoded;
+	// 		try {
+	// 			decoded = jwt.verify(token, process.env.SECRET_TOKEN);
+	// 		} catch {
+	// 			return reply.code(401).send({
+	// 				code: "INVALID_TOKEN",
+	// 				message: "Invalid or expired token",
+	// 			});
+	// 		}
+
+	// 		const username = decoded.username;
+	// 		console.log("username: ", username);
+	// 		const userKey = `user:${username}`;
+	// 		console.log("userKey: ", userKey);
+	// 		const user = await redisClient.hGetAll(userKey);
+	// 		console.log("user:" ,user);
+	// 		if (!user || !user.twoFASecret) {
+	// 			return reply.code(401).send({
+	// 				code: "UNAUTHORIZED",
+	// 				message: "Invalid token",
+	// 			});
+	// 		}
+
+	// 		// Verify TOTP
+	// 		const verified = speakeasy.totp.verify({
+	// 			secret: user.twoFASecret,
+	// 			encoding: "base32",
+	// 			token: code,
+	// 			window: 1,
+	// 		});
+	// 		console.log("verified: ", verified);
+	// 		if (!verified) {
+	// 			return reply.code(401).send({
+	// 				code: "INVALID_2FA_CODE",
+	// 				message: "Invalid 2FA code",
+	// 		  });
+	// 		}
+
+	// 		await redisClient.hSet(userKey, "has2FAEnabled", "1");
+
+	// 		// Access Token (short-lived JWT)
+	// 		const accessToken = jwt.sign(
+	// 			{
+	// 				userId: user.id,
+	// 				username: user.username,
+	// 			},
+	// 			process.env.SECRET_TOKEN,
+	// 			{ expiresIn: ACCESS_TOKEN_TTL }
+	// 		);
+	// 		// console.log("ACCESS TOKEN: ", accessToken);
+
+	// 		// Refresh Token
+	// 		// Generate a random salt (64 bytes)
+	// 		const refreshToken = crypto.randomBytes(64).toString("hex");
+	// 		// console.log("REFRESH_TOKEN: ", refreshToken);
+
+	// 		// Store refresh token in Redis
+	// 		await redisClient.set(
+	// 			`refresh:${refreshToken}`,
+	// 			user.id,
+	// 			{ EX: REFRESH_TOKEN_TTL }
+	// 		);
+	// 		const storedRefreshToken = await redisClient.get(`refresh:${refreshToken}`);
+	// 		// console.log("storedRefreshToken: ", storedRefreshToken);
+
+	// 		return reply.code(200).send({
+	// 			accessToken,
+	// 			refreshToken,
+	// 			tokenType: "Bearer",
+	// 			expiresIn : ACCESS_TOKEN_TTL,
+	// 			user: {
+	// 				id : user.uuid,
+	// 				username: user.username,
+	// 				displayName: user.displayName,
+	// 				email: user.email,
+	// 				avatarUrl: user.avatar,
+	// 				has2FAEnabled: "1",
+	// 			},
+	// 			requires2FA: "false",
+	// 		});
+	// 	} catch (error) {
+	// 		console.log("error: ", error);
+	// 		return reply.code(500).send({
+	// 			code: "INTERNAL_ERROR",
+	// 			message: "Unable to verify 2FA",
+	// 		});
+	// 	}
+	// }
+
+	// DISABLE 2FA
+	async disable2FA(req, reply) {
+		const { code, password } = req.body;
+		console.log("code: ", code);
+		console.log("password: ", password);
+
+		if (!validate2FACode(code) || !validatePassword(password)) {
+			return reply.code(400).send({
 				code: "INVALID_CREDENTIALS",
-				message: "Invalid 2FA code",
+				message: "Invalid fields",
 			});
 		}
 		try {
-			const token = req.headers.authorization?.split(" ")[1];
+			const token = req.headers.authorization.split(" ")[1];
 			if (!token) {
 				return reply.code(401).send({
 					code: "AUTH_REQUIRED",
@@ -832,10 +942,18 @@ export class Service {
 			console.log("userKey: ", userKey);
 			const user = await redisClient.hGetAll(userKey);
 			console.log("user:" ,user);
-			if (!user || !user.twoFASecret) {
+			if (!user || !user.hashedPassword || user.has2FAEnabled !== "1" || !user.twoFASecret) {
 				return reply.code(401).send({
-					code: "UNAUTHORIZED",
-					message: "Invalid token",
+					code: "AUTH_FAILED",
+					message: "Authentication failed",
+				});
+			}
+			// Verify password
+			const isValid = await bcrypt.compare(password, user.hashedPassword);
+			if (!isValid) {
+				return reply.code(401).send({
+					code: "INVALID_CREDENTIALS",
+					message: "Password is incorrect",
 				});
 			}
 
@@ -848,122 +966,28 @@ export class Service {
 			});
 			console.log("verified: ", verified);
 			if (!verified) {
-				return reply.code(401).send({
+				return reply.code(400).send({
 					code: "INVALID_2FA_CODE",
 					message: "Invalid 2FA code",
 			  });
 			}
 
-			await redisClient.hSet(userKey, "has2FAEnabled", "1");
-
-			// Access Token (short-lived JWT)
-			const accessToken = jwt.sign(
-				{
-					userId: user.id,
-					username: user.username,
-				},
-				process.env.SECRET_TOKEN,
-				{ expiresIn: ACCESS_TOKEN_TTL }
-			);
-			// console.log("ACCESS TOKEN: ", accessToken);
-
-			// Refresh Token
-			// Generate a random salt (64 bytes)
-			const refreshToken = crypto.randomBytes(64).toString("hex");
-			// console.log("REFRESH_TOKEN: ", refreshToken);
-
-			// Store refresh token in Redis
-			await redisClient.set(
-				`refresh:${refreshToken}`,
-				user.id,
-				{ EX: REFRESH_TOKEN_TTL }
-			);
-			const storedRefreshToken = await redisClient.get(`refresh:${refreshToken}`);
-			// console.log("storedRefreshToken: ", storedRefreshToken);
+			await redisClient.hDel(userKey, "twoFASecret");
+			await redisClient.hDel(userKey, "twoFABackupCodes");
+			await redisClient.hSet(userKey, "has2FAEnabled", "0");
 
 			return reply.code(200).send({
-				accessToken,
-				refreshToken,
-				tokenType: "Bearer",
-				expiresIn : ACCESS_TOKEN_TTL,
-				user: {
-					id : user.uuid,
-					username: user.username,
-					displayName: user.displayName,
-					email: user.email,
-					avatarUrl: user.avatar,
-					has2FAEnabled: "1",
-				},
-				requires2FA: "false",
+				code: "2FA_DISABLED_SUCCESS",
+				message: "2FA successfully disabled",
 			});
 		} catch (error) {
 			console.log("error: ", error);
 			return reply.code(500).send({
 				code: "INTERNAL_ERROR",
-				message: "Unable to verify 2FA",
+				message: "Unable to disable 2FA",
 			});
 		}
 	}
-
-	// Operation: disable2FA
-	// URL: /auth/2fa/disable
-	// summary:	Disable 2FA
-	// req.body
-	//   content:
-	//     application/json:
-	//       schema:
-	//         type: object
-	//         required:
-	//           - code
-	//           - password
-	//         properties:
-	//           code:
-	//             type: string
-	//             pattern: ^[0-9]{6}$
-	//             description: Current 6-digit TOTP code
-	//           password:
-	//             type: string
-	//             description: Current password for confirmation
-	//
-	// valid responses
-	//   '200':
-	//     description: 2FA disabled successfully
-	//   '400':
-	//     description: Invalid request parameters
-	//     content:
-	//       application/json:
-	//         schema: &ref_0
-	//           type: object
-	//           required:
-	//             - code
-	//             - message
-	//           properties:
-	//             code:
-	//               type: string
-	//               description: Error code for client handling
-	//             message:
-	//               type: string
-	//               description: Human-readable error message
-	//             details:
-	//               type: object
-	//               additionalProperties: true
-	//               description: Additional error details
-	//   '401':
-	//     description: Authentication required or token invalid
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//   '500':
-	//     description: Internal server error
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//
-
-	// async disable2FA(req, reply) {
-
-	// 	reply.code(200).send();
-	// }
 
 	// Operation: listSessions
 	// URL: /auth/sessions

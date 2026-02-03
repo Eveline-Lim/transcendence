@@ -38,6 +38,14 @@ export function validateEmail(email) {
 	return (true);
 }
 
+export function validate2FACode(code) {
+	const twoFACode = /^\d{6}$/;
+	if (!twoFACode.test(code)) {
+		return (false);
+	}
+	return (true);
+}
+
 export function validateInputs(fields, isLogin = false) {
 	const data = {};
 	for (const key in fields) {

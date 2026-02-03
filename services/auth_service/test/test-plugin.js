@@ -38,7 +38,7 @@ const avatarUrl = "https://example.com/avatar.png";
 const has2FAEnabled = false;
 const currentPassword = "Test1234!";
 const newPassword = "Helloworld";
-const code = "931842";
+const code = "624208";
 const token = process.env.ACCESS_TOKEN;
 const refreshToken = process.env.REFRESH_TOKEN;
 const userKey = `user:${username}`;
@@ -251,15 +251,36 @@ const qrCodeUrl = "https://example.com/qrCode.png";
 // 	//await redisClient.quit();
 // });
 
-test("testing verify2FA", async (t) => {
+// test("testing verify2FA", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
+
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/2fa/verify",
+// 		payload: {
+// 			code
+// 		},
+// 		headers: {
+// 			authorization: `Bearer ${token}`
+// 		},
+// 	});
+// 	console.log(res.statusCode, res.payload);
+// 	assert.equal(res.statusCode, 200);
+// 	await fastify.close();
+// 	await redisClient.quit();
+// });
+
+test("testing disable2FA", async (t) => {
 	const fastify = Fastify();
 	fastify.register(fastifyPlugin, opts);
 
 	const res = await fastify.inject({
 		method: "POST",
-		url: "/auth/2fa/verify",
+		url: "/auth/2fa/disable",
 		payload: {
-			code
+			code,
+			password
 		},
 		headers: {
 			authorization: `Bearer ${token}`
@@ -270,24 +291,6 @@ test("testing verify2FA", async (t) => {
 	await fastify.close();
 	await redisClient.quit();
 });
-
-// test("testing disable2FA", async (t) => {
-// 	const fastify = Fastify();
-// 	fastify.register(fastifyPlugin, opts);
-
-// 	const res = await fastify.inject({
-// 		method: "POST",
-// 		url: "/auth/2fa/disable",
-// 		payload: {
-// 			code,
-// 			password
-// 		},
-// 		headers: {
-// 			authorization: `Bearer ${token}`
-// 		},
-// 	});
-// 	assert.equal(res.statusCode, 200);
-// });
 
 // // test("testing listSessions", async (t) => {
 // // 	const fastify = Fastify();
