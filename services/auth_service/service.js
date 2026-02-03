@@ -159,11 +159,31 @@ export class Service {
 	// 		// Reset rate limite on success
 	// 		await redisClient.del(rlKey);
 
+	// 		// Create session
+	// 		const sessionId = crypto.randomUUID();
+	// 		console.log("sessionId: ", sessionId);
+	// 		const now = new Date().toISOString();
+
+	// 		await redisClient
+	// 		.multi()
+	// 		.hSet(`session:${sessionId}`, {
+	// 			id: sessionId,
+	// 			deviceInfo: req.headers["user-agent"] ?? "unknown",
+	// 			ipAddress: ip,
+	// 			location: "unknown",
+	// 			createdAt: now,
+	// 			lastActiveAt: now,
+	// 			isCurrent: "true"
+	// 		})
+	// 		.sAdd(`user:sessions:${user.username}`, sessionId)
+	// 		.exec();
+
 	// 		// Access Token (short-lived JWT)
 	// 		const accessToken = jwt.sign(
 	// 			{
 	// 				userId: user.id,
 	// 				username: user.username,
+	// 				sessionId,
 	// 			},
 	// 			process.env.SECRET_TOKEN,
 	// 			{ expiresIn: ACCESS_TOKEN_TTL }
@@ -906,19 +926,93 @@ export class Service {
 	// }
 
 	// DISABLE 2FA
-	async disable2FA(req, reply) {
-		const { code, password } = req.body;
-		console.log("code: ", code);
-		console.log("password: ", password);
+	// async disable2FA(req, reply) {
+	// 	const { code, password } = req.body;
+	// 	console.log("code: ", code);
+	// 	console.log("password: ", password);
 
-		if (!validate2FACode(code) || !validatePassword(password)) {
-			return reply.code(400).send({
-				code: "INVALID_CREDENTIALS",
-				message: "Invalid fields",
-			});
-		}
+	// 	if (!validate2FACode(code) || !validatePassword(password)) {
+	// 		return reply.code(400).send({
+	// 			code: "INVALID_CREDENTIALS",
+	// 			message: "Invalid fields",
+	// 		});
+	// 	}
+	// 	try {
+	// 		const token = req.headers.authorization.split(" ")[1];
+	// 		if (!token) {
+	// 			return reply.code(401).send({
+	// 				code: "AUTH_REQUIRED",
+	// 				message: "Authentication required",
+	// 			});
+	// 		}
+
+	// 		let decoded;
+	// 		try {
+	// 			decoded = jwt.verify(token, process.env.SECRET_TOKEN);
+	// 		} catch {
+	// 			return reply.code(401).send({
+	// 				code: "INVALID_TOKEN",
+	// 				message: "Invalid or expired token",
+	// 			});
+	// 		}
+
+	// 		const username = decoded.username;
+	// 		console.log("username: ", username);
+	// 		const userKey = `user:${username}`;
+	// 		console.log("userKey: ", userKey);
+	// 		const user = await redisClient.hGetAll(userKey);
+	// 		console.log("user:" ,user);
+	// 		if (!user || !user.hashedPassword || user.has2FAEnabled !== "1" || !user.twoFASecret) {
+	// 			return reply.code(401).send({
+	// 				code: "AUTH_FAILED",
+	// 				message: "Authentication failed",
+	// 			});
+	// 		}
+	// 		// Verify password
+	// 		const isValid = await bcrypt.compare(password, user.hashedPassword);
+	// 		if (!isValid) {
+	// 			return reply.code(401).send({
+	// 				code: "INVALID_CREDENTIALS",
+	// 				message: "Password is incorrect",
+	// 			});
+	// 		}
+
+	// 		// Verify TOTP
+	// 		const verified = speakeasy.totp.verify({
+	// 			secret: user.twoFASecret,
+	// 			encoding: "base32",
+	// 			token: code,
+	// 			window: 1,
+	// 		});
+	// 		console.log("verified: ", verified);
+	// 		if (!verified) {
+	// 			return reply.code(400).send({
+	// 				code: "INVALID_2FA_CODE",
+	// 				message: "Invalid 2FA code",
+	// 		  });
+	// 		}
+
+	// 		await redisClient.hDel(userKey, "twoFASecret");
+	// 		await redisClient.hDel(userKey, "twoFABackupCodes");
+	// 		await redisClient.hSet(userKey, "has2FAEnabled", "0");
+
+	// 		return reply.code(200).send({
+	// 			code: "2FA_DISABLED_SUCCESS",
+	// 			message: "2FA successfully disabled",
+	// 		});
+	// 	} catch (error) {
+	// 		console.log("error: ", error);
+	// 		return reply.code(500).send({
+	// 			code: "INTERNAL_ERROR",
+	// 			message: "Unable to disable 2FA",
+	// 		});
+	// 	}
+	// }
+
+	// LIST SESSIONS
+	async listSessions(req, reply) {
 		try {
-			const token = req.headers.authorization.split(" ")[1];
+			const token = req.headers.authorization?.split(" ")[1];
 			if (!token) {
 				return reply.code(401).send({
 					code: "AUTH_REQUIRED",
@@ -936,147 +1030,48 @@ export class Service {
 				});
 			}
 
-			const username = decoded.username;
-			console.log("username: ", username);
-			const userKey = `user:${username}`;
-			console.log("userKey: ", userKey);
-			const user = await redisClient.hGetAll(userKey);
-			console.log("user:" ,user);
-			if (!user || !user.hashedPassword || user.has2FAEnabled !== "1" || !user.twoFASecret) {
-				return reply.code(401).send({
-					code: "AUTH_FAILED",
-					message: "Authentication failed",
-				});
-			}
-			// Verify password
-			const isValid = await bcrypt.compare(password, user.hashedPassword);
-			if (!isValid) {
-				return reply.code(401).send({
-					code: "INVALID_CREDENTIALS",
-					message: "Password is incorrect",
-				});
-			}
+			const { username, sessionId: currentSessionId } = decoded;
+			console.log("decoded: ", decoded);
+			// Retrieve all sessions for the current user
+			const sessionIds = await redisClient.sMembers(`user:sessions:${username}`);
+			console.log("sessionIds: ", sessionIds);
 
-			// Verify TOTP
-			const verified = speakeasy.totp.verify({
-				secret: user.twoFASecret,
-				encoding: "base32",
-				token: code,
-				window: 1,
-			});
-			console.log("verified: ", verified);
-			if (!verified) {
-				return reply.code(400).send({
-					code: "INVALID_2FA_CODE",
-					message: "Invalid 2FA code",
-			  });
-			}
+			const sessions = await Promise.all(
+				sessionIds.map(async (id) => {
+					try {
+						const data = await redisClient.hGetAll(`session:${id}`);
+						console.log("data:", data);
 
-			await redisClient.hDel(userKey, "twoFASecret");
-			await redisClient.hDel(userKey, "twoFABackupCodes");
-			await redisClient.hSet(userKey, "has2FAEnabled", "0");
+						if (!data || Object.keys(data).length === 0) {
+							return null;
+						}
 
+						return {
+							id,
+							deviceInfo: data.deviceInfo,
+							ipAddress: data.ipAddress,
+							location: data.location,
+							createdAt: data.createdAt,
+							lastActiveAt: data.lastActiveAt,
+							isCurrent: id === currentSessionId,
+						};
+					} catch (error) {
+						console.error(`Erreur pour la session ${id}:`, error);
+						return null;
+					}
+				})
+			);
+			console.log("sessions: ", sessions);
 			return reply.code(200).send({
-				code: "2FA_DISABLED_SUCCESS",
-				message: "2FA successfully disabled",
+				sessions
 			});
 		} catch (error) {
-			console.log("error: ", error);
 			return reply.code(500).send({
 				code: "INTERNAL_ERROR",
-				message: "Unable to disable 2FA",
+				message: "Internal server error",
 			});
 		}
 	}
-
-	// Operation: listSessions
-	// URL: /auth/sessions
-	// summary:	List active sessions
-	// valid responses
-	//   '200':
-	//     description: List of active sessions
-	//     content:
-	//       application/json:
-	//         schema:
-	//           type: object
-	//           properties:
-	//             sessions:
-	//               type: array
-	//               items:
-	//                 type: object
-	//                 properties:
-	//                   id:
-	//                     type: string
-	//                     format: uuid
-	//                   deviceInfo:
-	//                     type: string
-	//                     description: Browser/device information
-	//                   ipAddress:
-	//                     type: string
-	//                   location:
-	//                     type: string
-	//                     description: Approximate geographic location
-	//                   createdAt:
-	//                     type: string
-	//                     format: date-time
-	//                   lastActiveAt:
-	//                     type: string
-	//                     format: date-time
-	//                   isCurrent:
-	//                     type: boolean
-	//                     description: Whether this is the current session
-	//   '401':
-	//     description: Authentication required or token invalid
-	//     content:
-	//       application/json:
-	//         schema: &ref_0
-	//           type: object
-	//           required:
-	//             - code
-	//             - message
-	//           properties:
-	//             code:
-	//               type: string
-	//               description: Error code for client handling
-	//             message:
-	//               type: string
-	//               description: Human-readable error message
-	//             details:
-	//               type: object
-	//               additionalProperties: true
-	//               description: Additional error details
-	//   '500':
-	//     description: Internal server error
-	//     content:
-	//       application/json:
-	//         schema: *ref_0
-	//
-
-	// async listSessions(req, reply) {
-	// 	console.log("listSessions", req.params);
-	// 	reply.code(200).send({
-	// 		sessions: [
-	// 			{
-	// 				id: "00000000-0000-0000-0000-000000000000",
-	// 				deviceInfo: "Chrome on Windows 10",
-	// 				ipAddress: "127.0.0.1",
-	// 				location: "Localhost",
-	// 				createdAt: new Date(Date.now() - 3600_000).toISOString(), // 1 hour ago
-	// 				lastActiveAt: new Date().toISOString(),
-	// 				isCurrent: true
-	// 			},
-	// 			{
-	// 				id: "11111111-1111-1111-1111-111111111111",
-	// 				deviceInfo: "Firefox on macOS",
-	// 				ipAddress: "192.168.0.10",
-	// 				location: "Home",
-	// 				createdAt: new Date(Date.now() - 7200_000).toISOString(), // 2 hours ago
-	// 				lastActiveAt: new Date(Date.now() - 1800_000).toISOString(), // 30 min ago
-	// 				isCurrent: false
-	// 			}
-	// 		]
-	// 	});
-	// }
 
 	// Operation: revokeSession
 	// URL: /auth/sessions/:sessionId
