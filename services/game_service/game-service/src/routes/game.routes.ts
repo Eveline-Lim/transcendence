@@ -17,8 +17,6 @@ import { IS_TEST } from '../config/env';
 
 export const	gameRouter = Router();
 
-// export const 	redis = new RedisService();
-
 gameRouter.post('/create-game', async (req, res) => {
 	
 	if (!redis) return res.status(503).json({error: 'Redis unavailable'});
@@ -38,7 +36,7 @@ gameRouter.post('/create-game', async (req, res) => {
 		await redis.setPlayerGame(player2_id, gameId);
 
 		res.status(201).json({
-			game_id: gameId,
+			gameId: gameId,
 			status: 'created',
 			message: 'Game created successfully',
 		});

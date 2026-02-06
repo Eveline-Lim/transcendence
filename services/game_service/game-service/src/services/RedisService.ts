@@ -47,7 +47,7 @@ export class RedisService {
 
 	async createGame(gameId: string, player1_id: string, player2_id: string): Promise<void> {
 		
-		if (!this.client) throw new Error('Redis nos initialized');
+		if (!this.client) throw new Error('Redis not initialized');
 
 		const gameState: GameState = {
 			gameId: gameId,
@@ -58,7 +58,7 @@ export class RedisService {
 			ball: { x: 50, y: 50, vx: 5, vy: 0},
 			paddles: { player1: 50, player2: 50},
 			created_at: Date.now(),
-			inputs: { player1_up: false, player1_down: false,player2_up: false,player2_down: false },
+			inputs: { player1_up: false, player1_down: false, player2_up: false, player2_down: false },
 		};
 
 		await this.client.setex(
@@ -71,7 +71,7 @@ export class RedisService {
 	//return GameState avec JSON.parse
 	async getGameState(gameId: string): Promise<GameState | null> {
 
-		if (!this.client) throw new Error('Redis nos initialized');
+		if (!this.client) throw new Error('Redis not initialized');
 
 		const data = await this.client.get(`game:${gameId}`);
 		return data ? JSON.parse(data) : null;
@@ -79,7 +79,7 @@ export class RedisService {
 
 	async updateGameState(gameId: string, gameState: GameState): Promise<void> {
 
-		if (!this.client) throw new Error('Redis nos initialized');
+		if (!this.client) throw new Error('Redis not initialized');
 
 		gameState.updated_at = Date.now();
 
