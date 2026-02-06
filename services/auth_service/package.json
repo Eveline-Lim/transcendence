@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@asyncapi/modelina": "^5.10.1",
+    "@fastify/cors": "^11.2.0",
     "@seriousme/openapi-schema-validator": "^2.7.0",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.3",

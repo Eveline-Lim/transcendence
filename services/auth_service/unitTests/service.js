@@ -652,14 +652,10 @@ export class Service {
 	//         schema: *ref_0
 	//
 
+	// // INITIATE OAUTH
 	// async initiateOAuth(req, reply) {
 	// 	const { provider } = req.params;
-	// 	const redirectUri = req.query.redirect_uri || "https://example.com/callback";
-
-	// 	console.log("initiateOAuth", provider, redirectUri);
-
-	// 	const oauthUrl = `https://oauth.example.com/${provider}?redirect_uri=${encodeURIComponent(redirectUri)}`;
-	// 	return reply.redirect(oauthUrl);
+	// 	console.log("provider: ", provider);
 	// }
 
 	// Operation: oauthCallback

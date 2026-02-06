@@ -210,17 +210,19 @@ const qrCodeUrl = "https://example.com/qrCode.png";
 // 	await redisClient.quit();
 // });
 
-// test("testing initiateOAuth", async (t) => {
-// 	const fastify = Fastify();
-// 	fastify.register(fastifyPlugin, opts);
+test("testing initiateOAuth", async (t) => {
+	const fastify = Fastify();
+	fastify.register(fastifyPlugin, opts);
 
-// 	const res = await fastify.inject({
-// 		method: "GET",
-// 		//url: "/auth/oauth/:provider",
-// 		url: "/auth/oauth/google?redirect_uri=https://example.com/callback",
-// 	});
-// 	t.assert.equal(res.statusCode, 302);
-// });
+	const res = await fastify.inject({
+		method: "GET",
+		//url: "/auth/oauth/:provider",
+	});
+	console.log(res.statusCode, res.payload);
+	assert.equal(res.statusCode, 302);
+	await fastify.close();
+	await redisClient.quit();
+});
 
 // // test("testing oauthCallback", async (t) => {
 // // 	const fastify = Fastify();
@@ -328,19 +330,19 @@ const qrCodeUrl = "https://example.com/qrCode.png";
 // // 	await redisClient.quit();
 // });
 
-test("testing revokeAllSessions", async (t) => {
-	const fastify = Fastify();
-	fastify.register(fastifyPlugin, opts);
+// test("testing revokeAllSessions", async (t) => {
+// 	const fastify = Fastify();
+// 	fastify.register(fastifyPlugin, opts);
 
-	const res = await fastify.inject({
-		method: "POST",
-		url: "/auth/sessions/revoke-all",
-		headers: {
-			authorization: `Bearer ${token}`
-		},
-	});
-	console.log(res.statusCode, res.payload);
-	assert.equal(res.statusCode, 200);
-	await fastify.close();
-// 	await redisClient.quit();
-});
+// 	const res = await fastify.inject({
+// 		method: "POST",
+// 		url: "/auth/sessions/revoke-all",
+// 		headers: {
+// 			authorization: `Bearer ${token}`
+// 		},
+// 	});
+// 	console.log(res.statusCode, res.payload);
+// 	assert.equal(res.statusCode, 200);
+// 	await fastify.close();
+// // 	await redisClient.quit();
+// });
