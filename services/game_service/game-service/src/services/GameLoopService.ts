@@ -10,7 +10,8 @@ import {
 	PADDLE_SPEED,
 	PADDLE_HEIGHT,
 	PADDLE_LEFT_X,
-	PADDLE_RIGHT_X, } from '../config/env'
+	PADDLE_RIGHT_X,
+	MAX_BOUNCE_ANGLE } from '../config/env'
 
   /***********/
  /*	CLASS	*/
@@ -61,7 +62,7 @@ export class GameLoopService {
 
 			this.updatePaddles(gameState);
 			this.updateBall(gameState);
-			// this.checkCollisions(gameState);
+			this.checkCollisionsX(gameState);
 			// this.checkScore(gameState);
 
 		}
@@ -103,7 +104,14 @@ export class GameLoopService {
 		const paddleTop = paddleY - (PADDLE_HEIGHT / 2);
 		const paddleBottom = paddleY + (PADDLE_HEIGHT / 2);
 
-		return ball.y >= paddleTop && ball.y <= paddleBottom;
+		if (ball.y >= paddleTop && ball.y <= paddleBottom) {
+			// if error, check if the value is higher than 1 or less than -1
+			const relativeImpact = (ball.y - paddleY) / (PADDLE_HEIGHT / 2);
+			ball.vy = relativeImpact * MAX_BOUNCE_ANGLE;
+			return true;
+		}
+		return false;
+		// return ball.y >= paddleTop && ball.y <= paddleBottom;
 	}
 
 	protected updateBallSpeed(gameState: GameState) {
@@ -191,5 +199,32 @@ export class GameLoopService {
 				ball.vy = -ball.vy;
 			}
 		}
+	}
+
+	protected resetBall(gameState: GameState) {
+		gameState.ball.x = 50;
+		gameState.ball.y = 50;
+
+		const direction = Math.random() > 0.5 ? 1 : -1;
+		gameState.ball.vx = 0.5 * direction;
+		gameState.ball.vy = (Math.random() - 0.5) * 0.5;
+	}
+
+	protected checkCollisionsX(gameState: GameState): boolean {
+		
+		const ball = gameState.ball.x;
+		if (ball - BALL_RADIUS < 0) {
+			gameState.score.player2++;
+			this.resetBall(gameState);
+			return true;
+		}
+
+		if (ball + BALL_RADIUS > 100) {
+			gameState.score.player1++;
+			this.resetBall(gameState);
+			return true ;
+		}
+
+		return false;
 	}
 }

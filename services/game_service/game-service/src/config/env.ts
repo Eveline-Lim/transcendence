@@ -12,3 +12,4 @@ export const PADDLE_SPEED = 2;
 export const PADDLE_HEIGHT = 15;
 export const PADDLE_LEFT_X = 5;
 export const PADDLE_RIGHT_X = 95;
+export const MAX_BOUNCE_ANGLE = 2;
