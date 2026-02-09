@@ -79,9 +79,9 @@ export function validateInputs(fields, isLogin = false) {
 			return { success: false };
 		}
 	}
-	if (!validatePassword(data.password)) {
-		return { success: false };
-	}
+	// if (!validatePassword(data.password)) {
+	// 	return { success: false };
+	// }
 
 	if (data.email) {
 		if (!data.email) {
