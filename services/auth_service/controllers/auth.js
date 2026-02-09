@@ -1,6 +1,5 @@
 export async function signup(req, reply) {
-	const { username, displayName, password, email, enable2FA } = req.body;
-
+	const { username, displayName, password, email, has2FAEnabled } = req.body;
 	console.log("REQ BODY:", req.body);
 
 	try {
@@ -12,7 +11,7 @@ export async function signup(req, reply) {
 				displayName,
 				password,
 				email,
-				enable2FA
+				has2FAEnabled
 			}
 		});
 	} catch (error) {

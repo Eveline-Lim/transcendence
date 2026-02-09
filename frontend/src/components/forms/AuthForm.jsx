@@ -4,16 +4,25 @@ import { validateUsername, validateEmail } from "../../utils/validators";
 export async function sendData(route, options) {
 	try {
 		const response = await fetch(route, options);
-		const data = await response.json().catch(() => null);
+		let data = null;
+		try {
+			data = await response.json();
+		} catch {
+			data = null;
+		}
 
 		if (!response.ok) {
-			// Return the server JSON (if any)
-			return data || { success: false, message: "Erreur réseau" };
+			return { 
+				success: false, 
+				message: "Internal server error" 
+			};
 		}
 		return data;
 	} catch (error) {
-		console.error("sendData error:", error);
-		return { success: false, message: "Erreur réseau" };
+		return { 
+			success: false, 
+			message: "Internal server error"
+		};
 	}
 }
 
@@ -39,13 +48,18 @@ export default function AuthForm() {
 		clearErrors();
 
 		const username = loginUsernameRef.current.value.trim();
-		const password = loginPasswordRef.current.value;
+		const password = loginPasswordRef.current.value.trim();
 
 		const newErrors = {};
 
 		if (!validateUsername(username)) {
 			newErrors.username = "Nom d'utilisateur invalide";
 		}
+
+		// COMMENTED OUT TO SIMPLIFY TESTING
+		// if (!validatePassword(password)) {
+		// 	newErrors.password = "Mot de passe invalide (6–15 caractères, majuscule, minuscule, chiffre, caractère spécial)";
+		// }
 
 		if (!password) {
 			newErrors.password = "Mot de passe invalide (6–15 caractères, majuscule, minuscule, chiffre, caractère spécial)";
@@ -66,7 +80,7 @@ export default function AuthForm() {
 
 		const username = signupUsernameRef.current.value.trim();
 		const displayName = signupDisplayNameRef.current.value.trim();
-		const password = signupPasswordRef.current.value;
+		const password = signupPasswordRef.current.value.trim();
 		const email = signupEmailRef.current.value.trim();
 
 		const newErrors = {};
@@ -78,6 +92,11 @@ export default function AuthForm() {
 		if (!displayName) {
 			newErrors.displayName = "Pseudo invalide";
 		}
+
+		// COMMENTED OUT TO SIMPLIFY TESTING
+		// if (!validatePassword(password)) {
+		// 	newErrors.password = "Mot de passe invalide (6–15 caractères, majuscule, minuscule, chiffre, caractère spécial)";
+		// }
 
 		if (!password) {
 			newErrors.password = "Mot de passe invalide (8–15 caractères, majuscule, minuscule, chiffre, caractère spécial)";
@@ -94,7 +113,7 @@ export default function AuthForm() {
 
 		console.log("SIGNUP OK:", { username, displayName, password, email });
 
-		const response = await sendData("/auth/signup", {
+		const response = await sendData("/api/auth/signup", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
@@ -102,7 +121,7 @@ export default function AuthForm() {
 				displayName,
 				password,
 				email,
-				enable2FA: false
+				has2FAEnabled: false
 			})
 		});
 
@@ -111,15 +130,7 @@ export default function AuthForm() {
 		} else {
 			setErrors({ form: response.message });
 		}
-
-		// 	const response = await fetch("http://localhost:3000/auth/signup", {
-		// method: "POST",
-		// headers: { "Content-Type": "application/json" },
-		// body: JSON.stringify({ username: "testuser", password: "123456" }),
 	};
-
-	// const data = await response.json();
-	// console.log("Backend response:", data);
 
 	const inputClass = (hasError) =>
 		`w-full rounded-md border px-4 py-3 text-lg text-black focus:outline-none focus:ring-2 focus:ring-purple-500 ${hasError ? "border-red-500" : "border-gray-300"}`;
