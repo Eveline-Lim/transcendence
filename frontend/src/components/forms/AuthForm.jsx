@@ -12,15 +12,15 @@ export async function sendData(route, options) {
 		}
 
 		if (!response.ok) {
-			return { 
-				success: false, 
-				message: "Internal server error" 
+			return {
+				success: false,
+				message: "Internal server error"
 			};
 		}
 		return data;
 	} catch (error) {
-		return { 
-			success: false, 
+		return {
+			success: false,
 			message: "Internal server error"
 		};
 	}
@@ -99,7 +99,7 @@ export default function AuthForm() {
 		// }
 
 		if (!password) {
-			newErrors.password = "Mot de passe invalide (8–15 caractères, majuscule, minuscule, chiffre, caractère spécial)";
+			newErrors.password = "Mot de passe invalide (6–15 caractères, majuscule, minuscule, chiffre, caractère spécial)";
 		}
 
 		if (!validateEmail(email)) {
@@ -120,8 +120,7 @@ export default function AuthForm() {
 				username,
 				displayName,
 				password,
-				email,
-				has2FAEnabled: false
+				email
 			})
 		});
 

@@ -1,13 +1,16 @@
 import Fastify from "fastify";
 import authRoutes from "./routes/auth.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = Fastify({
 	logger: true
 });
 
 // Register auth routes with prefix /auth
-app.register(authRoutes, { 
-	prefix: "api/auth" 
+app.register(authRoutes, {
+	prefix: "api/auth"
 });
 
 // Run the server

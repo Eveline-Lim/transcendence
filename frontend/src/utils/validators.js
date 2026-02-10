@@ -53,7 +53,7 @@ export function validateInputs(fields, isLogin = false) {
 	// console.log("DATA ", data.username, data.password);
 
 	if (isLogin) {
-		console.log("DATA IDENTIFIER: ", data.identifier);
+		// console.log("DATA IDENTIFIER: ", data.identifier);
 		if (data.identifier.includes("@")) {
 			data.email = data.identifier;
 			// console.log("data email: ", data.email);
