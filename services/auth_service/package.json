@@ -15,7 +15,17 @@
     "fastify-plugin": "^5.1.0",
     "@seriousme/openapi-schema-validator": "^2.7.0",
     "js-yaml": "^4.1.1",
-    "fastify-openapi-glue": "^4.10.0"
+    "fastify-openapi-glue": "^4.10.0",
+    "express": "^4.18.2",
+    "pg": "^8.11.3",
+    "redis": "^4.6.10",
+    "jsonwebtoken": "^9.0.2",
+    "bcrypt": "^5.1.1",
+    "axios": "^1.6.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "winston": "^3.11.0"
   },
   "devDependencies": {
     "fastify": "^5.6.2",

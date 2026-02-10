@@ -2,6 +2,13 @@
 import openapiGlue from "fastify-openapi-glue";
 import { Security } from "./security.js";
 import { Service } from "./service.js";
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const localFile = (fileName) => new URL(fileName, import.meta.url).pathname;
 
@@ -22,3 +29,42 @@ export const options = {
 		},
 	},
 };
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Fonction pour lire les secrets
+async function readSecret(secretName) {
+  try {
+    const secretPath = `/run/secrets/${secretName}`;
+    const content = await fs.readFile(secretPath, 'utf8');
+    return content.trim();
+  } catch (error) {
+    console.error(`❌ Erreur lecture secret ${secretName}:`, error.message);
+    process.exit(1);
+  }
+}
+
+// Initialisation async
+(async () => {
+  const app = express();
+
+  // Lire les secrets
+  const PORT = await readSecret('auth_service_port');
+  const NODE_ENV = await readSecret('node_env');
+  
+  // Middlewares
+  app.use(helmet());
+  app.use(cors());
+  app.use(express.json());
+
+  // Routes
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok', service: 'auth' });
+  });
+
+  // Démarrage
+  app.listen(PORT, () => {
+    console.log(`✅ Auth service running on port ${PORT}`);
+  });
+})();
