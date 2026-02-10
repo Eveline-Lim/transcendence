@@ -1,0 +1,177 @@
+services:
+  ##################################################################
+  # DATBASE
+  ##################################################################
+  postgres:
+    build: ./services/postgres
+    container_name: transcendence_db
+    secrets:
+      - db_name
+      - db_user
+      - db_password
+    environment:
+      POSTGRES_DB_FILE: /run/secrets/db_name
+      POSTGRES_USER_FILE: /run/secrets/db_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - transcendence_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$(cat /run/secrets/db_user) -d $$(cat /run/secrets/db_name)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  ##################################################################
+  # REDIS
+  ##################################################################
+  redis:
+    build: ./services/redis
+    container_name: transcendence_redis
+    secrets:
+      - redis_password
+    command: >
+      sh -c "redis-server --requirepass $$(cat /run/secrets/redis_password) --appendonly yes"
+    volumes:
+      - redis_data:/data
+    networks:
+      - transcendence_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  ##################################################################
+  # AUTH SERVICE
+  ##################################################################
+  auth_service:
+    build: ./services/auth_service
+    container_name: transcendence_auth
+    secrets:
+      - db_host
+      - db_port
+      - db_name
+      - db_user
+      - db_password
+      - redis_host
+      - redis_password
+      - jwt_secret
+      - jwt_expiration
+      - auth_service_port
+      - oauth_42_client_id
+      - oauth_42_client_secret
+      - oauth_42_client_callback_url
+      - node_env
+      - log_level
+    environment:
+      NODE_ENV_FILE: /run/secrets/node_env
+      LOG_LEVEL_FILE: /run/secrets/log_level
+      DB_HOST_FILE: /run/secrets/db_host
+      DB_PORT_FILE: /run/secrets/db_port
+      DB_NAME_FILE: /run/secrets/db_name
+      DB_USER_FILE: /run/secrets/db_user
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      REDIS_HOST_FILE: /run/secrets/redis_host
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      JWT_EXPIRATION_FILE: /run/secrets/jwt_expiration
+      AUTH_SERVICE_PORT_FILE: /run/secrets/auth_service_port
+      OAUTH_42_CLIENT_ID: /run/secrets/oauth_42_client_id
+      OAUTH_42_CLIENT_SECRET: /run/secrets/oauth_42_client_secret
+      OAUTH_42_CLIENT_CALLBACK_URL: /run/secrets/oauth_42_client_callback_url
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - transcendence_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  ##################################################################
+  # NGINX
+  ##################################################################
+  nginx:
+    build: ./services/nginx
+    container_name: transcendence_nginx
+    secrets:
+      - nginx_port
+      - frontend_url
+      - ssl_cert
+      - ssl_key
+    ports:
+      - "8080:80"
+      - "8443:443"
+    depends_on:
+      auth_service:
+        condition: service_healthy
+    networks:
+      - transcendence_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  transcendence_network:
+    driver: bridge
+
+secrets:
+  db_host:
+    file: ./secrets/db_host
+  db_port:
+    file: ./secrets/db_port
+  db_name:
+    file: ./secrets/db_name
+  db_user:
+    file: ./secrets/db_user
+  db_password:
+    file: ./secrets/db_password
+  redis_host:
+    file: ./secrets/redis_host
+  redis_password:
+    file: ./secrets/redis_password
+  jwt_secret:
+    file: ./secrets/jwt_secret
+  jwt_expiration:
+    file: ./secrets/jwt_expiration
+  nginx_port:
+    file: ./secrets/nginx_port
+  frontend_url:
+    file: ./secrets/frontend_url
+  ssl_cert:
+    file: ./secrets/ssl_cert
+  ssl_key:
+    file: ./secrets/ssl_key
+  auth_service_port:
+    file: ./secrets/auth_service_port
+  oauth_42_client_id:
+    file: ./secrets/oauth_42_client_id
+  oauth_42_client_secret:
+    file: ./secrets/oauth_42_client_secret
+  oauth_42_client_callback_url:
+    file: ./secrets/oauth_42_client_callback_url
+  node_env:
+    file: ./secrets/node_env
+  log_level:
+    file: ./secrets/log_level

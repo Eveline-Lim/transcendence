@@ -25,7 +25,7 @@ clean: ## Clean containers and volumes
 	$(COMPOSE) -f $(COMPOSE_FILE) down -v
 	docker system prune -f
 
-clean-all: ## Clean all (including images)
+fclean: ## Clean all (including images)
 	$(COMPOSE) -f $(COMPOSE_FILE) down -v --rmi all
 	docker system prune -af
 
