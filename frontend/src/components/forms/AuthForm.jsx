@@ -44,18 +44,36 @@ export default function AuthForm() {
 
 	// LOGIN
 	const handleLoginSubmit = async (e) => {
+		console.log("HEREEEEEEEEEEEEEEEEEE");
 		e.preventDefault();
 		clearErrors();
 
-		const username = loginUsernameRef.current.value.trim();
+		const identifier = loginUsernameRef.current.value.trim();
 		const password = loginPasswordRef.current.value.trim();
 
 		const newErrors = {};
 
-		if (!validateUsername(username)) {
-			newErrors.username = "Nom d'utilisateur invalide";
+		let email;
+		let username;
+		if (identifier.includes("@")) {
+			email = identifier;
+			console.log("email: ", email);
+		} else {
+			username = identifier;
+			console.log("username: ", username);
 		}
 
+		if (username) {
+			if (!validateUsername(username)) {
+				newErrors.username = "Nom d'utilisateur invalide";
+			}
+		}
+
+		if (email) {
+			if (!validateEmail(email)) {
+				newErrors.email = "Nom d'email invalide";
+		}
+		}
 		// COMMENTED OUT TO SIMPLIFY TESTING
 		// if (!validatePassword(password)) {
 		// 	newErrors.password = "Mot de passe invalide (6–15 caractères, majuscule, minuscule, chiffre, caractère spécial)";
@@ -70,7 +88,22 @@ export default function AuthForm() {
 			return;
 		}
 
-		console.log("LOGIN OK:", { username, password });
+		console.log("LOGIN OK:", { identifier, password });
+
+		const response = await sendData("/api/auth/login", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				identifier,
+				password
+			})
+		});
+
+		if (response.success) {
+			console.log("Login OK:", response.user);
+		} else {
+			setErrors({ form: response.message });
+		}
 	};
 
 	// SIGNUP
@@ -142,12 +175,12 @@ export default function AuthForm() {
 				<form onSubmit={handleLoginSubmit} className="flex flex-col w-full gap-4">
 					<h1 className="text-2xl font-bold">Connexion</h1>
 
-					<label className="text-left text-xl">Nom d'utilisateur</label>
+					<label className="text-left text-xl">Nom d'utilisateur/Email</label>
 					<input
 						ref={loginUsernameRef}
 						type="text"
 						autoFocus
-						placeholder="Nom d'utilisateur"
+						placeholder="Nom d'utilisateur/Email"
 						className={inputClass(errors.username)}
 					/>
 
