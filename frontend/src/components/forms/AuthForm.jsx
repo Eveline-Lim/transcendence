@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { validateUsername, validateEmail } from "../../utils/validators";
+import { useNavigate } from "react-router-dom";
 
 export async function sendData(route, options) {
 	try {
@@ -42,9 +43,10 @@ export default function AuthForm() {
 
 	const clearErrors = () => setErrors({});
 
+	const navigate = useNavigate();
+
 	// LOGIN
 	const handleLoginSubmit = async (e) => {
-		console.log("HEREEEEEEEEEEEEEEEEEE");
 		e.preventDefault();
 		clearErrors();
 
@@ -99,8 +101,12 @@ export default function AuthForm() {
 			})
 		});
 
-		if (response.success) {
+		console.log("API response:", response);
+
+		if (response) {
 			console.log("Login OK:", response.user);
+			console.log("Navigating...");
+			navigate("/game", { replace: true });
 		} else {
 			setErrors({ form: response.message });
 		}
@@ -157,8 +163,9 @@ export default function AuthForm() {
 			})
 		});
 
-		if (response.success) {
+		if (response) {
 			console.log("Signup OK:", response.user);
+			navigate("/game", { replace: true });
 		} else {
 			setErrors({ form: response.message });
 		}
@@ -198,9 +205,17 @@ export default function AuthForm() {
 
 					<button
 						type="submit"
-						className="text-white text-xl py-3 px-10 rounded-md bg-purple-700 hover:bg-purple-600 transition-colors"
+						className="text-white text-xl py-3 px-10 rounded-md cursor-pointer bg-purple-700 hover:bg-purple-600"
 					>
 						Connexion
+					</button>
+
+					<button
+						type="submit"
+						className="flex items-center justify-center gap-3 border rounded-md py-3 text-xl text-black hover:bg-gray-200"
+					>
+						<img src="./src/assets/42_Logo.svg" alt="Connexion avec 42" className="w-9"/>
+						<p>Connexion avec 42</p>
 					</button>
 
 					<p
