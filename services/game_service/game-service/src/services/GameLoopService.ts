@@ -11,7 +11,8 @@ import {
 	PADDLE_HEIGHT,
 	PADDLE_LEFT_X,
 	PADDLE_RIGHT_X,
-	MAX_BOUNCE_ANGLE } from '../config/env'
+	MAX_BOUNCE_ANGLE,
+	WINNING_SCORE } from '../config/env'
 
   /***********/
  /*	CLASS	*/
@@ -19,6 +20,7 @@ import {
 
 export class GameLoopService {
 	private io: Server;
+	// ID loop
 	private activeLoops: Map<string, NodeJS.Timeout> = new Map();
 	// Cache in RAM
 	private gameStatesCache: Map<string, GameState> = new Map();
@@ -44,26 +46,58 @@ export class GameLoopService {
 
 		//To run 60 time by seconde (16.67ms ~)
 		const interval = setInterval(async () => {
+			//Don't forget to protect tic
 			await this.gameLoopTick(gameId);
 		}, 16);
 
 		this.activeLoops.set(gameId, interval);
 	}
 
+	async stopGameLoop(gameId: string) {
+		const interval = this.activeLoops.get(gameId);
+		if (interval) {
+			clearInterval(interval);
+			this.activeLoops.delete(gameId);
+			this.gameStatesCache.delete(gameId);
+			console.log(`Stopped game loop for ${gameId}`);
+		}
+	}
+
 	private async gameLoopTick(gameId: string) {
 		try {
-
 			const gameState = this.gameStatesCache.get(gameId);
 
 			if(!gameState || gameState.status !== 'playing') {
-				// this.stopGameLoop(gameId);
+
+				if (gameState!.status === 'waiting') {
+					// set timer 30 secondes ?
+					return ;
+				}
+				this.stopGameLoop(gameId);
 				return;
 			}
 
 			this.updatePaddles(gameState);
 			this.updateBall(gameState);
-			this.checkCollisionsX(gameState);
-			// this.checkScore(gameState);
+
+			const pointScored = this.checkCollisionsX(gameState);
+			if (pointScored) {
+				await redis!.updateGameState(gameId, gameState);
+			}
+			
+			const gameFinished = this.checkScore(gameState);
+			if (gameFinished) {
+				gameState.status = 'finished';
+				await redis!.updateGameState(gameId, gameState);
+			}
+
+			this.io.to(gameId).emit('game-update', {
+				ball: gameState.ball,
+				paddles: gameState.paddles,
+				score: gameState.score,
+				status: gameState.status,
+				winner: gameState.winner
+			});
 
 		}
 		catch(error) {
@@ -225,6 +259,19 @@ export class GameLoopService {
 			return true ;
 		}
 
+		return false;
+	}
+
+	protected checkScore(gameState: GameState): boolean {
+		
+		if (gameState.score.player1 == WINNING_SCORE) {
+			gameState.winner = gameState.player1_id;
+			return true;
+		}
+		else if (gameState.score.player2 == WINNING_SCORE) {
+			gameState.winner = gameState.player2_id;
+			return true;
+		}
 		return false;
 	}
 }
