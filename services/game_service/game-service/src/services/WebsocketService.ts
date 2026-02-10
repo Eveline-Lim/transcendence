@@ -4,6 +4,7 @@
 
 import { Server, Socket } from 'socket.io';
 import { redis } from './RedisInstance';
+import { GameLoopService } from './GameLoopService';
 
 
   /***********/
@@ -12,9 +13,11 @@ import { redis } from './RedisInstance';
 
 export class WebsocketService {
 	private io: Server;
+	private gameLoopService: GameLoopService;
 
 	constructor(io: Server) {
 		this.io = io;
+		this.gameLoopService = new GameLoopService(io);
 		this.setupHandlers();
 	}
 
@@ -25,8 +28,7 @@ export class WebsocketService {
 			this.handlePing(socket);
 			this.handleDisconnect(socket);
 			this.handleJoinGame(socket);
-			this.handlePlayerInput(socket);    // In progress
-			// this.handleError(socket);         // À ajouter
+			this.handlePlayerInput(socket);
 		});
 	}
 
@@ -83,6 +85,8 @@ export class WebsocketService {
 						message: 'Both players connected, game starting!',
 						game_state: gameState
 					});
+
+					this.gameLoopService.startGameLoop(gameId);
 				}
 			}
 			catch(error) {
