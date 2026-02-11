@@ -103,12 +103,11 @@ export default function AuthForm() {
 
 		console.log("API response:", response);
 
-		if (response) {
+		if (response.success) {
 			console.log("Login OK:", response.user);
-			console.log("Navigating...");
 			navigate("/game", { replace: true });
 		} else {
-			setErrors({ form: response.message });
+			setErrors({ form: "Aucun compte n'est asscocié à cet utilisateur" });
 		}
 	};
 
@@ -163,11 +162,12 @@ export default function AuthForm() {
 			})
 		});
 
-		if (response) {
+		if (response.success) {
 			console.log("Signup OK:", response.user);
 			navigate("/game", { replace: true });
 		} else {
-			setErrors({ form: response.message });
+			// setErrors({ form: Ce nom d’utilisateur ou cette adresse e-mail est déjà utilisé(e). });
+			setErrors({ form: "Impossible de créer le compte : ces informations sont déjà associées à un compte existant." });
 		}
 	};
 
@@ -210,12 +210,14 @@ export default function AuthForm() {
 						Connexion
 					</button>
 
+					{errors.form && (<p className="text-red-500 text-lg text-left">{errors.form}</p>)}
+
 					<button
 						type="submit"
 						className="flex items-center justify-center gap-3 border rounded-md py-3 text-xl text-black hover:bg-gray-200"
 					>
+						<p>Connexion avec</p>
 						<img src="./src/assets/42_Logo.svg" alt="Connexion avec 42" className="w-9"/>
-						<p>Connexion avec 42</p>
 					</button>
 
 					<p
@@ -284,6 +286,8 @@ export default function AuthForm() {
 					{errors.email && (
 						<p className="text-red-500 text-lg text-left">{errors.email}</p>
 					)}
+
+					{errors.form && (<p className="text-red-500 text-lg text-left">{errors.form}</p>)}
 
 					<button
 						type="submit"

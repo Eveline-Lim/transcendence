@@ -1,7 +1,7 @@
 import { validateInputs } from "../utils/validators.js"
 import { redisClient } from "../redisClient.js";
 import bcrypt from "bcrypt";
-import crypto from 'node:crypto';
+import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 
 const ACCESS_TOKEN_TTL = 60 * 24; // 24h
@@ -129,6 +129,7 @@ export async function signup(req, reply) {
 		return reply.code(201).send({
 			code: "USER_CREATED",
 			message: "User successfully registered",
+			success: true,
 			accessToken,
 			refreshToken,
 			tokenType: "Bearer",
@@ -169,21 +170,6 @@ export async function login(req, reply) {
 	}
 
 	try {
-		// Rate limit check
-		const rlKey = `login:rl:${identifier}:${ip}`;
-		console.log("rlKey: ", rlKey);
-		const attempts = await redisClient.incr(rlKey);
-		if (attempts === 1) {
-			await redisClient.expire(rlKey, RATE_LIMIT_WINDOW_SECONDS);
-		}
-		// console.log("attempts: ", attempts);
-		if (attempts > MAX_LOGIN_ATTEMPTS) {
-			return reply.code(429).send({
-				code: "TOO_MANY_ATTEMPTS",
-				message: "Too many login attempts. Try again in five minutes."
-			});
-		}
-
 		let username;
 		if (identifier.includes("@")) {
 			username = await redisClient.get(`email:${identifier}`);
@@ -209,6 +195,21 @@ export async function login(req, reply) {
 		}
 		// Retrieve all user fields from Redis by username or email key.
 		const user = await redisClient.hGetAll(userKey);
+
+		// Rate limit check
+		const rlKey = `login:rateLimit:${identifier}:${ip}`;
+		console.log("rlKey: ", rlKey);
+		const attempts = await redisClient.incr(rlKey);
+		if (attempts === 1) {
+			await redisClient.expire(rlKey, RATE_LIMIT_WINDOW_SECONDS);
+		}
+		// console.log("attempts: ", attempts);
+		if (attempts > MAX_LOGIN_ATTEMPTS) {
+			return reply.code(429).send({
+				code: "TOO_MANY_ATTEMPTS",
+				message: "Too many login attempts. Try again in five minutes."
+			});
+		}
 
 		// If the user exists, we compare the entered password with the stored hashed password.
 		const isMatch = await bcrypt.compare(password, user.password);
@@ -274,6 +275,7 @@ export async function login(req, reply) {
 		return reply.code(200).send({
 			code: "LOGIN_SUCCESS",
 			message: "User successfully logged in",
+			success: true,
 			accessToken,
 			refreshToken,
 			tokenType: "Bearer",
