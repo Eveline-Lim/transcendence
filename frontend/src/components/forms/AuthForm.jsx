@@ -1,31 +1,7 @@
 import { useRef, useState } from "react";
 import { validateUsername, validateEmail } from "../../utils/validators";
 import { useNavigate } from "react-router-dom";
-
-export async function sendData(route, options) {
-	try {
-		const response = await fetch(route, options);
-		let data = null;
-		try {
-			data = await response.json();
-		} catch {
-			data = null;
-		}
-
-		if (!response.ok) {
-			return {
-				success: false,
-				message: "Internal server error"
-			};
-		}
-		return data;
-	} catch (error) {
-		return {
-			success: false,
-			message: "Internal server error"
-		};
-	}
-}
+import { sendData } from "../../sendData";
 
 export default function AuthForm() {
 	const [mode, setMode] = useState("login"); // "login" | "signup"
@@ -73,8 +49,8 @@ export default function AuthForm() {
 
 		if (email) {
 			if (!validateEmail(email)) {
-				newErrors.email = "Nom d'email invalide";
-		}
+				newErrors.email = "Email invalide";
+			}
 		}
 		// COMMENTED OUT TO SIMPLIFY TESTING
 		// if (!validatePassword(password)) {
@@ -172,7 +148,7 @@ export default function AuthForm() {
 	};
 
 	const inputClass = (hasError) =>
-		`w-full rounded-md border px-4 py-3 text-lg text-black focus:outline-none focus:ring-2 focus:ring-purple-500 ${hasError ? "border-red-500" : "border-gray-300"}`;
+		`w-full rounded-md border px-4 py-3 text-lg text-black focus:outline-none focus:ring-2 focus:ring-blue-500 ${hasError ? "border-red-500" : "border-gray-300"}`;
 
 	return (
 		<div className="flex justify-center bg-white border border-gray-200 w-96 p-6 rounded-md shadow-lg text-2xl flex-col text-center text-black">
@@ -205,19 +181,24 @@ export default function AuthForm() {
 
 					<button
 						type="submit"
-						className="text-white text-xl py-3 px-10 rounded-md cursor-pointer bg-purple-700 hover:bg-purple-600"
-					>
+						className="text-white text-xl py-3 px-10 rounded-md cursor-pointer bg-blue-700 hover:bg-blue-600">
 						Connexion
+					</button>
+
+					<button
+						type="button"
+						onClick={() => navigate("/password/forgot")}
+						className="text-lg font-bold cursor-pointer hover:text-blue-600">
+						Mot de passe oublié ?
 					</button>
 
 					{errors.form && (<p className="text-red-500 text-lg text-left">{errors.form}</p>)}
 
 					<button
 						type="submit"
-						className="flex items-center justify-center gap-3 border rounded-md py-3 text-xl text-black hover:bg-gray-200"
-					>
+						className="flex items-center justify-center gap-3 border rounded-md py-3 text-xl text-black cursor-pointer hover:bg-gray-200">
 						<p>Connexion avec</p>
-						<img src="./src/assets/42_Logo.svg" alt="Connexion avec 42" className="w-9"/>
+						<img src="./src/assets/42_Logo.svg" alt="Connexion avec 42" className="w-8"/>
 					</button>
 
 					<p
@@ -225,8 +206,7 @@ export default function AuthForm() {
 							setErrors({});
 							setMode("signup")}
 						}
-						className="text-lg cursor-pointer"
-					>
+						className="text-lg cursor-pointer">
 						Pas encore inscrit ? Inscrivez-vous !
 					</p>
 				</form>
@@ -291,8 +271,7 @@ export default function AuthForm() {
 
 					<button
 						type="submit"
-						className="text-white text-xl py-3 px-10 rounded-md bg-purple-700 hover:bg-purple-600 transition-colors"
-					>
+						className="text-white text-xl py-3 px-10 rounded-md cursor-pointer bg-blue-700 hover:bg-blue-600 transition-colors">
 						Enregistrer
 					</button>
 
@@ -301,8 +280,7 @@ export default function AuthForm() {
 							setErrors({});
 							setMode("login")}
 						}
-						className="text-lg cursor-pointer"
-					>
+						className="text-lg cursor-pointer">
 						Déjà un compte ? Connectez-vous !
 					</p>
 				</form>

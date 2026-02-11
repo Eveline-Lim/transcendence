@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Auth from "./pages/Auth.jsx";
 import Game from "./pages/Game.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
 
 function App() {
 	return (
@@ -8,6 +9,7 @@ function App() {
 			<BrowserRouter>
 				<Routes>
 					<Route path="/" element={<Auth />} />
+					<Route path="/password/forgot" element={<ForgotPassword />} />
 					<Route path="/game" element={<Game />} />
 				</Routes>
 			</BrowserRouter>

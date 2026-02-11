@@ -1,13 +1,9 @@
 import { validateInputs } from "../utils/validators.js"
 import { redisClient } from "../redisClient.js";
+import { ACCESS_TOKEN_TTL, REFRESH_TOKEN_TTL, MAX_LOGIN_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS } from "../utils/macros.js";
 import bcrypt from "bcrypt";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
-
-const ACCESS_TOKEN_TTL = 60 * 24; // 24h
-const REFRESH_TOKEN_TTL = 60 * 60 * 24; // 24h in seconds
-const MAX_LOGIN_ATTEMPTS = 5; // per 15 minutes
-const RATE_LIMIT_WINDOW_SECONDS = 5 * 60
 
 export async function signup(req, reply) {
 	const { username, displayName, email } = req.body;
