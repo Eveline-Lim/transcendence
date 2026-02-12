@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 
 export async function sendResetEmail(to, resetLink) {
 	const transporter = nodemailer.createTransport({
-		service: "Gmail",
+		service: "gmail",
 		auth: {
 			user: process.env.SMTP_USER,
 			pass: process.env.SMTP_PASSWORD,
@@ -25,7 +25,8 @@ export async function sendResetEmail(to, resetLink) {
 					Réinitialiser mon mot de passe
 				</a>
 				<p style="margin-top:20px;font-size:12px;color:#666;">
-					Ce lien expire dans 15 minutes. Si vous n'avez pas demandé la réinitialisation de votre mot de passe, vous pouvez ignorer cet email en toute sécurité.
+					Ce lien expire dans 15 minutes.
+					Si vous n'avez pas demandé la réinitialisation de votre mot de passe, vous pouvez ignorer cet email en toute sécurité.
 				</p>
 			</div>
 		`,

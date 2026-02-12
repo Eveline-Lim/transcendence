@@ -4,8 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { sendData } from "../../sendData";
 
 export default function ForgotPassword() {
-	const [errors, setErrors] = useState({});
 	const forgotPasswordEmailRef = useRef(null);
+	const [errors, setErrors] = useState({});
+	const [success, setSuccess] = useState(false);
 
 	const clearErrors = () => setErrors({});
 
@@ -37,11 +38,7 @@ export default function ForgotPassword() {
 			})
 		});
 
-		if (response.success) {
-			console.log("Reset password:", response.user);
-		} else {
-			setErrors({ form: "Aucun compte n'est associé à cet email" });
-		}
+		setSuccess(true);
 	};
 
 	const inputClass = (hasError) =>
@@ -61,30 +58,40 @@ export default function ForgotPassword() {
 				<span className="ml-1 font-bold">Retour</span>
 			</button>
 
-			<h1 className="text-2xl font-bold mt-5 mb-4">Mot de passe oublié ?</h1>
+			<h1 className="text-2xl font-bold mt-4 mb-4">Mot de passe oublié ?</h1>
 
-			<form onSubmit={handleForgotPasswordSubmit} className="w-full flex flex-col gap-6">
-				<label className="text-left text-xl">Email</label>
-				<input
-					ref={forgotPasswordEmailRef}
-					type="email"
-					autoFocus
-					placeholder="Email"
-					className={inputClass(errors.email)}
-				/>
+			{success && (
+				<p className="text-lg text-center">
+					Si un compte est associé à cette adresse e-mail, vous recevrez un lien pour réinitialiser votre mot de passe.
+				</p>
+			)}
+
+			{!success && (
+				<form onSubmit={handleForgotPasswordSubmit} className="w-full flex flex-col gap-6">
+					<label className="text-left text-xl">Email</label>
+					<input
+						ref={forgotPasswordEmailRef}
+						type="email"
+						autoFocus
+						placeholder="Email"
+						className={inputClass(errors.email)}
+					/>
 
 					{errors.email && (
 						<p className="text-red-500 text-lg text-left">{errors.email}</p>
 					)}
 
-					{errors.form && (<p className="text-red-500 text-lg text-left">{errors.form}</p>)}
+					{errors.form && (
+						<p className="text-red-500 text-lg text-left">{errors.form}</p>
+					)}
 
-				<button
-					type="submit"
-					className="text-white text-xl py-3 px-10 rounded-md bg-blue-700 hover:bg-blue-600 transition-colors cursor-pointer">
-					Réinitialiser mon mot de passe
-				</button>
-			</form>
+					<button
+						type="submit"
+						className="text-white text-xl py-3 px-10 rounded-md bg-blue-700 hover:bg-blue-600 transition-colors cursor-pointer">
+						Réinitialiser mon mot de passe
+					</button>
+				</form>
+			)}
 		</div>
-	)
+	);
 }
