@@ -77,9 +77,9 @@ export async function forgotPassword(req, reply) {
 		await redisClient.del(rlKey);
 
 		return reply.code(202).send({
+			success: true,
 			code: "PASSWORD_RESET_EMAIL_SENT_SUCCESS",
 			message: "If an account exists for this email address, a password reset link has been sent.",
-			success: true
 		});
 	} catch (error) {
 		console.log("ERROR: ", error);
@@ -92,7 +92,7 @@ export async function forgotPassword(req, reply) {
 
 export async function resetPassword(req, reply) {
 	const { token, password } = req.body;
-	console.log("REQ BODY:", req.body);
+	// console.log("REQ BODY:", req.body);
 
 	// COMMENTED OUT TO SIMPLIFY TESTING
 	// const validation = validatePassword(password);
@@ -130,7 +130,7 @@ export async function resetPassword(req, reply) {
 
 		const userKey = `user:${username}`;
 		const user = await redisClient.hGetAll(userKey);
-		if (!user) {
+		if (!user || Object.keys(user).length === 0) {
 			return reply.code(401).send({
 				code: "USER_NOT_FOUND",
 				message: "User does not exist",
@@ -153,6 +153,7 @@ export async function resetPassword(req, reply) {
 		await redisClient.del(`resetToken:${hashedToken}`);
 
 		return reply.code(200).send({
+			success: true,
 			code: "PASSWORD_RESET_SUCCESS",
 			message: "Password successfully reset",
 		});

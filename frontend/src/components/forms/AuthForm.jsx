@@ -35,9 +35,7 @@ export default function AuthForm() {
 
 		if (isEmail && !validateEmail(identifier)) {
 			newErrors.email = "Email invalide";
-		}
-
-		if (!isEmail && !validateUsername(identifier)) {
+		} else if (!isEmail && !validateUsername(identifier)) {
 			newErrors.username = "Nom d'utilisateur invalide";
 		}
 
@@ -131,7 +129,6 @@ export default function AuthForm() {
 			console.log("Signup OK:", response.user);
 			navigate("/game", { replace: true });
 		} else {
-			// setError({ form: Ce nom d’utilisateur ou cette adresse e-mail est déjà utilisé(e). });
 			setError({ form: "Impossible de créer le compte : ces informations sont déjà associées à un compte existant." });
 		}
 	};

@@ -123,9 +123,9 @@ export async function signup(req, reply) {
 		// console.log("storedRefreshToken: ", storedRefreshToken);
 
 		return reply.code(201).send({
+			success: true,
 			code: "USER_CREATED",
 			message: "User successfully registered",
-			success: true,
 			accessToken,
 			refreshToken,
 			tokenType: "Bearer",
@@ -269,9 +269,9 @@ export async function login(req, reply) {
 		// console.log("storedRefreshToken: ", storedRefreshToken);
 
 		return reply.code(200).send({
+			success: true,
 			code: "LOGIN_SUCCESS",
 			message: "User successfully logged in",
-			success: true,
 			accessToken,
 			refreshToken,
 			tokenType: "Bearer",

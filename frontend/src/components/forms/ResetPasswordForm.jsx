@@ -4,10 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { sendData } from "../../sendData";
 
 export default function ResetPassword() {
-	const [error, setError] = useState("");
+	const [error, setError] = useState({});
 	const [token, setToken] = useState(null);
-	const [password, setPassword] = useState("");
-	const [newPassword, setNewPassword] = useState("");
 	const [success, setSuccess] = useState(false);
 
 	const newPasswordRef = useRef(null);
@@ -19,7 +17,11 @@ export default function ResetPassword() {
 	// Get token from URL when component loads
 	useEffect(() => {
 		const urlToken = new URLSearchParams(window.location.search).get("token");
-		setToken(urlToken);
+		if (!urlToken) {
+			setError({ form: "Token de réinitialisation invalide" });
+		} else {
+			setToken(urlToken);
+		}
 	}, []);
 
 	const handleResetPasswordSubmit = async (e) => {
@@ -27,7 +29,7 @@ export default function ResetPassword() {
 		clearErrors();
 
 		if (!token) {
-			setError("Invalid or missing reset token");
+			setError({ form: "Token invalide" });
 			return;
 		}
 
@@ -58,13 +60,15 @@ export default function ResetPassword() {
 			}),
 		});
 
-		setSuccess(true);
-
 		if (response.success) {
-			navigate("/", { replace: true });
+			setSuccess(true);
+
+			// Redirect after 3 seconds
+			setTimeout(() => {
+				navigate("/", { replace: true });
+			}, 3000);
 		} else {
-			setError("");
-			return;
+			setError({ form: "Lien expiré ou invalide" });
 		}
 	};
 
@@ -89,12 +93,16 @@ export default function ResetPassword() {
 
 			{success && (
 				<p className="text-lg text-center">
-					Le mot de passe a été bien réinitialisé
+					Le mot de passe a été bien réinitialisé.
+					<br />
+					<span className="text-sm">
+						Redirection automatique...
+					</span>
 				</p>
 			)}
 
 			{!success && (
-				<form onSubmit={handleResetPasswordSubmit} className="w-full flex flex-col gap-4">
+				<form onSubmit={handleResetPasswordSubmit} className="w-full flex flex-col gap-6">
 					<label className="text-left text-xl">Nouveau mot de passe</label>
 					<input
 						ref={newPasswordRef}
@@ -105,12 +113,16 @@ export default function ResetPassword() {
 					/>
 
 					{error.password && (
-						<p className="text-red-500 text-sm">{error.password}</p>
+						<p className="text-red-500 text-lg text-left">{error.password}</p>
+					)}
+
+					{error.form && (
+						<p className="text-red-500 text-lg text-left">{error.form}</p>
 					)}
 
 					<button
 						type="submit"
-						className="bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 transition">
+						className="text-white text-xl py-3 px-10 rounded-md bg-blue-700 hover:bg-blue-600 transition-colors cursor-pointer">
 							Réinitialiser mon mot de passe
 					</button>
 				</form>

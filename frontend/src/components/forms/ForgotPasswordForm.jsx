@@ -5,7 +5,7 @@ import { sendData } from "../../sendData";
 
 export default function ForgotPassword() {
 	const forgotPasswordEmailRef = useRef(null);
-	const [error, setError] = useState("");
+	const [error, setError] = useState({});
 	const [success, setSuccess] = useState(false);
 
 	const clearErrors = () => setError({});
@@ -39,6 +39,11 @@ export default function ForgotPassword() {
 		});
 
 		setSuccess(true);
+
+		// Redirect after 3 seconds
+		setTimeout(() => {
+			navigate("/", { replace: true });
+		}, 3000);
 	};
 
 	const inputClass = (hasError) =>
@@ -79,10 +84,6 @@ export default function ForgotPassword() {
 
 					{error.email && (
 						<p className="text-red-500 text-lg text-left">{error.email}</p>
-					)}
-
-					{error.form && (
-						<p className="text-red-500 text-lg text-left">{error.form}</p>
 					)}
 
 					<button

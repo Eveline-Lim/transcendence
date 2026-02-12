@@ -25,7 +25,7 @@ export async function sendResetEmail(to, resetLink) {
 					Réinitialiser mon mot de passe
 				</a>
 				<p style="margin-top:20px;font-size:12px;color:#666;">
-					Ce lien expire dans 15 minutes.
+					Ce lien expire dans 15 minutes.<br />
 					Si vous n'avez pas demandé la réinitialisation de votre mot de passe, vous pouvez ignorer cet email en toute sécurité.
 				</p>
 			</div>
