@@ -1,8 +1,9 @@
-import { validateEmail } from "../utils/validators.js"
+import { validateEmail, validatePassword } from "../utils/validators.js"
 import { redisClient } from "../redisClient.js";
-import { MAX_LOGIN_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS } from "../utils/macros.js";
+import { MAX_LOGIN_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS, RESET_TOKEN_ETTL } from "../utils/macros.js";
 import { sendResetEmail } from "../mailService.js";
 import crypto from "node:crypto";
+import bcrypt from "bcrypt";
 
 export async function forgotPassword(req, reply) {
 	const { email } = req.body;
@@ -47,18 +48,27 @@ export async function forgotPassword(req, reply) {
 			});
 		}
 
+		const user = await redisClient.hGetAll(`user:${username}`);
+		const userId = user.id;
+
 		// Generate token
-		const resetToken = crypto.randomBytes(64).toString("hex");
+		let token = crypto.randomBytes(64).toString("hex");
 
-		// Store token in Redis
-		const resetKey = `passwordReset:${resetToken}`;
-		await redisClient.set(resetKey, username, {
-			EX: 900, // 15 minutes
-		});
+		const hashedToken = crypto
+			.createHash("sha256")
+			.update(token)
+			.digest("hex");
 
-		// Create reset URL
-		const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-		// console.log("resetLink: ", resetLink);
+		// Store hashed token in Redis
+		await redisClient.set(
+			`resetToken:${hashedToken}`,
+			userId,
+			{ EX: RESET_TOKEN_ETTL }
+		);
+
+		// Send raw token in email link
+		const resetLink = `${process.env.FRONTEND_URL}/password/reset?token=${token}`;
+		console.log("resetLink: ", resetLink);
 
 		// Send email
 		await sendResetEmail(email, resetLink);
@@ -76,6 +86,80 @@ export async function forgotPassword(req, reply) {
 		return reply.code(500).send({
 			code: "INTERNAL_ERROR",
 			message: "Unable to send reset password email",
+		});
+	}
+}
+
+export async function resetPassword(req, reply) {
+	const { token, password } = req.body;
+	console.log("REQ BODY:", req.body);
+
+	// COMMENTED OUT TO SIMPLIFY TESTING
+	// const validation = validatePassword(password);
+	// if (!validation) {
+	// 	return reply.code(400).send({
+	// 		code: "INVALID_CREDENTIALS",
+	// 		message: "Invalid fields",
+	// 	});
+	// }
+
+	try {
+		// Hash received token
+		const hashedToken = crypto
+			.createHash("sha256")
+			.update(token)
+			.digest("hex");
+		// console.log("hashed token: ", hashedToken);
+
+		const userId = await redisClient.get(`resetToken:${hashedToken}`);
+		console.log("userId: ", userId);
+		if (!userId) {
+			return reply.code(401).send({
+				code: "INVALID_TOKEN",
+				message: "Invalid or expired reset token",
+			});
+		}
+		const username = await redisClient.get(`userid:${userId}`);
+		console.log("username: ", username);
+		if (!username) {
+			return reply.code(401).send({
+				code: "USER_NOT_FOUND",
+				message: "User does not exist",
+			});
+		}
+
+		const userKey = `user:${username}`;
+		const user = await redisClient.hGetAll(userKey);
+		if (!user) {
+			return reply.code(401).send({
+				code: "USER_NOT_FOUND",
+				message: "User does not exist",
+			});
+		}
+
+		// Hash new password
+		const hashedPassword = await bcrypt.hash(password, 10);
+		// console.log("hasedPassword: ", hashedPassword);
+
+		// Update user password
+		await redisClient.hSet(userKey, {
+			password: hashedPassword
+		});
+
+		// const userUpdated = await redisClient.hGetAll(userKey);
+		// console.log("userUpdated: ", userUpdated);
+
+		// Delete token
+		await redisClient.del(`resetToken:${hashedToken}`);
+
+		return reply.code(200).send({
+			code: "PASSWORD_RESET_SUCCESS",
+			message: "Password successfully reset",
+		});
+	} catch (error) {
+		return reply.code(500).send({
+			code: "INTERNAL_ERROR",
+			message: "Unable to reset password",
 		});
 	}
 }

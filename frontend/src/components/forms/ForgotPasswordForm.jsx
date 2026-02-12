@@ -5,10 +5,10 @@ import { sendData } from "../../sendData";
 
 export default function ForgotPassword() {
 	const forgotPasswordEmailRef = useRef(null);
-	const [errors, setErrors] = useState({});
+	const [error, setError] = useState("");
 	const [success, setSuccess] = useState(false);
 
-	const clearErrors = () => setErrors({});
+	const clearErrors = () => setError({});
 
 	const navigate = useNavigate();
 
@@ -24,7 +24,7 @@ export default function ForgotPassword() {
 		}
 
 		if (Object.keys(newErrors).length > 0) {
-			setErrors(newErrors);
+			setError(newErrors);
 			return;
 		}
 
@@ -74,15 +74,15 @@ export default function ForgotPassword() {
 						type="email"
 						autoFocus
 						placeholder="Email"
-						className={inputClass(errors.email)}
+						className={inputClass(error.email)}
 					/>
 
-					{errors.email && (
-						<p className="text-red-500 text-lg text-left">{errors.email}</p>
+					{error.email && (
+						<p className="text-red-500 text-lg text-left">{error.email}</p>
 					)}
 
-					{errors.form && (
-						<p className="text-red-500 text-lg text-left">{errors.form}</p>
+					{error.form && (
+						<p className="text-red-500 text-lg text-left">{error.form}</p>
 					)}
 
 					<button

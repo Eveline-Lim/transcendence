@@ -5,7 +5,7 @@ import { sendData } from "../../sendData";
 
 export default function AuthForm() {
 	const [mode, setMode] = useState("login"); // "login" | "signup"
-	const [errors, setErrors] = useState({});
+	const [error, setError] = useState({});
 
 	// LOGIN refs
 	const loginUsernameRef = useRef(null);
@@ -17,7 +17,7 @@ export default function AuthForm() {
 	const signupDisplayNameRef = useRef(null);
 	const signupEmailRef = useRef(null);
 
-	const clearErrors = () => setErrors({});
+	const clearErrors = () => setError({});
 
 	const navigate = useNavigate();
 
@@ -31,27 +31,16 @@ export default function AuthForm() {
 
 		const newErrors = {};
 
-		let email;
-		let username;
-		if (identifier.includes("@")) {
-			email = identifier;
-			console.log("email: ", email);
-		} else {
-			username = identifier;
-			console.log("username: ", username);
+		const isEmail = identifier.includes("@");
+
+		if (isEmail && !validateEmail(identifier)) {
+			newErrors.email = "Email invalide";
 		}
 
-		if (username) {
-			if (!validateUsername(username)) {
-				newErrors.username = "Nom d'utilisateur invalide";
-			}
+		if (!isEmail && !validateUsername(identifier)) {
+			newErrors.username = "Nom d'utilisateur invalide";
 		}
 
-		if (email) {
-			if (!validateEmail(email)) {
-				newErrors.email = "Email invalide";
-			}
-		}
 		// COMMENTED OUT TO SIMPLIFY TESTING
 		// if (!validatePassword(password)) {
 		// 	newErrors.password = "Mot de passe invalide (6–15 caractères, majuscule, minuscule, chiffre, caractère spécial)";
@@ -62,7 +51,7 @@ export default function AuthForm() {
 		}
 
 		if (Object.keys(newErrors).length > 0) {
-			setErrors(newErrors);
+			setError(newErrors);
 			return;
 		}
 
@@ -83,7 +72,7 @@ export default function AuthForm() {
 			console.log("Login OK:", response.user);
 			navigate("/game", { replace: true });
 		} else {
-			setErrors({ form: "Aucun compte n'est asscocié à cet utilisateur" });
+			setError({ form: "Aucun compte n'est asscocié à cet utilisateur" });
 		}
 	};
 
@@ -121,7 +110,7 @@ export default function AuthForm() {
 		}
 
 		if (Object.keys(newErrors).length > 0) {
-			setErrors(newErrors);
+			setError(newErrors);
 			return;
 		}
 
@@ -142,8 +131,8 @@ export default function AuthForm() {
 			console.log("Signup OK:", response.user);
 			navigate("/game", { replace: true });
 		} else {
-			// setErrors({ form: Ce nom d’utilisateur ou cette adresse e-mail est déjà utilisé(e). });
-			setErrors({ form: "Impossible de créer le compte : ces informations sont déjà associées à un compte existant." });
+			// setError({ form: Ce nom d’utilisateur ou cette adresse e-mail est déjà utilisé(e). });
+			setError({ form: "Impossible de créer le compte : ces informations sont déjà associées à un compte existant." });
 		}
 	};
 
@@ -164,20 +153,20 @@ export default function AuthForm() {
 						type="text"
 						autoFocus
 						placeholder="Nom d'utilisateur/Email"
-						className={inputClass(errors.username)}
+						className={inputClass(error.username)}
 					/>
 
-					{errors.username && (<p className="text-red-500 text-lg text-left">{errors.username}</p>)}
+					{error.username && (<p className="text-red-500 text-lg text-left">{error.username}</p>)}
 
 					<label className="text-left text-xl">Mot de passe</label>
 					<input
 						ref={loginPasswordRef}
 						type="password"
 						placeholder="Mot de passe"
-						className={inputClass(errors.password)}
+						className={inputClass(error.password)}
 					/>
 
-					{errors.password && (<p className="text-red-500 text-lg text-left">{errors.password}</p>)}
+					{error.password && (<p className="text-red-500 text-lg text-left">{error.password}</p>)}
 
 					<button
 						type="submit"
@@ -192,10 +181,10 @@ export default function AuthForm() {
 						Mot de passe oublié ?
 					</button>
 
-					{errors.form && (<p className="text-red-500 text-lg text-left">{errors.form}</p>)}
+					{error.form && (<p className="text-red-500 text-lg text-left">{error.form}</p>)}
 
 					<button
-						type="submit"
+						type="button"
 						className="flex items-center justify-center gap-3 border rounded-md py-3 text-xl text-black cursor-pointer hover:bg-gray-200">
 						<p>Connexion avec</p>
 						<img src="./src/assets/42_Logo.svg" alt="Connexion avec 42" className="w-8"/>
@@ -203,7 +192,7 @@ export default function AuthForm() {
 
 					<p
 						onClick={() => {
-							setErrors({});
+							setError({});
 							setMode("signup")}
 						}
 						className="text-lg cursor-pointer">
@@ -223,11 +212,11 @@ export default function AuthForm() {
 						type="text"
 						autoFocus
 						placeholder="Nom d'utilisateur"
-						className={inputClass(errors.username)}
+						className={inputClass(error.username)}
 					/>
 
-					{errors.username && (
-						<p className="text-red-500 text-lg text-left">{errors.username}</p>
+					{error.username && (
+						<p className="text-red-500 text-lg text-left">{error.username}</p>
 					)}
 
 					<label className="text-left text-xl">Pseudo</label>
@@ -236,11 +225,11 @@ export default function AuthForm() {
 						type="text"
 						autoFocus
 						placeholder="Pseudo"
-						className={inputClass(errors.displayName)}
+						className={inputClass(error.displayName)}
 					/>
 
-					{errors.displayName && (
-						<p className="text-red-500 text-lg text-left">{errors.displayName}</p>
+					{error.displayName && (
+						<p className="text-red-500 text-lg text-left">{error.displayName}</p>
 					)}
 
 					<label className="text-left text-xl">Mot de passe</label>
@@ -248,11 +237,11 @@ export default function AuthForm() {
 						ref={signupPasswordRef}
 						type="password"
 						placeholder="Mot de passe"
-						className={inputClass(errors.password)}
+						className={inputClass(error.password)}
 					/>
 
-					{errors.password && (
-						<p className="text-red-500 text-lg text-left">{errors.password}</p>
+					{error.password && (
+						<p className="text-red-500 text-lg text-left">{error.password}</p>
 					)}
 
 					<label className="text-left text-xl">Email</label>
@@ -260,14 +249,14 @@ export default function AuthForm() {
 						ref={signupEmailRef}
 						type="email"
 						placeholder="Email"
-						className={inputClass(errors.email)}
+						className={inputClass(error.email)}
 					/>
 
-					{errors.email && (
-						<p className="text-red-500 text-lg text-left">{errors.email}</p>
+					{error.email && (
+						<p className="text-red-500 text-lg text-left">{error.email}</p>
 					)}
 
-					{errors.form && (<p className="text-red-500 text-lg text-left">{errors.form}</p>)}
+					{error.form && (<p className="text-red-500 text-lg text-left">{error.form}</p>)}
 
 					<button
 						type="submit"
@@ -277,7 +266,7 @@ export default function AuthForm() {
 
 					<p
 						onClick={() => {
-							setErrors({});
+							setError({});
 							setMode("login")}
 						}
 						className="text-lg cursor-pointer">

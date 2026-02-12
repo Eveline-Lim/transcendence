@@ -454,69 +454,69 @@ export class Service {
 	}
 
 	// RESET PASSWORD
-	// async resetPassword(req, reply) {
-	// 	const { token, password } = req.body;
-	// 	console.log("REQ BODY:", req.body);
+	async resetPassword(req, reply) {
+		const { token, password } = req.body;
+		console.log("REQ BODY:", req.body);
 
-	// 	const validation = validatePassword(password);
-	// 	if (!validation) {
-	// 		return reply.code(400).send({
-	// 			code: "INVALID_CREDENTIALS",
-	// 			message: "Invalid fields",
-	// 		});
-	// 	}
+		const validation = validatePassword(password);
+		if (!validation) {
+			return reply.code(400).send({
+				code: "INVALID_CREDENTIALS",
+				message: "Invalid fields",
+			});
+		}
 
-	// 	try {
-	// 		// Look up user by token
-	// 		const userId = await redisClient.get(`resetToken:${token}`);
-	// 		console.log("userId: ", userId);
-	// 		if (!userId) {
-	// 			return reply.code(401).send({
-	// 				code: "INVALID_TOKEN",
-	// 				message: "Invalid or expired reset token",
-	// 			});
-	// 		}
-	// 		const username = await redisClient.get(`userid:${userId}`);
-	// 		console.log("username: ", username);
-	// 		if (!username) {
-	// 			return reply.code(401).send({
-	// 				code: "USER_NOT_FOUND",
-	// 				message: "User does not exist",
-	// 			});
-	// 		}
+		try {
+			// Look up user by token
+			const userId = await redisClient.get(`resetToken:${token}`);
+			console.log("userId: ", userId);
+			if (!userId) {
+				return reply.code(401).send({
+					code: "INVALID_TOKEN",
+					message: "Invalid or expired reset token",
+				});
+			}
+			const username = await redisClient.get(`userid:${userId}`);
+			console.log("username: ", username);
+			if (!username) {
+				return reply.code(401).send({
+					code: "USER_NOT_FOUND",
+					message: "User does not exist",
+				});
+			}
 
-	// 		const userKey = `user:${username}`;
-	// 		const user = await redisClient.hGetAll(userKey);
-	// 		if (!user || !user.hashedPassword) {
-	// 			return reply.code(401).send({
-	// 				code: "USER_NOT_FOUND",
-	// 				message: "User does not exist",
-	// 			});
-	// 		}
-	// 		// Hash new password
-	// 		const hashedPassword = await bcrypt.hash(password, 10);
-	// 		// console.log("hasedPassword: ", hashedPassword);
+			const userKey = `user:${username}`;
+			const user = await redisClient.hGetAll(userKey);
+			if (!user || !user.hashedPassword) {
+				return reply.code(401).send({
+					code: "USER_NOT_FOUND",
+					message: "User does not exist",
+				});
+			}
+			// Hash new password
+			const hashedPassword = await bcrypt.hash(password, 10);
+			// console.log("hasedPassword: ", hashedPassword);
 
-	// 		// Update user
-	// 		await redisClient.hSet(userKey, {...user, hashedPassword,});
+			// Update user
+			await redisClient.hSet(userKey, {...user, hashedPassword,});
 
-	// 		// const userUpdated = await redisClient.hGetAll(userKey);
-	// 		// console.log("userUpdated: ", userUpdated);
+			// const userUpdated = await redisClient.hGetAll(userKey);
+			// console.log("userUpdated: ", userUpdated);
 
-	// 		// Delete token
-	// 		await redisClient.del(`resetToken:${token}`);
+			// Delete token
+			await redisClient.del(`resetToken:${token}`);
 
-	// 		return reply.code(200).send({
-	// 			code: "PASSWORD_RESET_SUCCESS",
-	// 			message: "Password successfully reset",
-	// 		});
-	// 	} catch (error) {
-	// 		return reply.code(500).send({
-	// 			code: "INTERNAL_ERROR",
-	// 			message: "Unable to reset password",
-	// 		});
-	// 	}
-	// }
+			return reply.code(200).send({
+				code: "PASSWORD_RESET_SUCCESS",
+				message: "Password successfully reset",
+			});
+		} catch (error) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Unable to reset password",
+			});
+		}
+	}
 
 	// CHANGE PASSWORD
 	// async changePassword(req, reply) {
