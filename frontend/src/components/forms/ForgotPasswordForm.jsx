@@ -40,7 +40,6 @@ export default function ForgotPassword() {
 		if (response.success) {
 			console.log("Reset password:", response.user);
 		} else {
-			console.log(response.message);
 			setErrors({ form: "Aucun compte n'est associé à cet email" });
 		}
 	};
