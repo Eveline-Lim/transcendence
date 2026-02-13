@@ -15,6 +15,7 @@ export async function signup(req, reply) {
 	const validation = validateInputs({ username, email }, false);
 	if (!validation.success) {
 		return reply.code(400).send({
+			success: false,
 			code: "INVALID_CREDENTIALS",
 			message: "Invalid fields",
 		});
@@ -33,6 +34,7 @@ export async function signup(req, reply) {
 		const existingUser = await redisClient.exists(userKey);
 		if (existingUser) {
 			return reply.code(409).send({
+				success: false,
 				code: "USER_ALREADY_EXISTS",
 				message: "Username already exists",
 			});
@@ -41,6 +43,7 @@ export async function signup(req, reply) {
 		const existingEmail = await redisClient.exists(emailKey);
 		if (existingEmail) {
 			return reply.code(409).send({
+				success: false,
 				code: "EMAIL_ALREADY_EXISTS",
 				message: "Email already exists",
 			});
@@ -143,6 +146,7 @@ export async function signup(req, reply) {
 	} catch (error) {
 		await redisClient.quit();
 		return reply.code(500).send({
+			success: false,
 			code: "INTERNAL_ERROR",
 			message: "Unable to register user",
 		});
@@ -160,6 +164,7 @@ export async function login(req, reply) {
 	const validation = validateInputs({ identifier, password }, true);
 	if (!validation.success) {
 		return reply.code(400).send({
+			success: false,
 			code: "INVALID_REQUEST_PARAMETERS",
 			message: "Invalid fields",
 		});
@@ -171,6 +176,7 @@ export async function login(req, reply) {
 			username = await redisClient.get(`email:${identifier}`);
 			if (!username) {
 				return reply.code(401).send({
+					success: false,
 					code: "INVALID_CREDENTIALS",
 					message: "Invalid username/email or password",
 				});
@@ -185,6 +191,7 @@ export async function login(req, reply) {
 		const existingUser = await redisClient.exists(userKey);
 		if (!existingUser) {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_CREDENTIALS",
 				message: "Invalid username/email or password",
 			});
@@ -202,6 +209,7 @@ export async function login(req, reply) {
 		// console.log("attempts: ", attempts);
 		if (attempts > MAX_LOGIN_ATTEMPTS) {
 			return reply.code(429).send({
+				success: false,
 				code: "TOO_MANY_ATTEMPTS",
 				message: "Too many login attempts. Try again in five minutes."
 			});
@@ -211,6 +219,7 @@ export async function login(req, reply) {
 		const isMatch = await bcrypt.compare(password, user.password);
 		if (!isMatch) {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_CREDENTIALS",
 				message: "Invalid username or password",
 			});
@@ -288,6 +297,7 @@ export async function login(req, reply) {
 		});
 	} catch (error) {
 		return reply.code(500).send({
+			success: false,
 			code: "INTERNAL_ERROR",
 			message: "Unable to log in user",
 		});

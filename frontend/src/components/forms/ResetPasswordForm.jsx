@@ -60,6 +60,8 @@ export default function ResetPassword() {
 			}),
 		});
 
+		console.log("response: ", response);
+
 		if (response.success) {
 			setSuccess(true);
 

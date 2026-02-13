@@ -70,7 +70,7 @@ export default function AuthForm() {
 			console.log("Login OK:", response.user);
 			navigate("/game", { replace: true });
 		} else {
-			setError({ form: "Aucun compte n'est asscocié à cet utilisateur" });
+			setError({ form: "Identifiants invalides" });
 		}
 	};
 
@@ -125,6 +125,7 @@ export default function AuthForm() {
 			})
 		});
 
+		console.log("response: ", response.success);
 		if (response.success) {
 			console.log("Signup OK:", response.user);
 			navigate("/game", { replace: true });

@@ -43,7 +43,7 @@ export async function forgotPassword(req, reply) {
 		const username = await redisClient.get(`email:${email}`);
 		if (!username) {
 			return reply.code(202).send({
-				code: "PASSWORD_RESET_EMAIL_SENT_SUCCESS",
+				code: "(error)PASSWORD_RESET_EMAIL_SENT_SUCCESS",
 				message: "If an account exists for this email address, a password reset link has been sent.",
 			});
 		}
@@ -58,6 +58,7 @@ export async function forgotPassword(req, reply) {
 			.createHash("sha256")
 			.update(token)
 			.digest("hex");
+		// console.log("FORGOT PASSWORD hashed token: ", hashedToken);
 
 		// Store hashed token in Redis
 		await redisClient.set(
@@ -66,6 +67,8 @@ export async function forgotPassword(req, reply) {
 			{ EX: RESET_TOKEN_ETTL }
 		);
 
+		const resetToken = await redisClient.get(`resetToken:${hashedToken}`);
+		console.log();
 		// Send raw token in email link
 		const resetLink = `${process.env.FRONTEND_URL}/password/reset?token=${token}`;
 		console.log("resetLink: ", resetLink);
@@ -82,7 +85,6 @@ export async function forgotPassword(req, reply) {
 			message: "If an account exists for this email address, a password reset link has been sent.",
 		});
 	} catch (error) {
-		console.log("ERROR: ", error);
 		return reply.code(500).send({
 			code: "INTERNAL_ERROR",
 			message: "Unable to send reset password email",
@@ -90,9 +92,24 @@ export async function forgotPassword(req, reply) {
 	}
 }
 
+
 export async function resetPassword(req, reply) {
+	// const referer = req.headers.referer;
 	const { token, password } = req.body;
-	// console.log("REQ BODY:", req.body);
+
+	// const url = new URL(referer);
+	// const urlToken = url.searchParams.get('token');
+	// console.log("urlToken: ", urlToken);
+	console.log("token: ", token);
+	console.log("password: ", password);
+
+	if (!token) {
+		return reply.code(400).send({
+			success: false,
+			code: "INVALID_CREDENTIALS",
+			message: "Invalid fields",
+		});
+	}
 
 	// COMMENTED OUT TO SIMPLIFY TESTING
 	// const validation = validatePassword(password);
@@ -109,12 +126,14 @@ export async function resetPassword(req, reply) {
 			.createHash("sha256")
 			.update(token)
 			.digest("hex");
-		// console.log("hashed token: ", hashedToken);
+		// console.log("RESET PASSWORD hashed token: ", hashedToken);
+
 
 		const userId = await redisClient.get(`resetToken:${hashedToken}`);
 		console.log("userId: ", userId);
 		if (!userId) {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_TOKEN",
 				message: "Invalid or expired reset token",
 			});
@@ -123,6 +142,7 @@ export async function resetPassword(req, reply) {
 		console.log("username: ", username);
 		if (!username) {
 			return reply.code(401).send({
+				success: false,
 				code: "USER_NOT_FOUND",
 				message: "User does not exist",
 			});
@@ -132,6 +152,7 @@ export async function resetPassword(req, reply) {
 		const user = await redisClient.hGetAll(userKey);
 		if (!user || Object.keys(user).length === 0) {
 			return reply.code(401).send({
+				success: false,
 				code: "USER_NOT_FOUND",
 				message: "User does not exist",
 			});
@@ -159,6 +180,7 @@ export async function resetPassword(req, reply) {
 		});
 	} catch (error) {
 		return reply.code(500).send({
+			success: false,
 			code: "INTERNAL_ERROR",
 			message: "Unable to reset password",
 		});

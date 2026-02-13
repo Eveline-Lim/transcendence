@@ -8,7 +8,7 @@ export async function sendData(route, options) {
 			data = null;
 		}
 
-		if (!response.ok) {
+		if (response.success == "false") {
 			return {
 				success: false,
 				message: "Internal server error"
