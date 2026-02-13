@@ -7,12 +7,13 @@ echo "Génération des secrets..."
 
 # Fonction helper
 create_secret() {
-    if [ ! -f "secrets/$1" ]; then
+    if [[ ! -f "secrets/$1" ]]; then
         echo "$2" > "secrets/$1"
         echo "  + secrets/$1 créé"
     else
         echo "  . secrets/$1 existe déjà"
     fi
+    return 0
 }
 
 # Database
@@ -41,7 +42,7 @@ create_secret "nginx_port" "80"
 create_secret "frontend_url" "http://localhost:8080"
 
 # SSL (Self-signed pour le dev)
-if [ ! -f "secrets/ssl_key" ]; then
+if [[ ! -f "secrets/ssl_key" ]]; then
     echo "  + Génération certificat SSL auto-signé..."
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
         -keyout secrets/ssl_key \
