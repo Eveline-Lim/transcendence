@@ -205,8 +205,8 @@ async fn remove_from_queue(state: &AppState, player_id: Uuid, mode: GameMode) {
 
 fn send_match_found(p1: WaitingPlayer, p2: WaitingPlayer) {
     let match_id = Uuid::new_v4();
+    // TODO: ici utiliser le service game
     let game_url = format!("ws://localhost:9090/game/{}", match_id);
-
     let msg_for_p1 = ServerMessage::MatchFound {
         data: MatchFoundData {
             match_id,
