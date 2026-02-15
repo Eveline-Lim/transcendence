@@ -10,8 +10,8 @@ use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
 use uuid::Uuid;
 
 use crate::AppState;
-use crate::casual_queue::WaitingPlayer;
 use crate::messages::*;
+use crate::waiting_player::WaitingPlayer;
 
 /// Extract player information from API Gateway headers.
 ///
@@ -162,7 +162,10 @@ pub async fn handle_connection(stream: TcpStream, state: Arc<AppState>) {
 
                 let matched = match mode {
                     GameMode::Casual => state.casual.lock().await.enqueue(player),
-                    GameMode::Ranked => state.ranked.lock().await.enqueue(player, 1000),
+                    GameMode::Ranked => {
+                        let mmr = player.get_rank().await;
+                        state.ranked.lock().await.enqueue(player, mmr)
+                    }
                 };
 
                 if let Some((p1, p2)) = matched {

@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 
 use uuid::Uuid;
 
-use crate::casual_queue::WaitingPlayer;
 use crate::messages::{QueueUpdateData, ServerMessage};
+use crate::waiting_player::WaitingPlayer;
 
 const MAX_RANK_DIFF: u32 = 50;
 
