@@ -5,11 +5,11 @@ use log::info;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 
-pub mod auth;
 pub mod casual_queue;
 pub mod handler;
 pub mod messages;
 pub mod ranked_queue;
+pub mod waiting_player;
 
 use casual_queue::CasualQueue;
 use handler::handle_connection;

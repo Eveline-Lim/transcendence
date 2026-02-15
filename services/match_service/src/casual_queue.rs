@@ -1,21 +1,8 @@
 use std::collections::VecDeque;
 
-use tokio::sync::mpsc;
-use uuid::Uuid;
-
 use crate::messages::{QueueUpdateData, ServerMessage};
-
-/// A player handle stored in a queue.
-///
-/// The `sender` is used to push [`ServerMessage`]s back to the player's
-/// WebSocket writer task.  It is cheaply cloneable and never blocks.
-#[derive(Debug)]
-pub struct WaitingPlayer {
-    pub id: Uuid,
-    pub username: String,
-    pub avatar_url: Option<String>,
-    pub sender: mpsc::UnboundedSender<ServerMessage>,
-}
+use crate::waiting_player::WaitingPlayer;
+use uuid::Uuid;
 
 /// First-come-first-served matchmaking queue.
 ///
@@ -46,7 +33,6 @@ impl CasualQueue {
     /// or `None` when the player has been placed in the waiting queue (a
     /// [`ServerMessage::QueueUpdate`] is broadcast to all waiters).
     pub fn enqueue(&mut self, player: WaitingPlayer) -> Option<(WaitingPlayer, WaitingPlayer)> {
-        // Try to pop the oldest *connected* opponent.
         while let Some(opponent) = self.players.pop_front() {
             if !opponent.sender.is_closed() {
                 return Some((opponent, player));
@@ -88,6 +74,8 @@ impl CasualQueue {
 
 #[cfg(test)]
 mod tests {
+    use tokio::sync::mpsc;
+
     use super::*;
 
     fn make_player(name: &str) -> (WaitingPlayer, mpsc::UnboundedReceiver<ServerMessage>) {
