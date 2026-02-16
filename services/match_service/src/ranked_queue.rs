@@ -111,19 +111,13 @@ impl RankedQueue {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::waiting_player::PlayerInfo;
     use tokio::sync::mpsc;
 
     fn make_player(name: &str) -> (WaitingPlayer, mpsc::UnboundedReceiver<ServerMessage>) {
         let (tx, rx) = mpsc::unbounded_channel();
-        (
-            WaitingPlayer {
-                id: Uuid::new_v4(),
-                username: name.into(),
-                avatar_url: None,
-                sender: tx,
-            },
-            rx,
-        )
+        let info = PlayerInfo::new(Uuid::new_v4(), name.into(), None);
+        (WaitingPlayer::new(info, tx), rx)
     }
 
     #[test]

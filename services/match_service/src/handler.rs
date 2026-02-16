@@ -1,17 +1,15 @@
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 use futures_util::{SinkExt, StreamExt};
 use log::{error, info, warn};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
 use uuid::Uuid;
 
 use crate::AppState;
 use crate::messages::*;
-use crate::waiting_player::WaitingPlayer;
+use crate::waiting_player::{PlayerInfo, PlayerInfoFabric, WaitingPlayer};
 
 /// Extract player information from API Gateway headers.
 ///
@@ -30,84 +28,29 @@ use crate::waiting_player::WaitingPlayer;
 /// generates test users automatically.
 pub async fn extract_player_from_handshake(
     stream: TcpStream,
-) -> Result<
-    (
-        tokio_tungstenite::WebSocketStream<TcpStream>,
-        Uuid,
-        String,
-        Option<String>,
-    ),
-    String,
-> {
-    let reader_player_id: Arc<Mutex<Option<Uuid>>> = Arc::new(Mutex::new(None));
-    let reader_username: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
-    let reader_avatar: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
-
-    let writer_player_id = Arc::clone(&reader_player_id);
-    let writer_username = Arc::clone(&reader_username);
-    let writer_avatar = Arc::clone(&reader_avatar);
-
-    let callback = move |req: &Request, resp: Response| {
-        if let Some(player_id_str) = req
-            .headers()
-            .get("X-Player-Id")
-            .and_then(|v| v.to_str().ok())
-        {
-            if let Ok(uuid) = Uuid::parse_str(player_id_str) {
-                if let Ok(mut guard) = writer_player_id.try_lock() {
-                    *guard = Some(uuid);
-                }
-            }
-        }
-        req.headers()
-            .get("X-Username")
-            .and_then(|v| v.to_str().ok())
-            .map(|s| {
-                writer_username
-                    .try_lock()
-                    .map(|mut writer| *writer = Some(s.to_owned()))
-            });
-        req.headers()
-            .get("X-Avatar-Url")
-            .and_then(|v| v.to_str().ok())
-            .map(|s| {
-                writer_avatar
-                    .try_lock()
-                    .map(|mut wr| *wr = Some(s.to_owned()))
-            });
-        Ok(resp)
-    };
+) -> Result<(tokio_tungstenite::WebSocketStream<TcpStream>, PlayerInfo), String> {
+    let fabric = PlayerInfoFabric::new();
+    let callback = fabric.get_callback();
 
     let ws_stream = tokio_tungstenite::accept_hdr_async(stream, callback)
         .await
         .map_err(|e| format!("WebSocket handshake failed: {}", e))?;
 
-    let player_id = reader_player_id
-        .lock()
-        .await
-        .clone()
-        .unwrap_or_else(Uuid::new_v4);
-    let username = reader_username
-        .lock()
-        .await
-        .clone()
-        .unwrap_or_else(|| format!("Player-{}", &player_id.to_string()[..8]));
-    let avatar_url = reader_avatar.lock().await.clone();
+    let info = fabric.into_player_info().await;
 
-    Ok((ws_stream, player_id, username, avatar_url))
+    Ok((ws_stream, info))
 }
 
 pub async fn handle_connection(stream: TcpStream, state: Arc<AppState>) {
-    let (ws_stream, player_id, username, avatar_url) =
-        match extract_player_from_handshake(stream).await {
-            Ok(data) => data,
-            Err(e) => {
-                error!("Connection rejected: {}", e);
-                return;
-            }
-        };
+    let (ws_stream, info) = match extract_player_from_handshake(stream).await {
+        Ok(data) => data,
+        Err(e) => {
+            error!("Connection rejected: {}", e);
+            return;
+        }
+    };
 
-    info!("[{}] connected as {}", player_id, username);
+    info!("[{}] connected as {}", info.id, info.username);
 
     let (mut ws_sink, mut ws_source) = ws_stream.split();
 
@@ -138,7 +81,7 @@ pub async fn handle_connection(stream: TcpStream, state: Arc<AppState>) {
         let client_msg: ClientMessage = match serde_json::from_str(&text) {
             Ok(m) => m,
             Err(e) => {
-                warn!("[{}] bad message: {}", player_id, e);
+                warn!("[{}] bad message: {}", info.id, e);
                 continue;
             }
         };
@@ -148,22 +91,17 @@ pub async fn handle_connection(stream: TcpStream, state: Arc<AppState>) {
                 let mode = data.map(|d| d.game_mode).unwrap_or_default();
 
                 if let Some(prev) = current_mode.take() {
-                    remove_from_queue(&state, player_id, prev).await;
+                    remove_from_queue(&state, info.id, prev).await;
                 }
 
-                info!("[{}] joining {:?} queue", player_id, mode);
+                info!("[{}] joining {:?} queue", info.id, mode);
 
-                let player = WaitingPlayer {
-                    id: player_id,
-                    username: username.clone(),
-                    avatar_url: avatar_url.clone(),
-                    sender: tx.clone(),
-                };
+                let player = WaitingPlayer::new(info.clone(), tx.clone());
 
                 let matched = match mode {
                     GameMode::Casual => state.casual.lock().await.enqueue(player),
                     GameMode::Ranked => {
-                        let mmr = player.get_rank().await;
+                        let mmr = info.get_rank().await;
                         state.ranked.lock().await.enqueue(player, mmr)
                     }
                 };
@@ -176,23 +114,20 @@ pub async fn handle_connection(stream: TcpStream, state: Arc<AppState>) {
             }
             ClientMessage::LeaveQueue => {
                 if let Some(mode) = current_mode.take() {
-                    info!("[{}] leaving {:?} queue", player_id, mode);
-                    remove_from_queue(&state, player_id, mode).await;
+                    info!("[{}] leaving {:?} queue", info.id, mode);
+                    remove_from_queue(&state, info.id, mode).await;
                 }
             }
         }
     }
 
     if let Some(mode) = current_mode.take() {
-        info!(
-            "[{}] disconnected, removing from {:?} queue",
-            player_id, mode
-        );
-        remove_from_queue(&state, player_id, mode).await;
+        info!("[{}] disconnected, removing from {:?} queue", info.id, mode);
+        remove_from_queue(&state, info.id, mode).await;
     }
 
     writer.abort();
-    info!("[{}] connection closed", player_id);
+    info!("[{}] connection closed", info.id);
 }
 
 async fn remove_from_queue(state: &AppState, player_id: Uuid, mode: GameMode) {
@@ -277,11 +212,11 @@ mod tests {
         let result = server.await.unwrap();
         assert!(result.is_ok());
 
-        let (_, player_id, username, avatar_url) = result.unwrap();
-        assert_eq!(player_id.to_string(), test_uuid);
-        assert_eq!(username, "alice");
+        let (_, info) = result.unwrap();
+        assert_eq!(info.id.to_string(), test_uuid);
+        assert_eq!(info.username, "alice");
         assert_eq!(
-            avatar_url,
+            info.avatar_url,
             Some("https://example.com/alice.jpg".to_string())
         );
     }
@@ -320,10 +255,10 @@ mod tests {
         let result = server.await.unwrap();
         assert!(result.is_ok());
 
-        let (_, player_id, username, avatar_url) = result.unwrap();
-        assert_eq!(player_id.to_string(), test_uuid);
-        assert_eq!(username, "bob");
-        assert_eq!(avatar_url, None);
+        let (_, info) = result.unwrap();
+        assert_eq!(info.id.to_string(), test_uuid);
+        assert_eq!(info.username, "bob");
+        assert_eq!(info.avatar_url, None);
     }
 
     #[tokio::test]
@@ -354,11 +289,11 @@ mod tests {
         let result = server.await.unwrap();
         assert!(result.is_ok());
 
-        let (_, player_id, username, avatar_url) = result.unwrap();
+        let (_, info) = result.unwrap();
 
-        assert!(Uuid::parse_str(&player_id.to_string()).is_ok());
-        assert!(username.starts_with("Player-"));
-        assert_eq!(avatar_url, None);
+        assert!(Uuid::parse_str(&info.id.to_string()).is_ok());
+        assert!(info.username.starts_with("Player-"));
+        assert_eq!(info.avatar_url, None);
     }
 
     #[tokio::test]
@@ -391,10 +326,10 @@ mod tests {
         let result = server.await.unwrap();
         assert!(result.is_ok());
 
-        let (_, player_id, username, _) = result.unwrap();
+        let (_, info) = result.unwrap();
 
-        assert!(Uuid::parse_str(&player_id.to_string()).is_ok());
-        assert_eq!(username, "charlie");
+        assert!(Uuid::parse_str(&info.id.to_string()).is_ok());
+        assert_eq!(info.username, "charlie");
     }
 
     #[tokio::test]
