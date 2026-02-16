@@ -8,10 +8,10 @@ export async function sendData(route, options) {
 			data = null;
 		}
 
-		if (response.success == "false") {
+		if (!response.ok) {
 			return {
 				success: false,
-				message: "Internal server error"
+				message: data.message || "Internal server error"
 			};
 		}
 		return data;

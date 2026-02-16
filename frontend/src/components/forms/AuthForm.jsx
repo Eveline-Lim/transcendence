@@ -183,6 +183,9 @@ export default function AuthForm() {
 
 					<button
 						type="button"
+						onClick={() => {
+							window.location.href = "http://localhost:3000/api/auth/oauth/fortytwo";
+						}}
 						className="flex items-center justify-center gap-3 border rounded-md py-3 text-xl text-black cursor-pointer hover:bg-gray-200">
 						<p>Connexion avec</p>
 						<img src="./src/assets/42_Logo.svg" alt="Connexion avec 42" className="w-8"/>

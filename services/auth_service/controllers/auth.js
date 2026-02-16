@@ -145,6 +145,7 @@ export async function signup(req, reply) {
 		});
 	} catch (error) {
 		await redisClient.quit();
+		console.log("SIGNUP ERROR: ", error);
 		return reply.code(500).send({
 			success: false,
 			code: "INTERNAL_ERROR",
@@ -257,14 +258,14 @@ export async function login(req, reply) {
 			process.env.SECRET_TOKEN,
 			{ expiresIn: ACCESS_TOKEN_TTL }
 		);
-		// console.log("ACCESS TOKEN: ", accessToken);
+		console.log("ACCESS TOKEN: ", accessToken);
 		accessToken = await bcrypt.hash(accessToken, 10);
 		// console.log("hashedToken: ", accessToken);
 
 		// Refresh Token
 		// Generate a random salt (64 bytes)
 		let refreshToken = crypto.randomBytes(64).toString("hex");
-		// console.log("REFRESH_TOKEN: ", refreshToken);
+		console.log("REFRESH_TOKEN: ", refreshToken);
 		refreshToken = await bcrypt.hash(refreshToken, 10);
 		// console.log("hashedRefreshToken: ", refreshToken);
 
