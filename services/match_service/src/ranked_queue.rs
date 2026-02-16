@@ -50,7 +50,7 @@ impl RankedQueue {
     /// Remove a player by id.  Returns `true` if found.
     pub fn dequeue(&mut self, player_id: Uuid) -> bool {
         for players in self.buckets.values_mut() {
-            if let Some(pos) = players.iter().position(|p| p.id == player_id) {
+            if let Some(pos) = players.iter().position(|p| p.info.id == player_id) {
                 players.swap_remove(pos);
                 self.total -= 1;
                 self.buckets.retain(|_, v| !v.is_empty());
@@ -75,15 +75,15 @@ impl RankedQueue {
         candidates.sort_by_key(|&k| (k as i64 - mmr as i64).unsigned_abs());
 
         for target in candidates {
-            if let Some(players) = self.buckets.get_mut(&target) {
-                if let Some(idx) = players.iter().position(|p| !p.sender.is_closed()) {
-                    let opponent = players.swap_remove(idx);
-                    self.total -= 1;
-                    if players.is_empty() {
-                        self.buckets.remove(&target);
-                    }
-                    return Some(opponent);
+            if let Some(players) = self.buckets.get_mut(&target)
+                && let Some(idx) = players.iter().position(|p| !p.sender.is_closed())
+            {
+                let opponent = players.swap_remove(idx);
+                self.total -= 1;
+                if players.is_empty() {
+                    self.buckets.remove(&target);
                 }
+                return Some(opponent);
             }
         }
         None
@@ -111,14 +111,7 @@ impl RankedQueue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::waiting_player::PlayerInfo;
-    use tokio::sync::mpsc;
-
-    fn make_player(name: &str) -> (WaitingPlayer, mpsc::UnboundedReceiver<ServerMessage>) {
-        let (tx, rx) = mpsc::unbounded_channel();
-        let info = PlayerInfo::new(Uuid::new_v4(), name.into(), None);
-        (WaitingPlayer::new(info, tx), rx)
-    }
+    use crate::waiting_player::make_test_player as make_player;
 
     #[test]
     fn single_player_waits() {
@@ -136,8 +129,8 @@ mod tests {
 
         q.enqueue(p1, 1000);
         let (a, b) = q.enqueue(p2, 1030).expect("should match within ±50");
-        assert_eq!(a.username, "alice");
-        assert_eq!(b.username, "bob");
+        assert_eq!(a.info.username, "alice");
+        assert_eq!(b.info.username, "bob");
         assert!(q.is_empty());
     }
 
@@ -163,7 +156,7 @@ mod tests {
 
         let (joiner, _rj) = make_player("joiner");
         let (matched, _) = q.enqueue(joiner, 1000).expect("should match close");
-        assert_eq!(matched.username, "close");
+        assert_eq!(matched.info.username, "close");
         assert_eq!(q.len(), 1);
     }
 
@@ -192,7 +185,7 @@ mod tests {
     fn dequeue_removes_player() {
         let mut q = RankedQueue::new();
         let (p, _rx) = make_player("alice");
-        let id = p.id;
+        let id = p.info.id;
         q.enqueue(p, 1000);
         assert!(q.dequeue(id));
         assert!(q.is_empty());
@@ -248,7 +241,7 @@ mod tests {
         let (p1, _rx1) = make_player("alice");
         let (p2, mut rx2) = make_player("bob");
 
-        let id1 = p1.id;
+        let id1 = p1.info.id;
         q.enqueue(p1, 900);
         q.enqueue(p2, 1000);
 

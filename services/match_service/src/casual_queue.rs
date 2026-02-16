@@ -47,7 +47,7 @@ impl CasualQueue {
     /// player was found and removed.
     pub fn dequeue(&mut self, player_id: Uuid) -> bool {
         let before = self.players.len();
-        self.players.retain(|p| p.id != player_id);
+        self.players.retain(|p| p.info.id != player_id);
         let removed = self.players.len() < before;
         if removed {
             self.broadcast_queue_update();
@@ -74,17 +74,9 @@ impl CasualQueue {
 
 #[cfg(test)]
 mod tests {
-    use tokio::sync::mpsc;
-
-    use crate::waiting_player::PlayerInfo;
+    use crate::waiting_player::make_test_player as make_player;
 
     use super::*;
-
-    fn make_player(name: &str) -> (WaitingPlayer, mpsc::UnboundedReceiver<ServerMessage>) {
-        let (tx, rx) = mpsc::unbounded_channel();
-        let info = PlayerInfo::new(Uuid::new_v4(), name.into(), None);
-        (WaitingPlayer::new(info, tx), rx)
-    }
 
     #[test]
     fn single_player_waits() {
@@ -102,8 +94,8 @@ mod tests {
 
         assert!(q.enqueue(p1).is_none());
         let (a, b) = q.enqueue(p2).expect("should match");
-        assert_eq!(a.username, "alice");
-        assert_eq!(b.username, "bob");
+        assert_eq!(a.info.username, "alice");
+        assert_eq!(b.info.username, "bob");
         assert!(q.is_empty());
     }
 
@@ -116,8 +108,8 @@ mod tests {
 
         assert!(q.enqueue(a).is_none());
         let (m1, m2) = q.enqueue(b).unwrap();
-        assert_eq!(m1.username, "first");
-        assert_eq!(m2.username, "second");
+        assert_eq!(m1.info.username, "first");
+        assert_eq!(m2.info.username, "second");
 
         assert!(q.enqueue(c).is_none());
         assert_eq!(q.len(), 1);
@@ -127,7 +119,7 @@ mod tests {
     fn dequeue_removes_player() {
         let mut q = CasualQueue::new();
         let (p, _rx) = make_player("alice");
-        let id = p.id;
+        let id = p.info.id;
         q.enqueue(p);
         assert!(q.dequeue(id));
         assert!(q.is_empty());
@@ -184,7 +176,7 @@ mod tests {
     fn broadcast_after_dequeue_works() {
         let mut q = CasualQueue::new();
         let (p1, rx1) = make_player("alice");
-        let id1 = p1.id;
+        let id1 = p1.info.id;
 
         q.enqueue(p1);
         drop(rx1);

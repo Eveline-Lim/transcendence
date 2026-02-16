@@ -1,17 +1,12 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum GameMode {
+    #[default]
     Casual,
     Ranked,
-}
-
-impl Default for GameMode {
-    fn default() -> Self {
-        Self::Casual
-    }
 }
 
 #[derive(Debug, Deserialize)]
