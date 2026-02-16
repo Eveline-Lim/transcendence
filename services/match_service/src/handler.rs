@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::AppState;
 use crate::messages::*;
-use crate::waiting_player::{PlayerInfo, PlayerInfoFabric, WaitingPlayer};
+use crate::waiting_player::{PlayerInfo, PlayerInfoFactory, WaitingPlayer};
 
 /// Extract player information from API Gateway headers.
 ///
@@ -29,14 +29,14 @@ use crate::waiting_player::{PlayerInfo, PlayerInfoFabric, WaitingPlayer};
 pub async fn extract_player_from_handshake(
     stream: TcpStream,
 ) -> Result<(tokio_tungstenite::WebSocketStream<TcpStream>, PlayerInfo), String> {
-    let fabric = PlayerInfoFabric::new();
-    let callback = fabric.get_callback();
+    let factory = PlayerInfoFactory::new();
+    let callback = factory.make_callback();
 
     let ws_stream = tokio_tungstenite::accept_hdr_async(stream, callback)
         .await
         .map_err(|e| format!("WebSocket handshake failed: {}", e))?;
 
-    let info = fabric.into_player_info().await;
+    let info = factory.into_player_info().await;
 
     Ok((ws_stream, info))
 }
@@ -52,11 +52,11 @@ pub async fn handle_connection(stream: TcpStream, state: Arc<AppState>) {
 
     info!("[{}] connected as {}", info.id, info.username);
 
-    let (mut ws_sink, mut ws_source) = ws_stream.split();
+    let (mut ws_sink, mut ws_reader) = ws_stream.split();
 
     let (tx, mut rx) = mpsc::unbounded_channel::<ServerMessage>();
 
-    let writer = tokio::spawn(async move {
+    let writer_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             match serde_json::to_string(&msg) {
                 Ok(text) => {
@@ -71,7 +71,7 @@ pub async fn handle_connection(stream: TcpStream, state: Arc<AppState>) {
 
     let mut current_mode: Option<GameMode> = None;
 
-    while let Some(Ok(msg)) = ws_source.next().await {
+    while let Some(Ok(msg)) = ws_reader.next().await {
         let text = match msg {
             Message::Text(t) => t,
             Message::Close(_) => break,
@@ -126,7 +126,7 @@ pub async fn handle_connection(stream: TcpStream, state: Arc<AppState>) {
         remove_from_queue(&state, info.id, mode).await;
     }
 
-    writer.abort();
+    writer_task.abort();
     info!("[{}] connection closed", info.id);
 }
 

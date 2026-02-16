@@ -5,33 +5,33 @@ use tokio::sync::{Mutex, mpsc};
 use tokio_tungstenite::tungstenite::handshake::server::{ErrorResponse, Request, Response};
 use uuid::Uuid;
 
-pub struct PlayerInfoFabric {
-    reader_player_id: Arc<Mutex<Option<Uuid>>>,
-    reader_username: Arc<Mutex<Option<String>>>,
-    reader_avatar: Arc<Mutex<Option<String>>>,
+pub struct PlayerInfoFactory {
+    player_id: Arc<Mutex<Option<Uuid>>>,
+    username: Arc<Mutex<Option<String>>>,
+    avatar_url: Arc<Mutex<Option<String>>>,
 }
 
-impl Default for PlayerInfoFabric {
+impl Default for PlayerInfoFactory {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl PlayerInfoFabric {
-    pub fn new() -> PlayerInfoFabric {
-        PlayerInfoFabric {
-            reader_player_id: Arc::new(Mutex::new(None)),
-            reader_username: Arc::new(Mutex::new(None)),
-            reader_avatar: Arc::new(Mutex::new(None)),
+impl PlayerInfoFactory {
+    pub fn new() -> PlayerInfoFactory {
+        PlayerInfoFactory {
+            player_id: Arc::new(Mutex::new(None)),
+            username: Arc::new(Mutex::new(None)),
+            avatar_url: Arc::new(Mutex::new(None)),
         }
     }
 
-    pub fn get_callback(
+    pub fn make_callback(
         &self,
     ) -> impl FnOnce(&Request, Response) -> Result<Response, ErrorResponse> {
-        let writer_player_id = Arc::clone(&self.reader_player_id);
-        let writer_username = Arc::clone(&self.reader_username);
-        let writer_avatar = Arc::clone(&self.reader_avatar);
+        let player_id = Arc::clone(&self.player_id);
+        let username = Arc::clone(&self.username);
+        let avatar_url = Arc::clone(&self.avatar_url);
 
         move |req: &Request, resp: Response| {
             if let Some(player_id_str) = req
@@ -39,7 +39,7 @@ impl PlayerInfoFabric {
                 .get("X-Player-Id")
                 .and_then(|v| v.to_str().ok())
                 && let Ok(uuid) = Uuid::parse_str(player_id_str)
-                && let Ok(mut guard) = writer_player_id.try_lock()
+                && let Ok(mut guard) = player_id.try_lock()
             {
                 *guard = Some(uuid);
             }
@@ -47,35 +47,31 @@ impl PlayerInfoFabric {
                 .get("X-Username")
                 .and_then(|v| v.to_str().ok())
                 .map(|s| {
-                    writer_username
+                    username
                         .try_lock()
-                        .map(|mut writer| *writer = Some(s.to_owned()))
+                        .map(|mut guard| *guard = Some(s.to_owned()))
                 });
             req.headers()
                 .get("X-Avatar-Url")
                 .and_then(|v| v.to_str().ok())
                 .map(|s| {
-                    writer_avatar
+                    avatar_url
                         .try_lock()
-                        .map(|mut wr| *wr = Some(s.to_owned()))
+                        .map(|mut guard| *guard = Some(s.to_owned()))
                 });
             Ok(resp)
         }
     }
 
     pub async fn into_player_info(self) -> PlayerInfo {
-        let player_id = self
-            .reader_player_id
-            .lock()
-            .await
-            .unwrap_or_else(Uuid::new_v4);
+        let player_id = self.player_id.lock().await.unwrap_or_else(Uuid::new_v4);
         let username = self
-            .reader_username
+            .username
             .lock()
             .await
             .clone()
             .unwrap_or_else(|| format!("Player-{}", &player_id.to_string()[..8]));
-        let avatar_url = self.reader_avatar.lock().await.clone();
+        let avatar_url = self.avatar_url.lock().await.clone();
 
         PlayerInfo::new(player_id, username, avatar_url)
     }
