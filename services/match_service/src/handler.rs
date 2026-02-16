@@ -150,8 +150,8 @@ fn send_match_found(p1: WaitingPlayer, p2: WaitingPlayer) {
             match_id,
             game_engine_url: game_url.clone(),
             opponent: OpponentInfo {
-                username: p2.username.clone(),
-                avatar_url: p2.avatar_url.clone(),
+                username: p2.info.username.clone(),
+                avatar_url: p2.info.avatar_url.clone(),
             },
         },
     };
@@ -161,8 +161,8 @@ fn send_match_found(p1: WaitingPlayer, p2: WaitingPlayer) {
             match_id,
             game_engine_url: game_url,
             opponent: OpponentInfo {
-                username: p1.username.clone(),
-                avatar_url: p1.avatar_url.clone(),
+                username: p1.info.username.clone(),
+                avatar_url: p1.info.avatar_url.clone(),
             },
         },
     };

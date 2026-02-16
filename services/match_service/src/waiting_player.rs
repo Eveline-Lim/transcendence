@@ -11,6 +11,12 @@ pub struct PlayerInfoFabric {
     reader_avatar: Arc<Mutex<Option<String>>>,
 }
 
+impl Default for PlayerInfoFabric {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PlayerInfoFabric {
     pub fn new() -> PlayerInfoFabric {
         PlayerInfoFabric {
@@ -32,12 +38,10 @@ impl PlayerInfoFabric {
                 .headers()
                 .get("X-Player-Id")
                 .and_then(|v| v.to_str().ok())
+                && let Ok(uuid) = Uuid::parse_str(player_id_str)
+                && let Ok(mut guard) = writer_player_id.try_lock()
             {
-                if let Ok(uuid) = Uuid::parse_str(player_id_str) {
-                    if let Ok(mut guard) = writer_player_id.try_lock() {
-                        *guard = Some(uuid);
-                    }
-                }
+                *guard = Some(uuid);
             }
             req.headers()
                 .get("X-Username")
@@ -64,7 +68,6 @@ impl PlayerInfoFabric {
             .reader_player_id
             .lock()
             .await
-            .clone()
             .unwrap_or_else(Uuid::new_v4);
         let username = self
             .reader_username
@@ -111,19 +114,19 @@ impl PlayerInfo {
 /// The sender is cheaply cloneable and never blocks.
 #[derive(Debug)]
 pub struct WaitingPlayer {
-    pub id: Uuid,
-    pub username: String,
-    pub avatar_url: Option<String>,
+    pub info: PlayerInfo,
     pub sender: mpsc::UnboundedSender<ServerMessage>,
 }
 
 impl WaitingPlayer {
     pub fn new(info: PlayerInfo, sender: mpsc::UnboundedSender<ServerMessage>) -> Self {
-        Self {
-            id: info.id,
-            username: info.username,
-            avatar_url: info.avatar_url,
-            sender,
-        }
+        Self { info, sender }
     }
+}
+
+#[cfg(test)]
+pub fn make_test_player(name: &str) -> (WaitingPlayer, mpsc::UnboundedReceiver<ServerMessage>) {
+    let (tx, rx) = mpsc::unbounded_channel();
+    let info = PlayerInfo::new(Uuid::new_v4(), name.into(), None);
+    (WaitingPlayer::new(info, tx), rx)
 }

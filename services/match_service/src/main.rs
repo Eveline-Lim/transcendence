@@ -3,31 +3,9 @@ use std::sync::Arc;
 
 use log::info;
 use tokio::net::TcpListener;
-use tokio::sync::Mutex;
 
-pub mod casual_queue;
-pub mod handler;
-pub mod messages;
-pub mod ranked_queue;
-pub mod waiting_player;
-
-use casual_queue::CasualQueue;
-use handler::handle_connection;
-use ranked_queue::RankedQueue;
-
-pub struct AppState {
-    pub casual: Mutex<CasualQueue>,
-    pub ranked: Mutex<RankedQueue>,
-}
-
-impl AppState {
-    pub fn new() -> Self {
-        Self {
-            casual: Mutex::new(CasualQueue::new()),
-            ranked: Mutex::new(RankedQueue::new()),
-        }
-    }
-}
+use match_service::AppState;
+use match_service::handler::handle_connection;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -58,7 +36,7 @@ mod tests {
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message;
 
-    use crate::messages::*;
+    use match_service::messages::*;
 
     async fn start_server() -> (String, Arc<AppState>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
