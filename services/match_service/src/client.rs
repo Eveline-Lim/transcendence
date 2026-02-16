@@ -17,10 +17,10 @@ async fn main() {
     let (ws, _) = connect_async(&url).await.expect("Failed to connect");
     info!("Connected!  Commands: join [casual|ranked], leave, quit");
 
-    let (mut sink, mut source) = ws.split();
+    let (mut sink, mut reader) = ws.split();
 
-    let printer = tokio::spawn(async move {
-        while let Some(Ok(msg)) = source.next().await {
+    let recv_task = tokio::spawn(async move {
+        while let Some(Ok(msg)) = reader.next().await {
             if let Message::Text(text) = msg {
                 info!("← {text}");
             }
@@ -50,5 +50,5 @@ async fn main() {
         }
     }
 
-    printer.abort();
+    recv_task.abort();
 }
