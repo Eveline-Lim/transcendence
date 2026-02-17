@@ -28,7 +28,7 @@ export async function signup(req, reply) {
 		console.log("emailKey: ", emailKey);
 
 		// TEST
-		// await redisClient.flushDb();
+		await redisClient.flushDb();
 
 		// Check username uniqueness
 		const existingUser = await redisClient.exists(userKey);
