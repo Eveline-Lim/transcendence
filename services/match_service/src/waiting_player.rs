@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use crate::messages::ServerMessage;
 use tokio::sync::{Mutex, mpsc};
@@ -112,11 +112,20 @@ impl PlayerInfo {
 pub struct WaitingPlayer {
     pub info: PlayerInfo,
     pub sender: mpsc::UnboundedSender<ServerMessage>,
+    joined_at: std::time::Instant,
 }
 
 impl WaitingPlayer {
     pub fn new(info: PlayerInfo, sender: mpsc::UnboundedSender<ServerMessage>) -> Self {
-        Self { info, sender }
+        Self {
+            info,
+            sender,
+            joined_at: Instant::now(),
+        }
+    }
+
+    pub fn seconds_waiting(&self) -> u64 {
+        self.joined_at.elapsed().as_secs()
     }
 }
 

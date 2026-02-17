@@ -14,6 +14,8 @@ const MAX_RANK_DIFF: u32 = 50;
 pub struct RankedQueue {
     buckets: BTreeMap<u32, Vec<WaitingPlayer>>,
     total: usize,
+    total_waiting_time: u64,
+    total_match_found: u64,
 }
 
 impl RankedQueue {
@@ -83,6 +85,8 @@ impl RankedQueue {
                 if players.is_empty() {
                     self.buckets.remove(&target);
                 }
+                self.total_waiting_time += opponent.seconds_waiting();
+                self.total_match_found += 1;
                 return Some(opponent);
             }
         }
@@ -104,7 +108,11 @@ impl RankedQueue {
     }
 
     fn estimated_wait_secs(&self) -> u64 {
-        if self.total == 0 { 0 } else { 15 }
+        if self.total_match_found == 0 {
+            0
+        } else {
+            self.total_waiting_time / self.total_match_found
+        }
     }
 }
 

@@ -11,6 +11,8 @@ use uuid::Uuid;
 #[derive(Debug, Default)]
 pub struct CasualQueue {
     players: VecDeque<WaitingPlayer>,
+    total_waiting_time: u64,
+    total_match_found: u64,
 }
 
 impl CasualQueue {
@@ -35,6 +37,8 @@ impl CasualQueue {
     pub fn enqueue(&mut self, player: WaitingPlayer) -> Option<(WaitingPlayer, WaitingPlayer)> {
         while let Some(opponent) = self.players.pop_front() {
             if !opponent.sender.is_closed() {
+                self.total_waiting_time += opponent.seconds_waiting();
+                self.total_match_found += 1;
                 return Some((opponent, player));
             }
         }
@@ -68,7 +72,11 @@ impl CasualQueue {
     }
 
     fn estimated_wait_secs(&self) -> u64 {
-        if self.players.is_empty() { 0 } else { 10 }
+        if self.total_match_found == 0 {
+            0
+        } else {
+            self.total_waiting_time / self.total_match_found
+        }
     }
 }
 
@@ -153,7 +161,7 @@ mod tests {
         match msg {
             ServerMessage::QueueUpdate { data } => {
                 assert_eq!(data.players_waiting, 1);
-                assert_eq!(data.estimated_wait_time, 10);
+                assert_eq!(data.estimated_wait_time, 0);
             }
             other => panic!("expected QueueUpdate, got {other:?}"),
         }
