@@ -1,30 +1,31 @@
-FROM rust:1.92-slim AS builder
+FROM docker.io/rust:1.92-alpine AS builder
 
 WORKDIR /app
 
-COPY Cargo.toml Cargo.lock* ./
+RUN apk add --no-cache musl-dev
+
+COPY Cargo.toml Cargo.lock ./
 
 RUN mkdir src && \
     echo "fn main() {}" > src/main.rs && \
     echo "" > src/lib.rs && \
-    cargo build --release 2>/dev/null || true && \
+    echo "fn main() {}" > src/client.rs && \
+    cargo build --release && \
     rm -rf src
 
 COPY src/ src/
 
+RUN touch src/main.rs src/lib.rs
+
 RUN cargo build --release --bin match_service
 
-FROM debian:bookworm-slim
+FROM scratch
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /app/target/release/match_service /usr/local/bin/match_service
+COPY --from=builder /app/target/release/match_service /match_service
 
 ENV RUST_LOG=info
 
 EXPOSE 8080
 
-ENTRYPOINT ["match_service"]
+ENTRYPOINT ["/match_service"]
 CMD ["0.0.0.0:8080"]
