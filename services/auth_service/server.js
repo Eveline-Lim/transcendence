@@ -1,4 +1,5 @@
 import authRoutes from "./routes/auth.js";
+import playersRoutes from "./routes/players.js";
 import Fastify from "fastify";
 import dotenv from "dotenv";
 
@@ -11,6 +12,11 @@ const app = Fastify({
 // Register auth routes with prefix /auth
 app.register(authRoutes, {
 	prefix: "api/auth"
+});
+
+// Register players routes with prefix /players
+app.register(playersRoutes, {
+	prefix: "api/players"
 });
 
 // Run the server

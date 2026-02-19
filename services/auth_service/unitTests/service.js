@@ -185,7 +185,7 @@ export class Service {
 					username: user.username,
 					sessionId,
 				},
-				process.env.SECRET_TOKEN,
+				process.env.JWT_SECRET,
 				{ expiresIn: ACCESS_TOKEN_TTL }
 			);
 			console.log("ACCESS TOKEN: ", accessToken);

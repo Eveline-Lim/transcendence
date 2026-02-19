@@ -68,6 +68,7 @@ export default function AuthForm() {
 
 			if (response.success) {
 				console.log("Login OK:", response.user);
+				localStorage.setItem("token", response.accessToken);
 				navigate("/game", { replace: true });
 			} else {
 				setError({ form: "Identifiants invalides" });
@@ -163,7 +164,7 @@ export default function AuthForm() {
 					}}
 					className="flex items-center justify-center gap-3 border rounded-md py-3 text-xl text-black cursor-pointer hover:bg-gray-200">
 					<p>Connexion avec</p>
-					<img src="./src/assets/42_Logo.svg" alt="Connexion avec 42" className="w-8"/>
+					<img src="assets/42_Logo.svg" alt="Connexion avec 42" className="w-8"/>
 				</button>
 
 				<p

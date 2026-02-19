@@ -68,7 +68,7 @@ export async function forgotPassword(req, reply) {
 		);
 
 		const resetToken = await redisClient.get(`resetToken:${hashedToken}`);
-		console.log();
+		console.log("resetToken: ", resetToken);
 		// Send raw token in email link
 		const resetLink = `${process.env.FRONTEND_URL}/password/reset?token=${token}`;
 		console.log("resetLink: ", resetLink);
