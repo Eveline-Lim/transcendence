@@ -50,61 +50,61 @@ services:
   ##################################################################
   # AUTH SERVICE
   ##################################################################
-  # auth_service:
-  #   build: ./services/auth_service
-  #   container_name: transcendence_auth
-  #   secrets:
-  #     - db_host
-  #     - db_port
-  #     - db_name
-  #     - db_user
-  #     - db_password
-  #     - redis_host
-  #     - redis_password
-  #     - jwt_secret
-  #     - jwt_expiration
-  #     - auth_service_port
-  #     - oauth_42_client_id
-  #     - oauth_42_client_secret
-  #     - oauth_42_client_callback_url
-  #     - node_env
-  #     - log_level
-  #   environment:
-  #     NODE_ENV_FILE: /run/secrets/node_env
-  #     LOG_LEVEL_FILE: /run/secrets/log_level
-  #     DB_HOST_FILE: /run/secrets/db_host
-  #     DB_PORT_FILE: /run/secrets/db_port
-  #     DB_NAME_FILE: /run/secrets/db_name
-  #     DB_USER_FILE: /run/secrets/db_user
-  #     DB_PASSWORD_FILE: /run/secrets/db_password
-  #     REDIS_HOST_FILE: /run/secrets/redis_host
-  #     REDIS_PASSWORD_FILE: /run/secrets/redis_password
-  #     JWT_SECRET_FILE: /run/secrets/jwt_secret
-  #     JWT_EXPIRATION_FILE: /run/secrets/jwt_expiration
-  #     AUTH_SERVICE_PORT_FILE: /run/secrets/auth_service_port
-  #     OAUTH_42_CLIENT_ID: /run/secrets/oauth_42_client_id
-  #     OAUTH_42_CLIENT_SECRET: /run/secrets/oauth_42_client_secret
-  #     OAUTH_42_CLIENT_CALLBACK_URL: /run/secrets/oauth_42_client_callback_url
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #   networks:
-  #     - transcendence_network
-  #   restart: unless-stopped
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
-  #     interval: 10s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 40s
+  auth_service:
+    build: ./services/auth_service
+    container_name: transcendence_auth
+    secrets:
+      - db_host
+      - db_port
+      - db_name
+      - db_user
+      - db_password
+      - redis_host
+      - redis_password
+      - jwt_secret
+      - jwt_expiration
+      - auth_service_port
+      - oauth_42_client_id
+      - oauth_42_client_secret
+      - oauth_42_client_callback_url
+      - node_env
+      - log_level
+    environment:
+      NODE_ENV_FILE: /run/secrets/node_env
+      LOG_LEVEL_FILE: /run/secrets/log_level
+      DB_HOST_FILE: /run/secrets/db_host
+      DB_PORT_FILE: /run/secrets/db_port
+      DB_NAME_FILE: /run/secrets/db_name
+      DB_USER_FILE: /run/secrets/db_user
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      REDIS_HOST_FILE: /run/secrets/redis_host
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      JWT_EXPIRATION_FILE: /run/secrets/jwt_expiration
+      AUTH_SERVICE_PORT_FILE: /run/secrets/auth_service_port
+      OAUTH_42_CLIENT_ID: /run/secrets/oauth_42_client_id
+      OAUTH_42_CLIENT_SECRET: /run/secrets/oauth_42_client_secret
+      OAUTH_42_CLIENT_CALLBACK_URL: /run/secrets/oauth_42_client_callback_url
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - transcendence_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   ##################################################################
   # FRONTEND
   ##################################################################
-
   frontend:
+    mem_limit: 4g
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -128,9 +128,8 @@ services:
       - "8080:80"
       - "8443:443"
     depends_on:
+      - auth_service
       - frontend
-    #   auth_service:
-    #     condition: service_healthy
     networks:
       - transcendence_network
     restart: unless-stopped
