@@ -2,10 +2,30 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { sendData } from "../sendData";
 
-export default function NavBar({ user }) {
+
+export default function NavBar() {
 	const [player, setPlayer] = useState(null);
 	const [isOpen, setIsOpen] = useState(false);
 	const navigate = useNavigate();
+
+	const handleLogout = async () => {
+		try {
+			const token = localStorage.getItem("token");
+			console.log("handleLogout: \n", handleLogout);
+
+			await sendData("/api/auth/logout", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${token}`,
+				},
+			});
+
+			localStorage.removeItem("token");
+			navigate("/");
+		} catch (error) {
+			console.error("Logout failed:", error);
+		}
+	};
 
 	useEffect(() => {
 		const fetchPlayer = async () => {
@@ -34,6 +54,7 @@ export default function NavBar({ user }) {
 	return (
 		<header className="w-full h-16 flex items-center justify-between px-6 relative bg-blue-200">
 			<button
+			// Add a homepage
 				onClick={() => navigate("/")}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -115,13 +136,14 @@ export default function NavBar({ user }) {
 					</button>
 
 					<button
-						onClick={() => console.log("Logout")}
-						className="w-full text-left hover:bg-gray-100 p-2 rounded-lg cursor-pointer"
-					>
-						Déconnexion
+						type="button"
+						onClick={handleLogout}
+						className="w-full text-left hover:bg-gray-100 p-2 rounded-lg cursor-pointer">
+							Déconnexion
 					</button>
 				</div>
 			)}
 		</header>
 	);
 }
+

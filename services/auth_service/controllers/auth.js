@@ -304,3 +304,46 @@ export async function login(req, reply) {
 		});
 	}
 }
+
+export async function logout(req, reply) {
+	try {
+		const token = req.headers.authorization.split(" ")[1];
+		console.log("LOGOUT TOKEN: ", token);
+		if (!token) {
+			return reply.code(401).send({
+				code: "AUTH_REQUIRED",
+				message: "Authentication required",
+			});
+		}
+
+		let decoded;
+		try {
+			decoded = jwt.verify(token, process.env.JWT_SECRET);
+		} catch (error) {
+			return reply.code(401).send({
+				code: "AUTH_REQUIRED/INVALID_TOKEN",
+				message: "Invalid or expired token",
+			});
+		}
+
+		// Hash token before blacklisting ?
+		// const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+		// Add JWT token to blacklist
+		await redisClient.set(
+			`blacklist:${token}`,
+			"1", // to modify ?
+			{ EX: ACCESS_TOKEN_TTL}
+		);
+
+		reply.code(204).send({
+			code: "LOGOUT_SUCCESS",
+			message: "User successfully logged out",
+		});
+	} catch (error) {
+		return reply.code(500).send({
+			code: "INTERNAL_ERROR",
+			message: "Unable to log out user",
+		});
+	}
+}

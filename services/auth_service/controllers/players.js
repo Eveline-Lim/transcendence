@@ -31,5 +31,5 @@ export async function retrieveUser(req, reply) {
 			code: "INTERNAL_ERROR",
 			message: "Unable to retrieve user data",
 		});
-    }
+	}
 }
