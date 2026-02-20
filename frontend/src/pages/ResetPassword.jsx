@@ -7,7 +7,6 @@ import FormButton from "../components/FormButton";
 import BackButton from "../components/BackButton";
 
 export default function ResetPassword() {
-	console.log("HEREEEEEEEEEEEEE");
 	const [error, setError] = useState({});
 	const [token, setToken] = useState(null);
 	const [success, setSuccess] = useState(false);
@@ -77,36 +76,38 @@ export default function ResetPassword() {
 	};
 
 	return (
-		<div className="relative flex flex-col items-center bg-white border border-gray-200 p-8 rounded-lg shadow-lg max-w-md mx-auto text-black">
-			<BackButton />
+		<div className="min-h-screen flex items-center justify-center bg-gray-50">
+			<div className="relative flex flex-col items-center bg-white border border-gray-200 p-8 rounded-lg shadow-lg max-w-md mx-auto text-black">
+				<BackButton />
 
-			<h1 className="text-2xl font-bold mt-4 mb-4">Réinitialisation du mot de passe</h1>
+				<h1 className="text-2xl font-bold mt-4 mb-4">Réinitialisation du mot de passe</h1>
 
-			{success && (
-				<p className="text-lg text-center">
-					Le mot de passe a été bien réinitialisé.
-					<br />
-					<span className="text-sm">
-						Redirection automatique...
-					</span>
-				</p>
-			)}
-			{!success && (
-				<form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
-					<InputField
-						label="Nouveau mot de passe"
-						type="password"
-						placeholder="Nouveau mot de passe"
-						inputRef={newPasswordRef}
-						error={error.password}
-						autoFocus
-					/>
+				{success && (
+					<p className="text-lg text-center">
+						Le mot de passe a été bien réinitialisé.
+						<br />
+						<span className="text-sm">
+							Redirection automatique...
+						</span>
+					</p>
+				)}
+				{!success && (
+					<form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
+						<InputField
+							label="Nouveau mot de passe"
+							type="password"
+							placeholder="Nouveau mot de passe"
+							inputRef={newPasswordRef}
+							error={error.password}
+							autoFocus
+						/>
 
-					{error.form && <p className="text-red-500 text-lg text-left">{error.form}</p>}
+						{error.form && <p className="text-red-500 text-lg text-left">{error.form}</p>}
 
-					<FormButton>Réinitialiser mon mot de passe</FormButton>
-				</form>
-			)}
+						<FormButton>Réinitialiser mon mot de passe</FormButton>
+					</form>
+				)}
+			</div>
 		</div>
 	);
 }

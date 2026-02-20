@@ -5,7 +5,7 @@ export async function retrieveUser(req, reply) {
 	const username = req.user.username;
 
 	try {
-		const user = await redisClient.hGetAll(`user:${username}`);    
+		const user = await redisClient.hGetAll(`user:${username}`);
 		if (!user || Object.keys(user).length === 0) {
 			return reply.code(404).send({
 				success: false,

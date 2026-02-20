@@ -7,16 +7,14 @@ import ResetPassword from "./pages/ResetPassword.jsx";
 function App() {
 	return (
 		<div className="min-h-screen">
-			<div className="min-h-screen flex items-center justify-center bg-gray-50">
-				<BrowserRouter>
-				<Routes>
-					<Route path="/" element={<Auth />} />
-					<Route path="/password/forgot" element={<ForgotPassword />} />
-					<Route path="/password/reset" element={<ResetPassword />} />
-					<Route path="/game" element={<Game />} />
-				</Routes>
-				</BrowserRouter>
-			</div>
+			<BrowserRouter>
+			<Routes>
+				<Route path="/" element={<Auth />} />
+				<Route path="/password/forgot" element={<ForgotPassword />} />
+				<Route path="/password/reset" element={<ResetPassword />} />
+				<Route path="/game" element={<Game />} />
+			</Routes>
+			</BrowserRouter>
 		</div>
 	);
 }
