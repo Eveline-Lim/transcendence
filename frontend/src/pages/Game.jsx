@@ -1,5 +1,7 @@
+import NavBar from "../components/NavBar.jsx";
+
 export default function Game() {
 	return (
-		<h1>Game Page</h1>
+		<NavBar />
 	);
 }
