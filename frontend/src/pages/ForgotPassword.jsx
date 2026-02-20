@@ -43,7 +43,7 @@ export default function ForgotPassword() {
 		// Redirect after 3 seconds
 		setTimeout(() => {
 			navigate("/", { replace: true });
-		}, 3000);
+		}, 2500);
 	};
 
 	return (

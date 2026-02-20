@@ -5,7 +5,6 @@ export default function Game() {
 		<div>
 			<NavBar />
 			<div className="flex justify-center">
-				<h1>Welcome to the game!</h1>
 			</div>
 		</div>
 	);

@@ -4,7 +4,7 @@ import { sendData } from "../sendData.jsx";
 
 import InputField from "../components/InputField.jsx";
 import FormButton from "../components/FormButton";
-import BackButton from "../components/BackButton";
+// import BackButton from "../components/BackButton";
 
 export default function ResetPassword() {
 	const [error, setError] = useState({});
@@ -21,6 +21,9 @@ export default function ResetPassword() {
 		const urlToken = new URLSearchParams(window.location.search).get("token");
 		if (!urlToken) {
 			setError({ form: "Token de réinitialisation invalide" });
+			setTimeout(() => {
+				navigate("/404", { replace: true });
+			}, 1000);
 		} else {
 			setToken(urlToken);
 		}
@@ -69,7 +72,7 @@ export default function ResetPassword() {
 			// Redirect after 3 seconds
 			setTimeout(() => {
 				navigate("/", { replace: true });
-			}, 3000);
+			}, 2500);
 		} else {
 			setError({ form: "Lien expiré ou invalide" });
 		}
@@ -78,7 +81,7 @@ export default function ResetPassword() {
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-gray-50">
 			<div className="relative flex flex-col items-center bg-white border border-gray-200 p-8 rounded-lg shadow-lg max-w-md mx-auto text-black">
-				<BackButton />
+				{/* <BackButton /> */}
 
 				<h1 className="text-2xl font-bold mt-4 mb-4">Réinitialisation du mot de passe</h1>
 

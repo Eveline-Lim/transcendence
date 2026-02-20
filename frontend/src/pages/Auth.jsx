@@ -117,6 +117,7 @@ export default function AuthForm() {
 			console.log("response: ", response.success);
 			if (response.success) {
 				console.log("Signup OK:", response.user);
+				localStorage.setItem("token", response.accessToken);
 				navigate("/game", { replace: true });
 			} else {
 				setError({ form: "Impossible de créer le compte : ces informations sont déjà associées à un compte existant." });
