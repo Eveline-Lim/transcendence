@@ -19,7 +19,7 @@ RUN touch src/main.rs src/lib.rs
 
 RUN cargo build --release --bin match_service
 
-FROM scratch
+FROM alpine:3.20
 
 COPY --from=builder /app/target/release/match_service /match_service
 
