@@ -43,34 +43,36 @@ export default function ForgotPassword() {
 		// Redirect after 3 seconds
 		setTimeout(() => {
 			navigate("/", { replace: true });
-		}, 3000);
+		}, 2500);
 	};
 
 	return (
-		<div className="relative flex flex-col items-center bg-white border border-gray-200 p-8 rounded-lg shadow-lg max-w-md mx-auto text-black">
-			<BackButton />
+		<div className="min-h-screen flex items-center justify-center bg-gray-50">
+			<div className="relative flex flex-col items-center bg-white border border-gray-200 p-8 rounded-lg shadow-lg max-w-md mx-auto text-black">
+				<BackButton />
 
-			<h1 className="text-2xl font-bold mt-4 mb-4">Mot de passe oublié ?</h1>
+				<h1 className="text-2xl font-bold mt-4 mb-4">Mot de passe oublié ?</h1>
 
-			{success && (
-				<p className="text-lg text-center">
-					Si un compte est associé à cette adresse e-mail, vous recevrez un lien pour réinitialiser votre mot de passe.
-				</p>
-			)}
-			{!success && (
-				<form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
-					<InputField
-						label="Email"
-						type="email"
-						placeholder="Email"
-						inputRef={emailRef}
-						error={error.email}
-						autoFocus
-					/>
+				{success && (
+					<p className="text-lg text-center">
+						Si un compte est associé à cette adresse e-mail, vous recevrez un lien pour réinitialiser votre mot de passe.
+					</p>
+				)}
+				{!success && (
+					<form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
+						<InputField
+							label="Email"
+							type="email"
+							placeholder="Email"
+							inputRef={emailRef}
+							error={error.email}
+							autoFocus
+						/>
 
-					<FormButton>Réinitialiser mon mot de passe</FormButton>
-				</form>
-			)}
+						<FormButton>Réinitialiser mon mot de passe</FormButton>
+					</form>
+				)}
+			</div>
 		</div>
 	);
 }

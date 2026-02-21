@@ -168,7 +168,7 @@ export async function oauthCallback(req, reply) {
 			userId: user.id, 
 			username: user.username, 
 			sessionId },
-			process.env.SECRET_TOKEN,
+			process.env.JWT_SECRET,
 			{ expiresIn: ACCESS_TOKEN_TTL }
 		);
 		accessToken = await bcrypt.hash(accessToken, 10);

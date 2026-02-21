@@ -9,7 +9,7 @@ export async function signup(req, reply) {
 	const { username, displayName, email } = req.body;
 	console.log("REQ BODY:", req.body);
 	let password = req.body.password;
-	const avatarUrl = "./assets/avatar.jpg";
+	const avatarUrl = "/assets/avatar.jpg";
 
 	// const validation = validateInputs({ username, email, password }, false);
 	const validation = validateInputs({ username, email }, false);
@@ -101,28 +101,28 @@ export async function signup(req, reply) {
 				username,
 				sessionId,
 			},
-			process.env.SECRET_TOKEN,
+			process.env.JWT_SECRET,
 			{ expiresIn: ACCESS_TOKEN_TTL }
 		);
 		// console.log("ACCESS TOKEN: ", accessToken);
-		accessToken = await bcrypt.hash(accessToken, 10);
+		// accessToken = await bcrypt.hash(accessToken, 10);
 		// console.log("hashedToken: ", accessToken);
 
 		// Refresh Token
 		// Generate a random salt (64 bytes)
-		let refreshToken = crypto.randomBytes(64).toString("hex");
+		const refreshToken = crypto.randomBytes(64).toString("hex");
 		// console.log("REFRESH_TOKEN: ", refreshToken);
-		refreshToken = await bcrypt.hash(refreshToken, 10);
+		const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
 		// console.log("hashedRefreshToken: ", refreshToken);
 
 		// Store refresh token in Redis
 		await redisClient.set(
-			`refresh:${refreshToken}`,
-			user.id,
+			`refresh:${user.id}`,
+			hashedRefreshToken,
 			{ EX: REFRESH_TOKEN_TTL }
 		);
 
-		// const storedRefreshToken = await redisClient.get(`refresh:${refreshToken}`);
+		// const storedRefreshToken = await redisClient.get(`refresh:${user.id}`);
 		// console.log("storedRefreshToken: ", storedRefreshToken);
 
 		return reply.code(201).send({
@@ -255,28 +255,28 @@ export async function login(req, reply) {
 				username: user.username,
 				sessionId,
 			},
-			process.env.SECRET_TOKEN,
+			process.env.JWT_SECRET,
 			{ expiresIn: ACCESS_TOKEN_TTL }
 		);
 		console.log("ACCESS TOKEN: ", accessToken);
-		accessToken = await bcrypt.hash(accessToken, 10);
+		// accessToken = await bcrypt.hash(accessToken, 10);
 		// console.log("hashedToken: ", accessToken);
 
 		// Refresh Token
 		// Generate a random salt (64 bytes)
-		let refreshToken = crypto.randomBytes(64).toString("hex");
+		const refreshToken = crypto.randomBytes(64).toString("hex");
 		console.log("REFRESH_TOKEN: ", refreshToken);
-		refreshToken = await bcrypt.hash(refreshToken, 10);
+		const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
 		// console.log("hashedRefreshToken: ", refreshToken);
 
 		// Store refresh token in Redis
 		await redisClient.set(
-			`refresh:${refreshToken}`,
-			user.id,
+			`refresh:${user.id}`,
+			hashedRefreshToken,
 			{ EX: REFRESH_TOKEN_TTL }
 		);
-		const storedRefreshToken = await redisClient.get(`refresh:${refreshToken}`);
-		// console.log("storedRefreshToken: ", storedRefreshToken);
+		const storedRefreshToken = await redisClient.get(`refresh:${user.id}`);
+		console.log("storedRefreshToken: ", storedRefreshToken);
 
 		return reply.code(200).send({
 			success: true,
@@ -301,6 +301,49 @@ export async function login(req, reply) {
 			success: false,
 			code: "INTERNAL_ERROR",
 			message: "Unable to log in user",
+		});
+	}
+}
+
+export async function logout(req, reply) {
+	try {
+		const token = req.headers.authorization.split(" ")[1];
+		console.log("LOGOUT TOKEN: ", token);
+		if (!token) {
+			return reply.code(401).send({
+				code: "AUTH_REQUIRED",
+				message: "Authentication required",
+			});
+		}
+
+		let decoded;
+		try {
+			decoded = jwt.verify(token, process.env.JWT_SECRET);
+		} catch (error) {
+			return reply.code(401).send({
+				code: "AUTH_REQUIRED/INVALID_TOKEN",
+				message: "Invalid or expired token",
+			});
+		}
+
+		// Hash token before blacklisting ?
+		// const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+		// Add JWT token to blacklist
+		await redisClient.set(
+			`blacklist:${token}`,
+			"1", // to modify ?
+			{ EX: ACCESS_TOKEN_TTL}
+		);
+
+		reply.code(204).send({
+			code: "LOGOUT_SUCCESS",
+			message: "User successfully logged out",
+		});
+	} catch (error) {
+		return reply.code(500).send({
+			code: "INTERNAL_ERROR",
+			message: "Unable to log out user",
 		});
 	}
 }
