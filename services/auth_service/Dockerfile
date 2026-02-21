@@ -8,11 +8,12 @@ COPY package*.json ./
 
 RUN npm install
 
-COPY . .
 
 RUN addgroup -g 1001 -S nodejs \
-	&& adduser -S nodejs -u 1001 \
-	&& chown -R nodejs:nodejs /app
+&& adduser -S nodejs -u 1001
+
+COPY --chown=node:node server.js ./
+COPY --chown=node:node package*.json ./
 
 USER nodejs
 
