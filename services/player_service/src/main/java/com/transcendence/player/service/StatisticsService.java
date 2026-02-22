@@ -1,0 +1,132 @@
+package com.transcendence.player.service;
+
+import com.transcendence.player.dto.*;
+import com.transcendence.player.entity.MatchRecord;
+import com.transcendence.player.entity.Player;
+import com.transcendence.player.entity.PlayerStatistics;
+import com.transcendence.player.exception.ResourceNotFoundException;
+import com.transcendence.player.mapper.PlayerMapper;
+import com.transcendence.player.repository.MatchRecordRepository;
+import com.transcendence.player.repository.PlayerStatisticsRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class StatisticsService {
+
+    private final PlayerStatisticsRepository statisticsRepository;
+    private final MatchRecordRepository matchRecordRepository;
+    private final PlayerService playerService;
+    private final PlayerMapper mapper;
+
+    public PlayerStatisticsResponse getPlayerStats(UUID playerId) {
+        Player player = playerService.findById(playerId);
+        PlayerStatistics stats = statisticsRepository.findByPlayer(player)
+                .orElseThrow(() -> new ResourceNotFoundException("Statistics not found"));
+        return mapper.toStatisticsResponse(stats, null);
+    }
+
+    public MatchHistoryResponse getMatchHistory(UUID playerId, int page, int limit,
+                                                String result, String gameMode) {
+        Player player = playerService.findById(playerId);
+        PageRequest pageable = PageRequest.of(page - 1, limit, Sort.by("playedAt").descending());
+        Page<MatchRecord> records;
+
+        if (result != null && gameMode != null) {
+            records = matchRecordRepository.findByPlayerAndResultAndGameMode(player, result, gameMode, pageable);
+        } else if (result != null) {
+            records = matchRecordRepository.findByPlayerAndResult(player, result, pageable);
+        } else if (gameMode != null) {
+            records = matchRecordRepository.findByPlayerAndGameMode(player, gameMode, pageable);
+        } else {
+            records = matchRecordRepository.findByPlayer(player, pageable);
+        }
+
+        return MatchHistoryResponse.builder()
+                .matches(records.getContent().stream().map(mapper::toMatchRecordResponse).toList())
+                .pagination(buildPagination(records))
+                .build();
+    }
+
+    public RankingsResponse getGlobalRankings(int page, int limit) {
+        PageRequest pageable = PageRequest.of(page - 1, limit);
+        Page<PlayerStatistics> stats = statisticsRepository.findAllByOrderByEloRatingDesc(pageable);
+
+        AtomicInteger rankOffset = new AtomicInteger((page - 1) * limit + 1);
+        return RankingsResponse.builder()
+                .rankings(stats.getContent().stream()
+                        .map(s -> toRankingResponse(s, rankOffset.getAndIncrement()))
+                        .toList())
+                .pagination(buildPagination(stats))
+                .build();
+    }
+
+    public PlayerRankingResponse getPlayerRanking(UUID playerId) {
+        Player player = playerService.findById(playerId);
+        PlayerStatistics stats = statisticsRepository.findByPlayer(player)
+                .orElseThrow(() -> new ResourceNotFoundException("Statistics not found"));
+        // Simple rank approximation by counting players with higher ELO
+        long rank = statisticsRepository.count() + 1; // fallback
+        return toRankingResponse(stats, (int) rank);
+    }
+
+    public LeaderboardResponse getLeaderboard(int page, int limit) {
+        PageRequest pageable = PageRequest.of(page - 1, limit);
+        Page<PlayerStatistics> stats = statisticsRepository.findAllByOrderByEloRatingDesc(pageable);
+
+        AtomicInteger rankOffset = new AtomicInteger((page - 1) * limit + 1);
+        return LeaderboardResponse.builder()
+                .entries(stats.getContent().stream()
+                        .map(s -> toLeaderboardEntry(s, rankOffset.getAndIncrement()))
+                        .toList())
+                .pagination(buildPagination(stats))
+                .build();
+    }
+
+    private PlayerRankingResponse toRankingResponse(PlayerStatistics s, int rank) {
+        Player p = s.getPlayer();
+        return PlayerRankingResponse.builder()
+                .rank(rank)
+                .playerId(p.getId())
+                .username(p.getUsername())
+                .displayName(p.getDisplayName())
+                .avatarUrl(p.getAvatarUrl())
+                .eloRating(s.getEloRating())
+                .gamesPlayed(s.getGamesPlayed())
+                .wins(s.getWins())
+                .losses(s.getLosses())
+                .winRate(s.getWinRate())
+                .build();
+    }
+
+    private LeaderboardEntryResponse toLeaderboardEntry(PlayerStatistics s, int rank) {
+        return LeaderboardEntryResponse.builder()
+                .rank(rank)
+                .player(mapper.toPublicPlayerResponse(s.getPlayer()))
+                .eloRating(s.getEloRating())
+                .wins(s.getWins())
+                .losses(s.getLosses())
+                .winRate(s.getWinRate())
+                .build();
+    }
+
+    private PaginationResponse buildPagination(Page<?> page) {
+        return PaginationResponse.builder()
+                .page(page.getNumber() + 1)
+                .limit(page.getSize())
+                .total(page.getTotalElements())
+                .totalPages(page.getTotalPages())
+                .hasNext(page.hasNext())
+                .hasPrevious(page.hasPrevious())
+                .build();
+    }
+}
