@@ -1,12 +1,13 @@
 package com.transcendence.player.repository;
 
-import com.transcendence.player.entity.BlockedPlayer;
-import com.transcendence.player.entity.Player;
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.transcendence.player.entity.BlockedPlayer;
+import com.transcendence.player.entity.Player;
 
 public interface BlockedPlayerRepository extends JpaRepository<BlockedPlayer, UUID> {
 

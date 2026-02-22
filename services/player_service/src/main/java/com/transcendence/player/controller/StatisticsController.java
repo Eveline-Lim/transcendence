@@ -1,13 +1,22 @@
 package com.transcendence.player.controller;
 
-import com.transcendence.player.dto.*;
-import com.transcendence.player.service.StatisticsService;
-import lombok.RequiredArgsConstructor;
+import java.util.UUID;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.UUID;
+import com.transcendence.player.dto.LeaderboardResponse;
+import com.transcendence.player.dto.MatchHistoryResponse;
+import com.transcendence.player.dto.PlayerRankingResponse;
+import com.transcendence.player.dto.PlayerStatisticsResponse;
+import com.transcendence.player.dto.RankingsResponse;
+import com.transcendence.player.service.StatisticsService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor

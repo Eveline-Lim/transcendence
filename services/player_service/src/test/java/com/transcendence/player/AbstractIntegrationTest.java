@@ -10,11 +10,10 @@ import org.testcontainers.junit.jupiter.Container;
  */
 public abstract class AbstractIntegrationTest {
 
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:16-alpine")
-                    .withDatabaseName("transcendence_test")
-                    .withUsername("test")
-                    .withPassword("test");
+        @Container
+        @ServiceConnection
+        static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
+                        .withDatabaseName("transcendence_test")
+                        .withUsername("test")
+                        .withPassword("test");
 }

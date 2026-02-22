@@ -1,18 +1,23 @@
 package com.transcendence.player.service;
 
-import com.transcendence.player.AbstractIntegrationTest;
-import com.transcendence.player.dto.CreatePlayerRequest;
-import com.transcendence.player.dto.PlayerPreferencesResponse;
-import com.transcendence.player.dto.UpdatePreferencesRequest;
-import org.junit.jupiter.api.*;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.UUID;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.*;
+import com.transcendence.player.AbstractIntegrationTest;
+import com.transcendence.player.dto.CreatePlayerRequest;
+import com.transcendence.player.dto.PlayerPreferencesResponse;
+import com.transcendence.player.dto.UpdatePreferencesRequest;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -153,8 +158,8 @@ class PreferencesServiceTest extends AbstractIntegrationTest {
         PlayerPreferencesResponse updated = preferencesService.updatePreferences(playerId, req);
 
         assertThat(updated.getTheme()).isEqualTo("light");
-        assertThat(updated.getLanguage()).isEqualTo("fr");          // from order 2
-        assertThat(updated.getSoundVolume()).isEqualTo(40);          // from order 3
-        assertThat(updated.getPaddleColor()).isEqualTo("#FF0000");   // from order 4
+        assertThat(updated.getLanguage()).isEqualTo("fr"); // from order 2
+        assertThat(updated.getSoundVolume()).isEqualTo(40); // from order 3
+        assertThat(updated.getPaddleColor()).isEqualTo("#FF0000"); // from order 4
     }
 }

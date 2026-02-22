@@ -1,22 +1,32 @@
 package com.transcendence.player.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.Instant;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
 import com.transcendence.player.AbstractIntegrationTest;
-import com.transcendence.player.dto.*;
+import com.transcendence.player.dto.CreatePlayerRequest;
+import com.transcendence.player.dto.LeaderboardResponse;
+import com.transcendence.player.dto.MatchHistoryResponse;
+import com.transcendence.player.dto.PlayerRankingResponse;
+import com.transcendence.player.dto.PlayerStatisticsResponse;
+import com.transcendence.player.dto.RankingsResponse;
 import com.transcendence.player.entity.MatchRecord;
 import com.transcendence.player.entity.Player;
 import com.transcendence.player.entity.PlayerStatistics;
 import com.transcendence.player.repository.MatchRecordRepository;
 import com.transcendence.player.repository.PlayerRepository;
 import com.transcendence.player.repository.PlayerStatisticsRepository;
-import org.junit.jupiter.api.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
-import org.testcontainers.junit.jupiter.Testcontainers;
-
-import java.time.Instant;
-
-import static org.assertj.core.api.Assertions.*;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -44,9 +54,9 @@ class StatisticsServiceTest extends AbstractIntegrationTest {
 
     @BeforeAll
     static void createPlayers(@Autowired PlayerService ps,
-                              @Autowired PlayerStatisticsRepository sr,
-                              @Autowired PlayerRepository pr,
-                              @Autowired MatchRecordRepository mr) {
+            @Autowired PlayerStatisticsRepository sr,
+            @Autowired PlayerRepository pr,
+            @Autowired MatchRecordRepository mr) {
         CreatePlayerRequest r1 = new CreatePlayerRequest();
         r1.setUsername("stats_p1");
         r1.setEmail("stats_p1@example.com");

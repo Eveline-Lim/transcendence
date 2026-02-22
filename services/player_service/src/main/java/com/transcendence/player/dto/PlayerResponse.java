@@ -1,11 +1,12 @@
 package com.transcendence.player.dto;
 
-import com.transcendence.player.entity.PlayerStatus;
-import lombok.Builder;
-import lombok.Data;
-
 import java.time.Instant;
 import java.util.UUID;
+
+import com.transcendence.player.entity.PlayerStatus;
+
+import lombok.Builder;
+import lombok.Data;
 
 @Data
 @Builder

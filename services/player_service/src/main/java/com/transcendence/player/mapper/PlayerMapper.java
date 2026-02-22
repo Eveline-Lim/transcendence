@@ -1,8 +1,20 @@
 package com.transcendence.player.mapper;
 
-import com.transcendence.player.dto.*;
-import com.transcendence.player.entity.*;
 import org.springframework.stereotype.Component;
+
+import com.transcendence.player.dto.FriendRequestResponse;
+import com.transcendence.player.dto.FriendResponse;
+import com.transcendence.player.dto.MatchRecordResponse;
+import com.transcendence.player.dto.PlayerPreferencesResponse;
+import com.transcendence.player.dto.PlayerResponse;
+import com.transcendence.player.dto.PlayerStatisticsResponse;
+import com.transcendence.player.dto.PublicPlayerResponse;
+import com.transcendence.player.entity.FriendRequest;
+import com.transcendence.player.entity.Friendship;
+import com.transcendence.player.entity.MatchRecord;
+import com.transcendence.player.entity.Player;
+import com.transcendence.player.entity.PlayerPreferences;
+import com.transcendence.player.entity.PlayerStatistics;
 
 @Component
 public class PlayerMapper {
