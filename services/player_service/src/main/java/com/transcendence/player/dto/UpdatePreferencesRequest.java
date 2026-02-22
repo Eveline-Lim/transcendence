@@ -17,10 +17,12 @@ public class UpdatePreferencesRequest {
     private Boolean soundEnabled;
     private Boolean musicEnabled;
 
-    @Min(0) @Max(100)
+    @Min(0)
+    @Max(100)
     private Integer soundVolume;
 
-    @Min(0) @Max(100)
+    @Min(0)
+    @Max(100)
     private Integer musicVolume;
 
     // Notifications

@@ -1,12 +1,13 @@
 package com.transcendence.player.repository;
 
-import com.transcendence.player.entity.MatchRecord;
-import com.transcendence.player.entity.Player;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.UUID;
+import com.transcendence.player.entity.MatchRecord;
+import com.transcendence.player.entity.Player;
 
 public interface MatchRecordRepository extends JpaRepository<MatchRecord, UUID> {
 

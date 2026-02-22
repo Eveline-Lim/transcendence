@@ -1,19 +1,31 @@
 package com.transcendence.player.service;
 
-import com.transcendence.player.dto.*;
-import com.transcendence.player.entity.*;
-import com.transcendence.player.exception.ConflictException;
-import com.transcendence.player.exception.ResourceNotFoundException;
-import com.transcendence.player.mapper.PlayerMapper;
-import com.transcendence.player.repository.*;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.UUID;
+import com.transcendence.player.dto.FriendListResponse;
+import com.transcendence.player.dto.FriendRequestListResponse;
+import com.transcendence.player.dto.FriendRequestResponse;
+import com.transcendence.player.dto.PaginationResponse;
+import com.transcendence.player.dto.PublicPlayerResponse;
+import com.transcendence.player.entity.BlockedPlayer;
+import com.transcendence.player.entity.FriendRequest;
+import com.transcendence.player.entity.FriendRequestStatus;
+import com.transcendence.player.entity.Friendship;
+import com.transcendence.player.entity.Player;
+import com.transcendence.player.exception.ConflictException;
+import com.transcendence.player.exception.ResourceNotFoundException;
+import com.transcendence.player.mapper.PlayerMapper;
+import com.transcendence.player.repository.BlockedPlayerRepository;
+import com.transcendence.player.repository.FriendRequestRepository;
+import com.transcendence.player.repository.FriendshipRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor

@@ -1,18 +1,28 @@
 package com.transcendence.player.service;
 
-import com.transcendence.player.AbstractIntegrationTest;
-import com.transcendence.player.dto.*;
-import com.transcendence.player.exception.ConflictException;
-import com.transcendence.player.exception.ResourceNotFoundException;
-import org.junit.jupiter.api.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.UUID;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.*;
+import com.transcendence.player.AbstractIntegrationTest;
+import com.transcendence.player.dto.CreatePlayerRequest;
+import com.transcendence.player.dto.FriendListResponse;
+import com.transcendence.player.dto.FriendRequestListResponse;
+import com.transcendence.player.dto.FriendRequestResponse;
+import com.transcendence.player.dto.SendFriendRequestDto;
+import com.transcendence.player.exception.ConflictException;
+import com.transcendence.player.exception.ResourceNotFoundException;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -93,8 +103,7 @@ class FriendServiceTest extends AbstractIntegrationTest {
     @Test
     @Order(6)
     void respondToFriendRequest_accept_createsFriendship() {
-        FriendRequestResponse response =
-                friendService.respondToFriendRequest(player2Id, requestId, "accept");
+        FriendRequestResponse response = friendService.respondToFriendRequest(player2Id, requestId, "accept");
 
         assertThat(response.getStatus().name()).isEqualTo("accepted");
     }

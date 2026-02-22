@@ -1,6 +1,19 @@
 package com.transcendence.player.service;
 
-import com.transcendence.player.dto.*;
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.transcendence.player.dto.CreatePlayerRequest;
+import com.transcendence.player.dto.PaginationResponse;
+import com.transcendence.player.dto.PlayerListResponse;
+import com.transcendence.player.dto.PlayerResponse;
+import com.transcendence.player.dto.PublicPlayerResponse;
+import com.transcendence.player.dto.UpdatePlayerRequest;
 import com.transcendence.player.entity.Player;
 import com.transcendence.player.entity.PlayerPreferences;
 import com.transcendence.player.entity.PlayerStatistics;
@@ -10,14 +23,8 @@ import com.transcendence.player.mapper.PlayerMapper;
 import com.transcendence.player.repository.PlayerPreferencesRepository;
 import com.transcendence.player.repository.PlayerRepository;
 import com.transcendence.player.repository.PlayerStatisticsRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -88,7 +95,8 @@ public class PlayerService {
 
     public PlayerResponse updateCurrentPlayer(UUID playerId, UpdatePlayerRequest req) {
         Player player = findById(playerId);
-        if (req.getDisplayName() != null) player.setDisplayName(req.getDisplayName());
+        if (req.getDisplayName() != null)
+            player.setDisplayName(req.getDisplayName());
         if (req.getEmail() != null) {
             if (!req.getEmail().equals(player.getEmail())
                     && playerRepository.existsByEmail(req.getEmail())) {
@@ -101,7 +109,8 @@ public class PlayerService {
 
     public void deleteCurrentPlayer(UUID playerId) {
         Player player = findById(playerId);
-        // Child tables (player_statistics, player_preferences) cascade via FK ON DELETE CASCADE
+        // Child tables (player_statistics, player_preferences) cascade via FK ON DELETE
+        // CASCADE
         playerRepository.delete(player);
     }
 

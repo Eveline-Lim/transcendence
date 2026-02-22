@@ -1,6 +1,21 @@
 package com.transcendence.player.service;
 
-import com.transcendence.player.dto.*;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.transcendence.player.dto.LeaderboardEntryResponse;
+import com.transcendence.player.dto.LeaderboardResponse;
+import com.transcendence.player.dto.MatchHistoryResponse;
+import com.transcendence.player.dto.PaginationResponse;
+import com.transcendence.player.dto.PlayerRankingResponse;
+import com.transcendence.player.dto.PlayerStatisticsResponse;
+import com.transcendence.player.dto.RankingsResponse;
 import com.transcendence.player.entity.MatchRecord;
 import com.transcendence.player.entity.Player;
 import com.transcendence.player.entity.PlayerStatistics;
@@ -8,15 +23,8 @@ import com.transcendence.player.exception.ResourceNotFoundException;
 import com.transcendence.player.mapper.PlayerMapper;
 import com.transcendence.player.repository.MatchRecordRepository;
 import com.transcendence.player.repository.PlayerStatisticsRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +44,7 @@ public class StatisticsService {
     }
 
     public MatchHistoryResponse getMatchHistory(UUID playerId, int page, int limit,
-                                                String result, String gameMode) {
+            String result, String gameMode) {
         Player player = playerService.findById(playerId);
         PageRequest pageable = PageRequest.of(page - 1, limit, Sort.by("playedAt").descending());
         Page<MatchRecord> records;
