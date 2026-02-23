@@ -146,7 +146,7 @@ class StatisticsServiceTest extends AbstractIntegrationTest {
     @Test
     @Order(6)
     void getGlobalRankings_orderedByElo() {
-        RankingsResponse rankings = statisticsService.getGlobalRankings(1, 20);
+        RankingsResponse rankings = statisticsService.getGlobalRankings(1, 20, "all_time");
 
         assertThat(rankings.getRankings()).isNotEmpty();
         // First entry should have highest ELO (1800)
@@ -161,7 +161,7 @@ class StatisticsServiceTest extends AbstractIntegrationTest {
     @Test
     @Order(7)
     void getLeaderboard_returnsPaginatedEntries() {
-        LeaderboardResponse leaderboard = statisticsService.getLeaderboard(1, 10);
+        LeaderboardResponse leaderboard = statisticsService.getLeaderboard(1, 10, "all_time", "elo");
 
         assertThat(leaderboard.getEntries()).isNotEmpty();
         assertThat(leaderboard.getPagination().getPage()).isEqualTo(1);

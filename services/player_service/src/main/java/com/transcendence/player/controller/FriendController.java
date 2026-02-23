@@ -41,8 +41,9 @@ public class FriendController {
     public ResponseEntity<FriendListResponse> listFriends(
             @AuthenticationPrincipal UUID playerId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit) {
-        return ResponseEntity.ok(friendService.listFriends(playerId, page, limit));
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(friendService.listFriends(playerId, page, limit, status));
     }
 
     // GET /players/me/friends/requests

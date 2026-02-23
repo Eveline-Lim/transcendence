@@ -18,6 +18,7 @@ import com.transcendence.player.entity.FriendRequest;
 import com.transcendence.player.entity.FriendRequestStatus;
 import com.transcendence.player.entity.Friendship;
 import com.transcendence.player.entity.Player;
+import com.transcendence.player.entity.PlayerStatus;
 import com.transcendence.player.exception.ConflictException;
 import com.transcendence.player.exception.ResourceNotFoundException;
 import com.transcendence.player.mapper.PlayerMapper;
@@ -40,10 +41,16 @@ public class FriendService {
     private final PlayerMapper mapper;
 
     @Transactional(readOnly = true)
-    public FriendListResponse listFriends(UUID playerId, int page, int limit) {
+    public FriendListResponse listFriends(UUID playerId, int page, int limit, String status) {
         Player player = playerService.findById(playerId);
         PageRequest pageable = PageRequest.of(page - 1, limit);
-        Page<Friendship> result = friendshipRepository.findByPlayer(player, pageable);
+        Page<Friendship> result;
+        if (status != null) {
+            PlayerStatus playerStatus = PlayerStatus.valueOf(status);
+            result = friendshipRepository.findByPlayerAndFriendStatus(player, playerStatus, pageable);
+        } else {
+            result = friendshipRepository.findByPlayer(player, pageable);
+        }
         return FriendListResponse.builder()
                 .friends(result.getContent().stream().map(mapper::toFriendResponse).toList())
                 .pagination(PaginationUtils.buildPagination(result))

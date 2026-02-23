@@ -13,19 +13,8 @@ public class PlayerPreferencesResponse {
     private boolean musicEnabled;
     private int soundVolume;
     private int musicVolume;
-    // Notifications
-    private boolean notifyFriendRequests;
-    private boolean notifyGameInvites;
-    private boolean notifyTournamentUpdates;
-    // Game
-    private String paddleColor;
-    private String ballColor;
-    private String tableColor;
-    private boolean showFps;
-    private boolean enablePowerUps;
-    // Privacy
-    private boolean showOnlineStatus;
-    private boolean allowFriendRequests;
-    private boolean showMatchHistory;
-    private boolean showStatistics;
+    // Nested
+    private NotificationPreferences notifications;
+    private GamePreferences gameSettings;
+    private PrivacyPreferences privacy;
 }

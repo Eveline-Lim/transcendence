@@ -5,7 +5,10 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.transcendence.player.dto.GamePreferences;
+import com.transcendence.player.dto.NotificationPreferences;
 import com.transcendence.player.dto.PlayerPreferencesResponse;
+import com.transcendence.player.dto.PrivacyPreferences;
 import com.transcendence.player.dto.UpdatePreferencesRequest;
 import com.transcendence.player.entity.Player;
 import com.transcendence.player.entity.PlayerPreferences;
@@ -44,30 +47,42 @@ public class PreferencesService {
             prefs.setSoundVolume(req.getSoundVolume());
         if (req.getMusicVolume() != null)
             prefs.setMusicVolume(req.getMusicVolume());
-        if (req.getNotifyFriendRequests() != null)
-            prefs.setNotifyFriendRequests(req.getNotifyFriendRequests());
-        if (req.getNotifyGameInvites() != null)
-            prefs.setNotifyGameInvites(req.getNotifyGameInvites());
-        if (req.getNotifyTournamentUpdates() != null)
-            prefs.setNotifyTournamentUpdates(req.getNotifyTournamentUpdates());
-        if (req.getPaddleColor() != null)
-            prefs.setPaddleColor(req.getPaddleColor());
-        if (req.getBallColor() != null)
-            prefs.setBallColor(req.getBallColor());
-        if (req.getTableColor() != null)
-            prefs.setTableColor(req.getTableColor());
-        if (req.getShowFps() != null)
-            prefs.setShowFps(req.getShowFps());
-        if (req.getEnablePowerUps() != null)
-            prefs.setEnablePowerUps(req.getEnablePowerUps());
-        if (req.getShowOnlineStatus() != null)
-            prefs.setShowOnlineStatus(req.getShowOnlineStatus());
-        if (req.getAllowFriendRequests() != null)
-            prefs.setAllowFriendRequests(req.getAllowFriendRequests());
-        if (req.getShowMatchHistory() != null)
-            prefs.setShowMatchHistory(req.getShowMatchHistory());
-        if (req.getShowStatistics() != null)
-            prefs.setShowStatistics(req.getShowStatistics());
+
+        NotificationPreferences n = req.getNotifications();
+        if (n != null) {
+            if (n.getFriendRequests() != null)
+                prefs.setNotifyFriendRequests(n.getFriendRequests());
+            if (n.getGameInvites() != null)
+                prefs.setNotifyGameInvites(n.getGameInvites());
+            if (n.getTournamentUpdates() != null)
+                prefs.setNotifyTournamentUpdates(n.getTournamentUpdates());
+        }
+
+        GamePreferences g = req.getGameSettings();
+        if (g != null) {
+            if (g.getPaddleColor() != null)
+                prefs.setPaddleColor(g.getPaddleColor());
+            if (g.getBallColor() != null)
+                prefs.setBallColor(g.getBallColor());
+            if (g.getTableColor() != null)
+                prefs.setTableColor(g.getTableColor());
+            if (g.getShowFps() != null)
+                prefs.setShowFps(g.getShowFps());
+            if (g.getEnablePowerUps() != null)
+                prefs.setEnablePowerUps(g.getEnablePowerUps());
+        }
+
+        PrivacyPreferences p = req.getPrivacy();
+        if (p != null) {
+            if (p.getShowOnlineStatus() != null)
+                prefs.setShowOnlineStatus(p.getShowOnlineStatus());
+            if (p.getAllowFriendRequests() != null)
+                prefs.setAllowFriendRequests(p.getAllowFriendRequests());
+            if (p.getShowMatchHistory() != null)
+                prefs.setShowMatchHistory(p.getShowMatchHistory());
+            if (p.getShowStatistics() != null)
+                prefs.setShowStatistics(p.getShowStatistics());
+        }
 
         return mapper.toPreferencesResponse(preferencesRepository.save(prefs));
     }

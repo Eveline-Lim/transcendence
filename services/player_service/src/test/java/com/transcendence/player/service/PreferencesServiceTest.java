@@ -16,7 +16,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.transcendence.player.AbstractIntegrationTest;
 import com.transcendence.player.dto.CreatePlayerRequest;
+import com.transcendence.player.dto.GamePreferences;
+import com.transcendence.player.dto.NotificationPreferences;
 import com.transcendence.player.dto.PlayerPreferencesResponse;
+import com.transcendence.player.dto.PrivacyPreferences;
 import com.transcendence.player.dto.UpdatePreferencesRequest;
 
 @Testcontainers
@@ -53,18 +56,18 @@ class PreferencesServiceTest extends AbstractIntegrationTest {
         assertThat(prefs.isMusicEnabled()).isTrue();
         assertThat(prefs.getSoundVolume()).isEqualTo(80);
         assertThat(prefs.getMusicVolume()).isEqualTo(50);
-        assertThat(prefs.isNotifyFriendRequests()).isTrue();
-        assertThat(prefs.isNotifyGameInvites()).isTrue();
-        assertThat(prefs.isNotifyTournamentUpdates()).isFalse();
-        assertThat(prefs.getPaddleColor()).isEqualTo("#FFFFFF");
-        assertThat(prefs.getBallColor()).isEqualTo("#FFFFFF");
-        assertThat(prefs.getTableColor()).isEqualTo("#000000");
-        assertThat(prefs.isShowFps()).isFalse();
-        assertThat(prefs.isEnablePowerUps()).isTrue();
-        assertThat(prefs.isShowOnlineStatus()).isTrue();
-        assertThat(prefs.isAllowFriendRequests()).isTrue();
-        assertThat(prefs.isShowMatchHistory()).isTrue();
-        assertThat(prefs.isShowStatistics()).isTrue();
+        assertThat(prefs.getNotifications().getFriendRequests()).isTrue();
+        assertThat(prefs.getNotifications().getGameInvites()).isTrue();
+        assertThat(prefs.getNotifications().getTournamentUpdates()).isFalse();
+        assertThat(prefs.getGameSettings().getPaddleColor()).isEqualTo("#FFFFFF");
+        assertThat(prefs.getGameSettings().getBallColor()).isEqualTo("#FFFFFF");
+        assertThat(prefs.getGameSettings().getTableColor()).isEqualTo("#000000");
+        assertThat(prefs.getGameSettings().getShowFps()).isFalse();
+        assertThat(prefs.getGameSettings().getEnablePowerUps()).isTrue();
+        assertThat(prefs.getPrivacy().getShowOnlineStatus()).isTrue();
+        assertThat(prefs.getPrivacy().getAllowFriendRequests()).isTrue();
+        assertThat(prefs.getPrivacy().getShowMatchHistory()).isTrue();
+        assertThat(prefs.getPrivacy().getShowStatistics()).isTrue();
     }
 
     @Test
@@ -101,51 +104,50 @@ class PreferencesServiceTest extends AbstractIntegrationTest {
     @Order(4)
     void updatePreferences_gameSettings() {
         UpdatePreferencesRequest req = new UpdatePreferencesRequest();
-        req.setPaddleColor("#FF0000");
-        req.setBallColor("#00FF00");
-        req.setTableColor("#0000FF");
-        req.setShowFps(true);
-        req.setEnablePowerUps(false);
+        req.setGameSettings(GamePreferences.builder()
+                .paddleColor("#FF0000").ballColor("#00FF00").tableColor("#0000FF")
+                .showFps(true).enablePowerUps(false)
+                .build());
 
         PlayerPreferencesResponse updated = preferencesService.updatePreferences(playerId, req);
 
-        assertThat(updated.getPaddleColor()).isEqualTo("#FF0000");
-        assertThat(updated.getBallColor()).isEqualTo("#00FF00");
-        assertThat(updated.getTableColor()).isEqualTo("#0000FF");
-        assertThat(updated.isShowFps()).isTrue();
-        assertThat(updated.isEnablePowerUps()).isFalse();
+        assertThat(updated.getGameSettings().getPaddleColor()).isEqualTo("#FF0000");
+        assertThat(updated.getGameSettings().getBallColor()).isEqualTo("#00FF00");
+        assertThat(updated.getGameSettings().getTableColor()).isEqualTo("#0000FF");
+        assertThat(updated.getGameSettings().getShowFps()).isTrue();
+        assertThat(updated.getGameSettings().getEnablePowerUps()).isFalse();
     }
 
     @Test
     @Order(5)
     void updatePreferences_notifications() {
         UpdatePreferencesRequest req = new UpdatePreferencesRequest();
-        req.setNotifyFriendRequests(false);
-        req.setNotifyGameInvites(false);
-        req.setNotifyTournamentUpdates(true);
+        req.setNotifications(NotificationPreferences.builder()
+                .friendRequests(false).gameInvites(false).tournamentUpdates(true)
+                .build());
 
         PlayerPreferencesResponse updated = preferencesService.updatePreferences(playerId, req);
 
-        assertThat(updated.isNotifyFriendRequests()).isFalse();
-        assertThat(updated.isNotifyGameInvites()).isFalse();
-        assertThat(updated.isNotifyTournamentUpdates()).isTrue();
+        assertThat(updated.getNotifications().getFriendRequests()).isFalse();
+        assertThat(updated.getNotifications().getGameInvites()).isFalse();
+        assertThat(updated.getNotifications().getTournamentUpdates()).isTrue();
     }
 
     @Test
     @Order(6)
     void updatePreferences_privacy() {
         UpdatePreferencesRequest req = new UpdatePreferencesRequest();
-        req.setShowOnlineStatus(false);
-        req.setAllowFriendRequests(false);
-        req.setShowMatchHistory(false);
-        req.setShowStatistics(false);
+        req.setPrivacy(PrivacyPreferences.builder()
+                .showOnlineStatus(false).allowFriendRequests(false)
+                .showMatchHistory(false).showStatistics(false)
+                .build());
 
         PlayerPreferencesResponse updated = preferencesService.updatePreferences(playerId, req);
 
-        assertThat(updated.isShowOnlineStatus()).isFalse();
-        assertThat(updated.isAllowFriendRequests()).isFalse();
-        assertThat(updated.isShowMatchHistory()).isFalse();
-        assertThat(updated.isShowStatistics()).isFalse();
+        assertThat(updated.getPrivacy().getShowOnlineStatus()).isFalse();
+        assertThat(updated.getPrivacy().getAllowFriendRequests()).isFalse();
+        assertThat(updated.getPrivacy().getShowMatchHistory()).isFalse();
+        assertThat(updated.getPrivacy().getShowStatistics()).isFalse();
     }
 
     @Test
@@ -160,6 +162,6 @@ class PreferencesServiceTest extends AbstractIntegrationTest {
         assertThat(updated.getTheme()).isEqualTo("light");
         assertThat(updated.getLanguage()).isEqualTo("fr"); // from order 2
         assertThat(updated.getSoundVolume()).isEqualTo(40); // from order 3
-        assertThat(updated.getPaddleColor()).isEqualTo("#FF0000"); // from order 4
+        assertThat(updated.getGameSettings().getPaddleColor()).isEqualTo("#FF0000"); // from order 4
     }
 }

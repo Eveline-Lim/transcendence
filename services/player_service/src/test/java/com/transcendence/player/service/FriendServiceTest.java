@@ -111,8 +111,8 @@ class FriendServiceTest extends AbstractIntegrationTest {
     @Test
     @Order(7)
     void listFriends_afterAccept_containsBothPlayers() {
-        FriendListResponse list1 = friendService.listFriends(player1Id, 1, 20);
-        FriendListResponse list2 = friendService.listFriends(player2Id, 1, 20);
+        FriendListResponse list1 = friendService.listFriends(player1Id, 1, 20, null);
+        FriendListResponse list2 = friendService.listFriends(player2Id, 1, 20, null);
 
         assertThat(list1.getFriends()).hasSize(1);
         assertThat(list1.getFriends().get(0).getPlayer().getId()).isEqualTo(player2Id);
@@ -153,8 +153,8 @@ class FriendServiceTest extends AbstractIntegrationTest {
     void removeFriend_removesFromBothSides() {
         friendService.removeFriend(player1Id, player2Id);
 
-        FriendListResponse list1 = friendService.listFriends(player1Id, 1, 20);
-        FriendListResponse list2 = friendService.listFriends(player2Id, 1, 20);
+        FriendListResponse list1 = friendService.listFriends(player1Id, 1, 20, null);
+        FriendListResponse list2 = friendService.listFriends(player2Id, 1, 20, null);
 
         assertThat(list1.getFriends()).isEmpty();
         assertThat(list2.getFriends()).isEmpty();

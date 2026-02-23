@@ -18,7 +18,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.transcendence.player.dto.GamePreferences;
+import com.transcendence.player.dto.NotificationPreferences;
 import com.transcendence.player.dto.PlayerPreferencesResponse;
+import com.transcendence.player.dto.PrivacyPreferences;
 import com.transcendence.player.security.GatewayAuthenticationFilter;
 import com.transcendence.player.security.SecurityConfig;
 import com.transcendence.player.service.PreferencesService;
@@ -40,11 +43,17 @@ class PreferencesControllerTest {
                 .theme("system").language("en")
                 .soundEnabled(true).musicEnabled(true)
                 .soundVolume(80).musicVolume(50)
-                .notifyFriendRequests(true).notifyGameInvites(true).notifyTournamentUpdates(false)
-                .paddleColor("#FFFFFF").ballColor("#FFFFFF").tableColor("#000000")
-                .showFps(false).enablePowerUps(true)
-                .showOnlineStatus(true).allowFriendRequests(true)
-                .showMatchHistory(true).showStatistics(true)
+                .notifications(NotificationPreferences.builder()
+                        .friendRequests(true).gameInvites(true).tournamentUpdates(false)
+                        .build())
+                .gameSettings(GamePreferences.builder()
+                        .paddleColor("#FFFFFF").ballColor("#FFFFFF").tableColor("#000000")
+                        .showFps(false).enablePowerUps(true)
+                        .build())
+                .privacy(PrivacyPreferences.builder()
+                        .showOnlineStatus(true).allowFriendRequests(true)
+                        .showMatchHistory(true).showStatistics(true)
+                        .build())
                 .build();
     }
 
@@ -56,7 +65,10 @@ class PreferencesControllerTest {
                         .header("X-User-Id", PLAYER_ID.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.theme").value("system"))
-                .andExpect(jsonPath("$.language").value("en"));
+                .andExpect(jsonPath("$.language").value("en"))
+                .andExpect(jsonPath("$.notifications.friendRequests").value(true))
+                .andExpect(jsonPath("$.gameSettings.paddleColor").value("#FFFFFF"))
+                .andExpect(jsonPath("$.privacy.showOnlineStatus").value(true));
     }
 
     @Test
@@ -98,7 +110,7 @@ class PreferencesControllerTest {
                         .header("X-User-Id", PLAYER_ID.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"paddleColor":"not-a-color"}
+                                {"gameSettings":{"paddleColor":"not-a-color"}}
                                 """))
                 .andExpect(status().isBadRequest());
     }
@@ -106,17 +118,17 @@ class PreferencesControllerTest {
     @Test
     void updatePreferences_validColor_returns200() throws Exception {
         PlayerPreferencesResponse updated = defaultPreferences();
-        updated.setPaddleColor("#FF0000");
+        updated.getGameSettings().setPaddleColor("#FF0000");
         when(preferencesService.updatePreferences(eq(PLAYER_ID), any())).thenReturn(updated);
 
         mockMvc.perform(patch("/players/me/preferences")
                         .header("X-User-Id", PLAYER_ID.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"paddleColor":"#FF0000"}
+                                {"gameSettings":{"paddleColor":"#FF0000"}}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.paddleColor").value("#FF0000"));
+                .andExpect(jsonPath("$.gameSettings.paddleColor").value("#FF0000"));
     }
 
     @Test

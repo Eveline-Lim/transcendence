@@ -1,5 +1,6 @@
 package com.transcendence.player.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
@@ -25,27 +26,12 @@ public class UpdatePreferencesRequest {
     @Max(100)
     private Integer musicVolume;
 
-    // Notifications
-    private Boolean notifyFriendRequests;
-    private Boolean notifyGameInvites;
-    private Boolean notifyTournamentUpdates;
+    @Valid
+    private NotificationPreferences notifications;
 
-    // Game settings
-    @Pattern(regexp = "^#[0-9A-Fa-f]{6}$")
-    private String paddleColor;
+    @Valid
+    private GamePreferences gameSettings;
 
-    @Pattern(regexp = "^#[0-9A-Fa-f]{6}$")
-    private String ballColor;
-
-    @Pattern(regexp = "^#[0-9A-Fa-f]{6}$")
-    private String tableColor;
-
-    private Boolean showFps;
-    private Boolean enablePowerUps;
-
-    // Privacy
-    private Boolean showOnlineStatus;
-    private Boolean allowFriendRequests;
-    private Boolean showMatchHistory;
-    private Boolean showStatistics;
+    @Valid
+    private PrivacyPreferences privacy;
 }

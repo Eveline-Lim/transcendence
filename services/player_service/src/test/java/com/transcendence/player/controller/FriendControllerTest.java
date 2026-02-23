@@ -66,13 +66,30 @@ class FriendControllerTest {
                         .page(1).limit(20).total(1).totalPages(1)
                         .hasNext(false).hasPrevious(false).build())
                 .build();
-        when(friendService.listFriends(PLAYER_ID, 1, 20)).thenReturn(response);
+        when(friendService.listFriends(eq(PLAYER_ID), eq(1), eq(20), any())).thenReturn(response);
 
         mockMvc.perform(get("/players/me/friends")
                         .header("X-User-Id", PLAYER_ID.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.friends").isArray())
                 .andExpect(jsonPath("$.friends[0].player.username").value("friend"));
+    }
+
+    @Test
+    void listFriends_withStatusFilter_returns200() throws Exception {
+        FriendListResponse response = FriendListResponse.builder()
+                .friends(List.of())
+                .pagination(PaginationResponse.builder()
+                        .page(1).limit(20).total(0).totalPages(0)
+                        .hasNext(false).hasPrevious(false).build())
+                .build();
+        when(friendService.listFriends(eq(PLAYER_ID), eq(1), eq(20), eq("online"))).thenReturn(response);
+
+        mockMvc.perform(get("/players/me/friends")
+                        .header("X-User-Id", PLAYER_ID.toString())
+                        .param("status", "online"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.friends").isArray());
     }
 
     @Test

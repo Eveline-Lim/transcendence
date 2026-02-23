@@ -4,10 +4,13 @@ import org.springframework.stereotype.Component;
 
 import com.transcendence.player.dto.FriendRequestResponse;
 import com.transcendence.player.dto.FriendResponse;
+import com.transcendence.player.dto.GamePreferences;
 import com.transcendence.player.dto.MatchRecordResponse;
+import com.transcendence.player.dto.NotificationPreferences;
 import com.transcendence.player.dto.PlayerPreferencesResponse;
 import com.transcendence.player.dto.PlayerResponse;
 import com.transcendence.player.dto.PlayerStatisticsResponse;
+import com.transcendence.player.dto.PrivacyPreferences;
 import com.transcendence.player.dto.PublicPlayerResponse;
 import com.transcendence.player.entity.FriendRequest;
 import com.transcendence.player.entity.Friendship;
@@ -98,18 +101,24 @@ public class PlayerMapper {
                 .musicEnabled(p.isMusicEnabled())
                 .soundVolume(p.getSoundVolume())
                 .musicVolume(p.getMusicVolume())
-                .notifyFriendRequests(p.isNotifyFriendRequests())
-                .notifyGameInvites(p.isNotifyGameInvites())
-                .notifyTournamentUpdates(p.isNotifyTournamentUpdates())
-                .paddleColor(p.getPaddleColor())
-                .ballColor(p.getBallColor())
-                .tableColor(p.getTableColor())
-                .showFps(p.isShowFps())
-                .enablePowerUps(p.isEnablePowerUps())
-                .showOnlineStatus(p.isShowOnlineStatus())
-                .allowFriendRequests(p.isAllowFriendRequests())
-                .showMatchHistory(p.isShowMatchHistory())
-                .showStatistics(p.isShowStatistics())
+                .notifications(NotificationPreferences.builder()
+                        .friendRequests(p.isNotifyFriendRequests())
+                        .gameInvites(p.isNotifyGameInvites())
+                        .tournamentUpdates(p.isNotifyTournamentUpdates())
+                        .build())
+                .gameSettings(GamePreferences.builder()
+                        .paddleColor(p.getPaddleColor())
+                        .ballColor(p.getBallColor())
+                        .tableColor(p.getTableColor())
+                        .showFps(p.isShowFps())
+                        .enablePowerUps(p.isEnablePowerUps())
+                        .build())
+                .privacy(PrivacyPreferences.builder()
+                        .showOnlineStatus(p.isShowOnlineStatus())
+                        .allowFriendRequests(p.isAllowFriendRequests())
+                        .showMatchHistory(p.isShowMatchHistory())
+                        .showStatistics(p.isShowStatistics())
+                        .build())
                 .build();
     }
 }
