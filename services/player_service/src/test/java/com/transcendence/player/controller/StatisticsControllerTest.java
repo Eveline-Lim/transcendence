@@ -115,9 +115,23 @@ class StatisticsControllerTest {
                 .rankings(List.of())
                 .pagination(emptyPagination())
                 .build();
-        when(statisticsService.getGlobalRankings(1, 20)).thenReturn(rankings);
+        when(statisticsService.getGlobalRankings(1, 20, "all_time")).thenReturn(rankings);
 
         mockMvc.perform(get("/rankings"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rankings").isArray());
+    }
+
+    @Test
+    void getGlobalRankings_withPeriod_returns200() throws Exception {
+        RankingsResponse rankings = RankingsResponse.builder()
+                .rankings(List.of())
+                .pagination(emptyPagination())
+                .build();
+        when(statisticsService.getGlobalRankings(1, 20, "monthly")).thenReturn(rankings);
+
+        mockMvc.perform(get("/rankings")
+                        .param("period", "monthly"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rankings").isArray());
     }
@@ -128,10 +142,24 @@ class StatisticsControllerTest {
                 .entries(List.of())
                 .pagination(emptyPagination())
                 .build();
-        when(statisticsService.getLeaderboard(1, 10)).thenReturn(leaderboard);
+        when(statisticsService.getLeaderboard(1, 10, "all_time", "elo")).thenReturn(leaderboard);
 
         mockMvc.perform(get("/leaderboard")
                         .param("limit", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.entries").isArray());
+    }
+
+    @Test
+    void getLeaderboard_withCategory_returns200() throws Exception {
+        LeaderboardResponse leaderboard = LeaderboardResponse.builder()
+                .entries(List.of())
+                .pagination(emptyPagination())
+                .build();
+        when(statisticsService.getLeaderboard(1, 20, "all_time", "wins")).thenReturn(leaderboard);
+
+        mockMvc.perform(get("/leaderboard")
+                        .param("category", "wins"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.entries").isArray());
     }

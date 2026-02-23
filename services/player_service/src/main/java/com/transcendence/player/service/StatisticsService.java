@@ -71,7 +71,7 @@ public class StatisticsService {
                 .build();
     }
 
-    public RankingsResponse getGlobalRankings(int page, int limit) {
+    public RankingsResponse getGlobalRankings(int page, int limit, String period) {
         PageRequest pageable = PageRequest.of(page - 1, limit);
         Page<PlayerStatistics> stats = statisticsRepository.findAllByOrderByEloRatingDesc(pageable);
 
@@ -93,9 +93,15 @@ public class StatisticsService {
         return toRankingResponse(stats, (int) rank);
     }
 
-    public LeaderboardResponse getLeaderboard(int page, int limit) {
+    public LeaderboardResponse getLeaderboard(int page, int limit, String period, String category) {
         PageRequest pageable = PageRequest.of(page - 1, limit);
-        Page<PlayerStatistics> stats = statisticsRepository.findAllByOrderByEloRatingDesc(pageable);
+        Page<PlayerStatistics> stats = switch (category) {
+            case "elo" -> statisticsRepository.findAllByOrderByEloRatingDesc(pageable);
+            case "wins" -> statisticsRepository.findAllByOrderByWinsDesc(pageable);
+            case "winrate" -> statisticsRepository.findAllByOrderByWinRateDesc(pageable);
+            case "games_played" -> statisticsRepository.findAllByOrderByGamesPlayedDesc(pageable);
+            default -> throw new IllegalArgumentException("Invalid category: " + category);
+        };
 
         AtomicInteger rankOffset = new AtomicInteger((page - 1) * limit + 1);
         return LeaderboardResponse.builder()

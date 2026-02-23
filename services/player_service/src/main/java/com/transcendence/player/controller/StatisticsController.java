@@ -52,8 +52,9 @@ public class StatisticsController {
     @GetMapping("/rankings")
     public ResponseEntity<RankingsResponse> getGlobalRankings(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit) {
-        return ResponseEntity.ok(statisticsService.getGlobalRankings(page, limit));
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(defaultValue = "all_time") String period) {
+        return ResponseEntity.ok(statisticsService.getGlobalRankings(page, limit, period));
     }
 
     // GET /rankings/me
@@ -73,7 +74,9 @@ public class StatisticsController {
     @GetMapping("/leaderboard")
     public ResponseEntity<LeaderboardResponse> getLeaderboard(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit) {
-        return ResponseEntity.ok(statisticsService.getLeaderboard(page, limit));
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(defaultValue = "all_time") String period,
+            @RequestParam(defaultValue = "elo") String category) {
+        return ResponseEntity.ok(statisticsService.getLeaderboard(page, limit, period, category));
     }
 }
