@@ -92,7 +92,6 @@ export async function forgotPassword(req, reply) {
 	}
 }
 
-
 export async function resetPassword(req, reply) {
 	// const referer = req.headers.referer;
 	const { token, password } = req.body;

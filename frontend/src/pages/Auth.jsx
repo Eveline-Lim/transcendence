@@ -69,7 +69,8 @@ export default function AuthForm() {
 			if (response.success) {
 				console.log("Login OK:", response.user);
 				localStorage.setItem("token", response.accessToken);
-				navigate("/game", { replace: true });
+				// navigate("/game", { replace: true });
+				navigate("/twofaCode", { replace: true });
 			} else {
 				setError({ form: "Identifiants invalides" });
 			}
@@ -112,7 +113,8 @@ export default function AuthForm() {
 					username,
 					displayName,
 					password,
-					email }),
+					email
+				}),
 			});
 			console.log("response: ", response.success);
 			if (response.success) {

@@ -16,11 +16,11 @@ export async function initiateOauth(req, reply) {
 	}
 
 	try {
-    	// Generate a temporary Oauth session
+		// Generate a temporary Oauth session
 		const oauthSessionId = crypto.randomUUID();
 		console.log("oauthSession: \n", oauthSessionId);
 
-    	// Generate a CSRF token to protect against cross-site request forgery attacks
+		// Generate a CSRF token to protect against cross-site request forgery attacks
 		const csrfToken = crypto.randomUUID();
 		console.log("csrfToken: \n", csrfToken);
 
@@ -32,9 +32,9 @@ export async function initiateOauth(req, reply) {
 			isOAuth: "true"
 		});
 
-    const state = oauthSessionId;
+		const state = oauthSessionId;
 
-      // Create the 42 authorization url
+		// Create the 42 authorization url
 		const authUrl =
 			"https://api.intra.42.fr/oauth/authorize?" +
 			new URLSearchParams({
@@ -45,7 +45,7 @@ export async function initiateOauth(req, reply) {
 			});
 		console.log("authUrl: \n", authUrl);
 
-      // Redirect the user to authorization page
+		// Redirect the user to authorization page
 		return reply.redirect(authUrl);
 
 	} catch (error) {
@@ -83,7 +83,7 @@ export async function oauthCallback(req, reply) {
 		// Validate session in Redis
 		const storedSession = await redisClient.hGetAll(`session:${oauthSessionId}`);
 
-		if (!storedSession || Object.keys(storedSession).length === 0 || 
+		if (!storedSession || Object.keys(storedSession).length === 0 ||
 			storedSession.isOAuth !== "true") {
 				return reply.code(400).send({
 					code: "INVALID_STATE",
@@ -108,12 +108,12 @@ export async function oauthCallback(req, reply) {
 			throw new Error("Token exchange failed");
 		}
 
-    	const tokenData = await tokenResponse.json();
+		const tokenData = await tokenResponse.json();
 		const accessToken42 = tokenData.access_token;
 
-    	// Fetch 42 user profile
-    	const userResponse = await fetch("https://api.intra.42.fr/v2/me", {
-			headers: { 
+		// Fetch 42 user profile
+		const userResponse = await fetch("https://api.intra.42.fr/v2/me", {
+			headers: {
 				Authorization: `Bearer ${accessToken42}`
 			}
 		});
@@ -121,11 +121,11 @@ export async function oauthCallback(req, reply) {
 			throw new Error("Failed to fetch 42 user");
 		}
 
-    	const fortyTwoUser = await userResponse.json();
+		const fortyTwoUser = await userResponse.json();
 
-    	// Check if user exists
-    	const userKey = `user:${fortyTwoUser.login}`;
-    	let user = await redisClient.hGetAll(userKey);
+		// Check if user exists
+		const userKey = `user:${fortyTwoUser.login}`;
+		let user = await redisClient.hGetAll(userKey);
 
 		if (!user || Object.keys(user).length === 0) {
 			const uuid = crypto.randomUUID();
@@ -140,7 +140,7 @@ export async function oauthCallback(req, reply) {
 			};
 
 			await redisClient.hSet(userKey, user);
-      		await redisClient.set(`email:${user.email}`, user.username);
+			await redisClient.set(`email:${user.email}`, user.username);
 			await redisClient.set(`userid:${uuid}`, user.username);
 		}
 
@@ -163,10 +163,10 @@ export async function oauthCallback(req, reply) {
 		.sAdd(`user:sessions:${user.username}`, sessionId)
 		.exec();
 
-    	// JWT access token
-		let accessToken = jwt.sign({ 
-			userId: user.id, 
-			username: user.username, 
+		// JWT access token
+		let accessToken = jwt.sign({
+			userId: user.id,
+			username: user.username,
 			sessionId },
 			process.env.JWT_SECRET,
 			{ expiresIn: ACCESS_TOKEN_TTL }
@@ -176,14 +176,14 @@ export async function oauthCallback(req, reply) {
 		// Refresh token
 		let refreshToken = crypto.randomBytes(64).toString("hex");
 		refreshToken = await bcrypt.hash(refreshToken, 10);
-		await redisClient.set(`refresh:${refreshToken}`, 
+		await redisClient.set(`refresh:${refreshToken}`,
 			user.id, {
 				EX: REFRESH_TOKEN_TTL
-    	});
+		});
 
 		// Delete temporary OAuth session
 		await redisClient.del(`session:${oauthSessionId}`);
-		
+
 		// Redirect to frontend with tokens
 		return reply.redirect(
 			`${process.env.FRONTEND_URL}/game`

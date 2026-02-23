@@ -321,7 +321,7 @@ export async function logout(req, reply) {
 			decoded = jwt.verify(token, process.env.JWT_SECRET);
 		} catch (error) {
 			return reply.code(401).send({
-				code: "AUTH_REQUIRED/INVALID_TOKEN",
+				code: "INVALID_TOKEN",
 				message: "Invalid or expired token",
 			});
 		}

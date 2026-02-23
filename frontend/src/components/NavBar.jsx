@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { sendData } from "../sendData";
 
-
 export default function NavBar() {
 	const [player, setPlayer] = useState(null);
 	const [isOpen, setIsOpen] = useState(false);
@@ -20,7 +19,7 @@ export default function NavBar() {
 				},
 			});
 
-			localStorage.removeItem("token");
+			// localStorage.removeItem("token");
 			navigate("/");
 		} catch (error) {
 			console.error("Logout failed:", error);
@@ -129,7 +128,7 @@ export default function NavBar() {
 					</button>
 
 					<button
-						onClick={() => console.log("Profile")}
+						onClick={() => navigate("/profile")}
 						className="w-full text-left hover:bg-gray-100 p-2 rounded-lg cursor-pointer"
 					>
 						Mon profil
@@ -146,4 +145,3 @@ export default function NavBar() {
 		</header>
 	);
 }
-
