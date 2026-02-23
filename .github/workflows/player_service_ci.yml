@@ -36,10 +36,3 @@ jobs:
           TESTCONTAINERS_RYUK_DISABLED: false
         run: mvn test
 
-      - name: Publish test report
-        if: always()
-        uses: dorny/test-reporter@v1
-        with:
-          name: JUnit Results
-          path: services/player_service/target/surefire-reports/*.xml
-          reporter: java-junit
