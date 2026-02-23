@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -43,11 +45,13 @@ public class MatchRecord {
 
     private int opponentScore;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
-    private String result; // win, loss, draw
+    private MatchResult result;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
-    private String gameMode; // casual, ranked, ai
+    private GameMode gameMode;
 
     private int duration; // seconds
 

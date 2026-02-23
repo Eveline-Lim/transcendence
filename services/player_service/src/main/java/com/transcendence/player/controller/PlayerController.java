@@ -1,8 +1,13 @@
 package com.transcendence.player.controller;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,6 +37,9 @@ import lombok.RequiredArgsConstructor;
 public class PlayerController {
 
     private final PlayerService playerService;
+
+    @Value("${avatar.upload-dir}")
+    private String uploadDir;
 
     // POST /players - public
     @PostMapping("/players")
@@ -79,9 +87,36 @@ public class PlayerController {
     @PutMapping("/players/me/avatar")
     public ResponseEntity<Map<String, String>> uploadAvatar(
             @AuthenticationPrincipal UUID playerId,
-            @RequestParam("avatar") MultipartFile file) {
-        // In production: persist file to storage and generate URL
-        String avatarUrl = "/uploads/avatars/" + playerId + "_" + file.getOriginalFilename();
+            @RequestParam("avatar") MultipartFile file) throws IOException {
+
+        // Sanitize: extract only the file extension from the original filename
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf('.'));
+            if (!extension.matches("\\.(jpg|jpeg|png|gif|webp)")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid file type"));
+            }
+        }
+
+        // Generate safe filename using only playerId + extension
+        String safeFilename = playerId.toString() + extension;
+
+        // Ensure upload directory exists
+        Path uploadPath = Path.of(uploadDir);
+        Files.createDirectories(uploadPath);
+
+        // Resolve and verify the target path doesn't escape the upload directory
+        Path targetPath = uploadPath.resolve(safeFilename).normalize();
+        if (!targetPath.startsWith(uploadPath.normalize())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid filename"));
+        }
+
+        // Write the file to disk
+        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+        // Save URL reference in database
+        String avatarUrl = "/uploads/avatars/" + safeFilename;
         String saved = playerService.updateAvatar(playerId, avatarUrl);
         return ResponseEntity.ok(Map.of("avatarUrl", saved));
     }

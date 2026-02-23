@@ -21,4 +21,6 @@ public interface FriendRequestRepository extends JpaRepository<FriendRequest, UU
 
         boolean existsByFromPlayerAndToPlayerAndStatus(
                         Player fromPlayer, Player toPlayer, FriendRequestStatus status);
+
+        Optional<FriendRequest> findByFromPlayerAndToPlayer(Player fromPlayer, Player toPlayer);
 }
