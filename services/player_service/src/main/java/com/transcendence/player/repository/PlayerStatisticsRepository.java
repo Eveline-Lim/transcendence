@@ -15,4 +15,6 @@ public interface PlayerStatisticsRepository extends JpaRepository<PlayerStatisti
     Optional<PlayerStatistics> findByPlayer(Player player);
 
     Page<PlayerStatistics> findAllByOrderByEloRatingDesc(Pageable pageable);
+
+    long countByEloRatingGreaterThan(int eloRating);
 }

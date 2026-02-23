@@ -1,6 +1,7 @@
 package com.transcendence.player.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -11,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.transcendence.player.dto.FriendListResponse;
 import com.transcendence.player.dto.FriendRequestListResponse;
 import com.transcendence.player.dto.FriendRequestResponse;
-import com.transcendence.player.dto.PaginationResponse;
 import com.transcendence.player.dto.PublicPlayerResponse;
 import com.transcendence.player.entity.BlockedPlayer;
 import com.transcendence.player.entity.FriendRequest;
@@ -24,6 +24,7 @@ import com.transcendence.player.mapper.PlayerMapper;
 import com.transcendence.player.repository.BlockedPlayerRepository;
 import com.transcendence.player.repository.FriendRequestRepository;
 import com.transcendence.player.repository.FriendshipRepository;
+import com.transcendence.player.util.PaginationUtils;
 
 import lombok.RequiredArgsConstructor;
 
@@ -45,7 +46,7 @@ public class FriendService {
         Page<Friendship> result = friendshipRepository.findByPlayer(player, pageable);
         return FriendListResponse.builder()
                 .friends(result.getContent().stream().map(mapper::toFriendResponse).toList())
-                .pagination(buildPagination(result))
+                .pagination(PaginationUtils.buildPagination(result))
                 .build();
     }
 
@@ -70,11 +71,28 @@ public class FriendService {
         Player from = playerService.findById(fromId);
         Player to = playerService.findById(targetId);
 
+        // Check if either player has blocked the other
+        if (blockedPlayerRepository.existsByBlockerAndBlocked(to, from)) {
+            throw new ResourceNotFoundException("Player not found");
+        }
+        if (blockedPlayerRepository.existsByBlockerAndBlocked(from, to)) {
+            throw new ConflictException("Cannot send friend request to a blocked player");
+        }
+
         if (friendshipRepository.existsByPlayerAndFriend(from, to)) {
             throw new ConflictException("Already friends");
         }
-        if (friendRequestRepository.existsByFromPlayerAndToPlayerAndStatus(from, to, FriendRequestStatus.pending)) {
-            throw new ConflictException("Friend request already sent");
+
+        // Check for any existing request between these players
+        Optional<FriendRequest> existing = friendRequestRepository.findByFromPlayerAndToPlayer(from, to);
+        if (existing.isPresent()) {
+            FriendRequest req = existing.get();
+            if (req.getStatus() == FriendRequestStatus.pending) {
+                throw new ConflictException("Friend request already sent");
+            }
+            // Delete old rejected/accepted request to allow re-sending
+            friendRequestRepository.delete(req);
+            friendRequestRepository.flush();
         }
 
         FriendRequest request = FriendRequest.builder()
@@ -160,16 +178,5 @@ public class FriendService {
             throw new ResourceNotFoundException("Block not found");
         }
         blockedPlayerRepository.deleteByBlockerAndBlocked(blocker, blocked);
-    }
-
-    private PaginationResponse buildPagination(Page<?> page) {
-        return PaginationResponse.builder()
-                .page(page.getNumber() + 1)
-                .limit(page.getSize())
-                .total(page.getTotalElements())
-                .totalPages(page.getTotalPages())
-                .hasNext(page.hasNext())
-                .hasPrevious(page.hasPrevious())
-                .build();
     }
 }

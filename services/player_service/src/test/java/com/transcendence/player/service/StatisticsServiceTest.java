@@ -21,7 +21,9 @@ import com.transcendence.player.dto.MatchHistoryResponse;
 import com.transcendence.player.dto.PlayerRankingResponse;
 import com.transcendence.player.dto.PlayerStatisticsResponse;
 import com.transcendence.player.dto.RankingsResponse;
+import com.transcendence.player.entity.GameMode;
 import com.transcendence.player.entity.MatchRecord;
+import com.transcendence.player.entity.MatchResult;
 import com.transcendence.player.entity.Player;
 import com.transcendence.player.entity.PlayerStatistics;
 import com.transcendence.player.repository.MatchRecordRepository;
@@ -83,13 +85,13 @@ class StatisticsServiceTest extends AbstractIntegrationTest {
         MatchRecord m1 = MatchRecord.builder()
                 .player(p1).opponent(p2)
                 .playerScore(11).opponentScore(5)
-                .result("win").gameMode("ranked")
+                .result(MatchResult.win).gameMode(GameMode.ranked)
                 .duration(300).playedAt(Instant.now().minusSeconds(3600))
                 .build();
         MatchRecord m2 = MatchRecord.builder()
                 .player(p1).opponent(p2)
                 .playerScore(5).opponentScore(11)
-                .result("loss").gameMode("casual")
+                .result(MatchResult.loss).gameMode(GameMode.casual)
                 .duration(280).playedAt(Instant.now().minusSeconds(7200))
                 .build();
         mr.save(m1);

@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.transcendence.player.dto.CreatePlayerRequest;
-import com.transcendence.player.dto.PaginationResponse;
 import com.transcendence.player.dto.PlayerListResponse;
 import com.transcendence.player.dto.PlayerResponse;
 import com.transcendence.player.dto.PublicPlayerResponse;
@@ -23,6 +22,7 @@ import com.transcendence.player.mapper.PlayerMapper;
 import com.transcendence.player.repository.PlayerPreferencesRepository;
 import com.transcendence.player.repository.PlayerRepository;
 import com.transcendence.player.repository.PlayerStatisticsRepository;
+import com.transcendence.player.util.PaginationUtils;
 
 import lombok.RequiredArgsConstructor;
 
@@ -79,7 +79,7 @@ public class PlayerService {
 
         return PlayerListResponse.builder()
                 .players(result.getContent().stream().map(mapper::toPublicPlayerResponse).toList())
-                .pagination(buildPagination(result))
+                .pagination(PaginationUtils.buildPagination(result))
                 .build();
     }
 
@@ -130,16 +130,5 @@ public class PlayerService {
     public Player findById(UUID playerId) {
         return playerRepository.findById(playerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Player not found"));
-    }
-
-    private PaginationResponse buildPagination(Page<?> page) {
-        return PaginationResponse.builder()
-                .page(page.getNumber() + 1)
-                .limit(page.getSize())
-                .total(page.getTotalElements())
-                .totalPages(page.getTotalPages())
-                .hasNext(page.hasNext())
-                .hasPrevious(page.hasPrevious())
-                .build();
     }
 }

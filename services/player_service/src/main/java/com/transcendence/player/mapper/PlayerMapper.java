@@ -83,8 +83,8 @@ public class PlayerMapper {
                 .opponent(m.getOpponent() != null ? toPublicPlayerResponse(m.getOpponent()) : null)
                 .playerScore(m.getPlayerScore())
                 .opponentScore(m.getOpponentScore())
-                .result(m.getResult())
-                .gameMode(m.getGameMode())
+                .result(m.getResult().name())
+                .gameMode(m.getGameMode().name())
                 .duration(m.getDuration())
                 .playedAt(m.getPlayedAt())
                 .build();

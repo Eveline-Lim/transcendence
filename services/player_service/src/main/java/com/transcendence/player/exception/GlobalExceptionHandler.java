@@ -1,5 +1,6 @@
 package com.transcendence.player.exception;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,6 +38,17 @@ public class GlobalExceptionHandler {
         body.put("message", "Invalid request parameters");
         body.put("details", details);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
+        return error(HttpStatus.BAD_REQUEST, "BAD_REQUEST", ex.getMessage());
+    }
+
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<Map<String, Object>> handleIOException(IOException ex) {
+        log.error("File operation failed", ex);
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_ERROR", "Failed to process file upload");
     }
 
     @ExceptionHandler(Exception.class)

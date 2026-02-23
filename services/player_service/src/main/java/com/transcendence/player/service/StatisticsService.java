@@ -12,17 +12,19 @@ import org.springframework.transaction.annotation.Transactional;
 import com.transcendence.player.dto.LeaderboardEntryResponse;
 import com.transcendence.player.dto.LeaderboardResponse;
 import com.transcendence.player.dto.MatchHistoryResponse;
-import com.transcendence.player.dto.PaginationResponse;
 import com.transcendence.player.dto.PlayerRankingResponse;
 import com.transcendence.player.dto.PlayerStatisticsResponse;
 import com.transcendence.player.dto.RankingsResponse;
+import com.transcendence.player.entity.GameMode;
 import com.transcendence.player.entity.MatchRecord;
+import com.transcendence.player.entity.MatchResult;
 import com.transcendence.player.entity.Player;
 import com.transcendence.player.entity.PlayerStatistics;
 import com.transcendence.player.exception.ResourceNotFoundException;
 import com.transcendence.player.mapper.PlayerMapper;
 import com.transcendence.player.repository.MatchRecordRepository;
 import com.transcendence.player.repository.PlayerStatisticsRepository;
+import com.transcendence.player.util.PaginationUtils;
 
 import lombok.RequiredArgsConstructor;
 
@@ -49,19 +51,23 @@ public class StatisticsService {
         PageRequest pageable = PageRequest.of(page - 1, limit, Sort.by("playedAt").descending());
         Page<MatchRecord> records;
 
-        if (result != null && gameMode != null) {
-            records = matchRecordRepository.findByPlayerAndResultAndGameMode(player, result, gameMode, pageable);
-        } else if (result != null) {
-            records = matchRecordRepository.findByPlayerAndResult(player, result, pageable);
-        } else if (gameMode != null) {
-            records = matchRecordRepository.findByPlayerAndGameMode(player, gameMode, pageable);
+        MatchResult resultEnum = result != null ? MatchResult.valueOf(result.toLowerCase()) : null;
+        GameMode gameModeEnum = gameMode != null ? GameMode.valueOf(gameMode.toLowerCase()) : null;
+
+        if (resultEnum != null && gameModeEnum != null) {
+            records = matchRecordRepository.findByPlayerAndResultAndGameMode(player, resultEnum, gameModeEnum,
+                    pageable);
+        } else if (resultEnum != null) {
+            records = matchRecordRepository.findByPlayerAndResult(player, resultEnum, pageable);
+        } else if (gameModeEnum != null) {
+            records = matchRecordRepository.findByPlayerAndGameMode(player, gameModeEnum, pageable);
         } else {
             records = matchRecordRepository.findByPlayer(player, pageable);
         }
 
         return MatchHistoryResponse.builder()
                 .matches(records.getContent().stream().map(mapper::toMatchRecordResponse).toList())
-                .pagination(buildPagination(records))
+                .pagination(PaginationUtils.buildPagination(records))
                 .build();
     }
 
@@ -74,7 +80,7 @@ public class StatisticsService {
                 .rankings(stats.getContent().stream()
                         .map(s -> toRankingResponse(s, rankOffset.getAndIncrement()))
                         .toList())
-                .pagination(buildPagination(stats))
+                .pagination(PaginationUtils.buildPagination(stats))
                 .build();
     }
 
@@ -82,8 +88,8 @@ public class StatisticsService {
         Player player = playerService.findById(playerId);
         PlayerStatistics stats = statisticsRepository.findByPlayer(player)
                 .orElseThrow(() -> new ResourceNotFoundException("Statistics not found"));
-        // Simple rank approximation by counting players with higher ELO
-        long rank = statisticsRepository.count() + 1; // fallback
+        // Rank = number of players with higher ELO + 1
+        long rank = statisticsRepository.countByEloRatingGreaterThan(stats.getEloRating()) + 1;
         return toRankingResponse(stats, (int) rank);
     }
 
@@ -96,7 +102,7 @@ public class StatisticsService {
                 .entries(stats.getContent().stream()
                         .map(s -> toLeaderboardEntry(s, rankOffset.getAndIncrement()))
                         .toList())
-                .pagination(buildPagination(stats))
+                .pagination(PaginationUtils.buildPagination(stats))
                 .build();
     }
 
@@ -124,17 +130,6 @@ public class StatisticsService {
                 .wins(s.getWins())
                 .losses(s.getLosses())
                 .winRate(s.getWinRate())
-                .build();
-    }
-
-    private PaginationResponse buildPagination(Page<?> page) {
-        return PaginationResponse.builder()
-                .page(page.getNumber() + 1)
-                .limit(page.getSize())
-                .total(page.getTotalElements())
-                .totalPages(page.getTotalPages())
-                .hasNext(page.hasNext())
-                .hasPrevious(page.hasPrevious())
                 .build();
     }
 }
