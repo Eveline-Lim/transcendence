@@ -46,21 +46,18 @@ public class StatisticsService {
     }
 
     public MatchHistoryResponse getMatchHistory(UUID playerId, int page, int limit,
-            String result, String gameMode) {
+            MatchResult result, GameMode gameMode) {
         Player player = playerService.findById(playerId);
         PageRequest pageable = PageRequest.of(page - 1, limit, Sort.by("playedAt").descending());
         Page<MatchRecord> records;
 
-        MatchResult resultEnum = result != null ? MatchResult.valueOf(result.toLowerCase()) : null;
-        GameMode gameModeEnum = gameMode != null ? GameMode.valueOf(gameMode.toLowerCase()) : null;
-
-        if (resultEnum != null && gameModeEnum != null) {
-            records = matchRecordRepository.findByPlayerAndResultAndGameMode(player, resultEnum, gameModeEnum,
+        if (result != null && gameMode != null) {
+            records = matchRecordRepository.findByPlayerAndResultAndGameMode(player, result, gameMode,
                     pageable);
-        } else if (resultEnum != null) {
-            records = matchRecordRepository.findByPlayerAndResult(player, resultEnum, pageable);
-        } else if (gameModeEnum != null) {
-            records = matchRecordRepository.findByPlayerAndGameMode(player, gameModeEnum, pageable);
+        } else if (result != null) {
+            records = matchRecordRepository.findByPlayerAndResult(player, result, pageable);
+        } else if (gameMode != null) {
+            records = matchRecordRepository.findByPlayerAndGameMode(player, gameMode, pageable);
         } else {
             records = matchRecordRepository.findByPlayer(player, pageable);
         }

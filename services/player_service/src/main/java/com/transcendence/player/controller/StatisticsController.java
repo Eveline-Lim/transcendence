@@ -14,6 +14,8 @@ import com.transcendence.player.dto.MatchHistoryResponse;
 import com.transcendence.player.dto.PlayerRankingResponse;
 import com.transcendence.player.dto.PlayerStatisticsResponse;
 import com.transcendence.player.dto.RankingsResponse;
+import com.transcendence.player.entity.GameMode;
+import com.transcendence.player.entity.MatchResult;
 import com.transcendence.player.service.StatisticsService;
 
 import lombok.RequiredArgsConstructor;
@@ -43,8 +45,8 @@ public class StatisticsController {
             @AuthenticationPrincipal UUID playerId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int limit,
-            @RequestParam(required = false) String result,
-            @RequestParam(required = false) String gameMode) {
+            @RequestParam(required = false) MatchResult result,
+            @RequestParam(required = false) GameMode gameMode) {
         return ResponseEntity.ok(statisticsService.getMatchHistory(playerId, page, limit, result, gameMode));
     }
 
