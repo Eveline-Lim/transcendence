@@ -3,7 +3,6 @@ package com.transcendence.player.controller;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.UUID;
 
@@ -95,6 +94,16 @@ public class PlayerController {
             if (!extension.matches("\\.(jpg|jpeg|png|gif|webp)")) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Invalid file type"));
             }
+        } else {
+            return ResponseEntity.badRequest().body(Map.of("error", "Missing file extension"));
+        }
+
+        // Read file bytes once (Spring already buffered the multipart upload)
+        byte[] fileBytes = file.getBytes();
+
+        // Verify actual file content via magic-number sniffing — independent of filename
+        if (!isAllowedImageType(fileBytes)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "File content is not a supported image"));
         }
 
         // Generate safe filename using only playerId + extension
@@ -111,12 +120,29 @@ public class PlayerController {
         }
 
         // Write the file to disk
-        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        Files.write(targetPath, fileBytes);
 
         // Save URL reference in database
         String avatarUrl = avatarProperties.getBaseUrl() + "/" + safeFilename;
         String saved = playerService.updateAvatar(playerId, avatarUrl);
         return ResponseEntity.ok(Map.of("avatarUrl", saved));
+    }
+
+    private boolean isAllowedImageType(byte[] bytes) {
+        if (bytes.length < 4) return false;
+        // JPEG: FF D8 FF
+        if (bytes[0] == (byte) 0xFF && bytes[1] == (byte) 0xD8 && bytes[2] == (byte) 0xFF) return true;
+        // PNG: 89 50 4E 47 0D 0A 1A 0A
+        if (bytes.length >= 8
+                && bytes[0] == (byte) 0x89 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G'
+                && bytes[4] == 0x0D && bytes[5] == 0x0A && bytes[6] == 0x1A && bytes[7] == 0x0A) return true;
+        // GIF: GIF8
+        if (bytes[0] == 'G' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == '8') return true;
+        // WebP: RIFF????WEBP
+        if (bytes.length >= 12
+                && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F'
+                && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P') return true;
+        return false;
     }
 
     // DELETE /players/me/avatar
