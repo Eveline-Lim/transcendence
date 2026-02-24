@@ -183,4 +183,33 @@ class FriendServiceTest extends AbstractIntegrationTest {
         FriendRequestListResponse outgoing = friendService.listFriendRequests(player1Id, "outgoing");
         assertThat(outgoing.getRequests()).noneMatch(r -> r.getId().equals(fr.getId()));
     }
+
+    @Test
+    @Order(13)
+    void sendFriendRequest_reverseRequest_autoAcceptsAndCreatesFriendship() {
+        CreatePlayerRequest r5 = new CreatePlayerRequest();
+        r5.setUsername("friend_p5");
+        r5.setEmail("friend_p5@example.com");
+        r5.setPassword("password123");
+        UUID player5Id = playerService.createPlayer(r5).getId();
+
+        CreatePlayerRequest r6 = new CreatePlayerRequest();
+        r6.setUsername("friend_p6");
+        r6.setEmail("friend_p6@example.com");
+        r6.setPassword("password123");
+        UUID player6Id = playerService.createPlayer(r6).getId();
+
+        // player5 sends to player6 — pending
+        friendService.sendFriendRequest(player5Id, player6Id);
+
+        // player6 sends back — should auto-accept
+        FriendRequestResponse response = friendService.sendFriendRequest(player6Id, player5Id);
+
+        assertThat(response.getStatus().name()).isEqualTo("accepted");
+
+        FriendListResponse list5 = friendService.listFriends(player5Id, 1, 20, null);
+        FriendListResponse list6 = friendService.listFriends(player6Id, 1, 20, null);
+        assertThat(list5.getFriends()).hasSize(1);
+        assertThat(list6.getFriends()).hasSize(1);
+    }
 }

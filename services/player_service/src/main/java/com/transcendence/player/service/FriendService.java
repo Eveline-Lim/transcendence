@@ -90,6 +90,23 @@ public class FriendService {
             throw new ConflictException("Already friends");
         }
 
+        // Check for a reverse pending request (to → from) — auto-accept on mutual
+        // interest
+        Optional<FriendRequest> reverse = friendRequestRepository.findByFromPlayerAndToPlayer(to, from);
+        if (reverse.isPresent() && reverse.get().getStatus() == FriendRequestStatus.pending) {
+            FriendRequest rev = reverse.get();
+            rev.setStatus(FriendRequestStatus.accepted);
+            friendshipRepository.save(Friendship.builder()
+                    .player(rev.getFromPlayer())
+                    .friend(rev.getToPlayer())
+                    .build());
+            friendshipRepository.save(Friendship.builder()
+                    .player(rev.getToPlayer())
+                    .friend(rev.getFromPlayer())
+                    .build());
+            return mapper.toFriendRequestResponse(friendRequestRepository.save(rev));
+        }
+
         // Check for any existing request between these players
         Optional<FriendRequest> existing = friendRequestRepository.findByFromPlayerAndToPlayer(from, to);
         if (existing.isPresent()) {
