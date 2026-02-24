@@ -6,7 +6,7 @@ import BackButton from "../components/BackButton";
 
 export default function TwoFACode() {
 	const [code, setCode] = useState(Array(6).fill(""));
-	const [message, setMessage] = useState("");
+	const [error, setError] = useState("");
 	const inputsRef = useRef([]);
 
 	const navigate = useNavigate();
@@ -39,25 +39,30 @@ export default function TwoFACode() {
 		const fullCode = code.join("");
 
 		if (fullCode.length !== 6) {
-			setMessage("Entrez le code à six chiffres");
+			setError("Entrez le code à six chiffres");
 			return;
 		}
 
 		console.log("Code entered:", fullCode);
-		const response = await sendData("/api/auth/2fa/verify", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				code: fullCode })
-			});
 
-		console.log("response: \n", response);
+		try {
+			const response = await sendData("/api/auth/2fa/verify", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					code: fullCode })
+				});
 
-		if (response.success) {
-			setMessage("L'authentification à deux facteurs a été vérifiée avec succès");
-			navigate("/");
-		} else {
-			setMessage("Erreur lors de la vérification du code. Veuillez réessayer.");
+			console.log("response: \n", response);
+
+			if (response.success) {
+				setError("L'authentification à deux facteurs a été vérifiée avec succès");
+				navigate("/");
+			} else {
+				setError("Erreur lors de la vérification du code. Veuillez réessayer.");
+			}
+		} catch (error) {
+			setError({ form: "Une erreur est survenue. Veuillez réessayer" });
 		}
 	};
 
@@ -83,7 +88,7 @@ export default function TwoFACode() {
 				</div>
 
 				<p className="mt-3 mb-3 font-medium text-red-500">
-					{message}
+					{error}
 				</p>
 
 				<button

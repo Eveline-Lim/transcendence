@@ -55,24 +55,27 @@ export default function AuthForm() {
 
 			console.log("LOGIN OK:", { identifier, password });
 
-			const response = await sendData("/api/auth/login", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					identifier,
-					password
-				})
-			});
+			try {
+				const response = await sendData("/api/auth/login", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						identifier,
+						password
+					})
+				});
 
-			console.log("API response:", response);
+				console.log("API response:", response);
 
-			if (response.success) {
-				console.log("Login OK:", response.user);
-				localStorage.setItem("token", response.accessToken);
-				// navigate("/game", { replace: true });
-				navigate("/twofaCode", { replace: true });
-			} else {
-				setError({ form: "Identifiants invalides" });
+				if (response.success) {
+					console.log("Login OK:", response.user);
+					localStorage.setItem("token", response.accessToken);
+					navigate("/game", { replace: true });
+				} else {
+					setError({ form: "Identifiants invalides" });
+				}
+			} catch (error) {
+				setError({ form: "Une erreur est survenue. Veuillez réessayer" });
 			}
 		} else {
 			const username = signupUsernameRef.current.value.trim();
@@ -106,23 +109,27 @@ export default function AuthForm() {
 
 			console.log("SIGNUP OK:", { username, displayName, password, email });
 
-			const response = await sendData("/api/auth/signup", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					username,
-					displayName,
-					password,
-					email
-				}),
-			});
-			console.log("response: ", response.success);
-			if (response.success) {
-				console.log("Signup OK:", response.user);
-				localStorage.setItem("token", response.accessToken);
-				navigate("/game", { replace: true });
-			} else {
-				setError({ form: "Impossible de créer le compte : ces informations sont déjà associées à un compte existant." });
+			try {
+				const response = await sendData("/api/auth/signup", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						username,
+						displayName,
+						password,
+						email
+					}),
+				});
+				console.log("response: ", response.success);
+				if (response.success) {
+					console.log("Signup OK:", response.user);
+					localStorage.setItem("token", response.accessToken);
+					navigate("/game", { replace: true });
+				} else {
+					setError({ form: "Impossible de créer le compte : ces informations sont déjà associées à un compte existant." });
+				}
+			} catch (error) {
+				setError({ form: "Une erreur est survenue. Veuillez réessayer" });
 			}
 		}
 	};

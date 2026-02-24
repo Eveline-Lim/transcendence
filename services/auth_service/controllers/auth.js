@@ -172,7 +172,8 @@ export async function login(req, reply) {
 	}
 
 	try {
-		let username;
+		let username = identifier;
+		console.log("username: ", username);
 		if (identifier.includes("@")) {
 			username = await redisClient.get(`email:${identifier}`);
 			if (!username) {
@@ -182,8 +183,6 @@ export async function login(req, reply) {
 					message: "Invalid username/email or password",
 				});
 			}
-		} else {
-			username = identifier;
 		}
 
 		const userKey = `user:${username}`;
