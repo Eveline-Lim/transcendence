@@ -1,0 +1,38 @@
+name: Player Service CI
+
+on:
+  push:
+    paths:
+      - 'services/player_service/**'
+      - '.github/workflows/player_service_ci.yml'
+  pull_request:
+    paths:
+      - 'services/player_service/**'
+      - '.github/workflows/player_service_ci.yml'
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build
+        working-directory: services/player_service
+        run: mvn compile -q
+
+      - name: Run tests (Testcontainers via Docker)
+        working-directory: services/player_service
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: false
+        run: mvn test
+
