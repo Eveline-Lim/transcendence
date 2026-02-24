@@ -35,7 +35,11 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
                         List.of());
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (IllegalArgumentException e) {
-                // Invalid UUID format, ignore or log
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.setContentType("application/json");
+                response.getWriter().write(
+                        "{\"code\":\"INVALID_HEADER\",\"message\":\"X-User-Id is not a valid UUID\"}");
+                return;
             }
         }
 
