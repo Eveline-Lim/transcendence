@@ -17,12 +17,15 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.transcendence.player.config.AvatarProperties;
 import com.transcendence.player.dto.LeaderboardResponse;
 import com.transcendence.player.dto.MatchHistoryResponse;
 import com.transcendence.player.dto.PaginationResponse;
 import com.transcendence.player.dto.PlayerRankingResponse;
 import com.transcendence.player.dto.PlayerStatisticsResponse;
 import com.transcendence.player.dto.RankingsResponse;
+import com.transcendence.player.entity.GameMode;
+import com.transcendence.player.entity.MatchResult;
 import com.transcendence.player.security.GatewayAuthenticationFilter;
 import com.transcendence.player.security.SecurityConfig;
 import com.transcendence.player.service.StatisticsService;
@@ -36,6 +39,9 @@ class StatisticsControllerTest {
 
     @MockBean
     private StatisticsService statisticsService;
+
+    @MockBean
+    private AvatarProperties avatarProperties;
 
     private static final UUID PLAYER_ID = UUID.randomUUID();
 
@@ -99,7 +105,7 @@ class StatisticsControllerTest {
                 .matches(List.of())
                 .pagination(emptyPagination())
                 .build();
-        when(statisticsService.getMatchHistory(eq(PLAYER_ID), eq(1), eq(20), eq("win"), eq("ranked")))
+        when(statisticsService.getMatchHistory(eq(PLAYER_ID), eq(1), eq(20), eq(MatchResult.win), eq(GameMode.ranked)))
                 .thenReturn(history);
 
         mockMvc.perform(get("/players/me/match-history")

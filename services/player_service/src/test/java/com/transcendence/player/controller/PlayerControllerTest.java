@@ -23,6 +23,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.transcendence.player.config.AvatarProperties;
 import com.transcendence.player.dto.PaginationResponse;
 import com.transcendence.player.dto.PlayerListResponse;
 import com.transcendence.player.dto.PlayerResponse;
@@ -41,6 +42,9 @@ class PlayerControllerTest {
 
     @MockBean
     private PlayerService playerService;
+
+    @MockBean
+    private AvatarProperties avatarProperties;
 
     private static final UUID PLAYER_ID = UUID.randomUUID();
 

@@ -36,4 +36,5 @@ jwt:
 
 avatar:
   upload-dir: ${AVATAR_UPLOAD_DIR:./uploads/avatars}
+  base-url: ${AVATAR_BASE_URL:/uploads/avatars}
   max-size: 5242880

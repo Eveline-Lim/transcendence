@@ -7,7 +7,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.transcendence.player.config.AvatarProperties;
 import com.transcendence.player.dto.CreatePlayerRequest;
 import com.transcendence.player.dto.PlayerListResponse;
 import com.transcendence.player.dto.PlayerResponse;
@@ -37,9 +37,7 @@ import lombok.RequiredArgsConstructor;
 public class PlayerController {
 
     private final PlayerService playerService;
-
-    @Value("${avatar.upload-dir}")
-    private String uploadDir;
+    private final AvatarProperties avatarProperties;
 
     // POST /players - public
     @PostMapping("/players")
@@ -103,7 +101,7 @@ public class PlayerController {
         String safeFilename = playerId.toString() + extension;
 
         // Ensure upload directory exists
-        Path uploadPath = Path.of(uploadDir);
+        Path uploadPath = Path.of(avatarProperties.getUploadDir());
         Files.createDirectories(uploadPath);
 
         // Resolve and verify the target path doesn't escape the upload directory
@@ -116,7 +114,7 @@ public class PlayerController {
         Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
         // Save URL reference in database
-        String avatarUrl = "/uploads/avatars/" + safeFilename;
+        String avatarUrl = avatarProperties.getBaseUrl() + "/" + safeFilename;
         String saved = playerService.updateAvatar(playerId, avatarUrl);
         return ResponseEntity.ok(Map.of("avatarUrl", saved));
     }
