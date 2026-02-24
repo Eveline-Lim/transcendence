@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { sendData } from "../sendData.jsx";
 
 import BackButton from "../components/BackButton";
@@ -12,6 +12,11 @@ export default function TwoFAQRCode() {
 	const inputsRef = useRef([]);
 
 	const navigate = useNavigate();
+	const location = useLocation();
+	const { qrCodeUrl } = location.state || {};
+	if (!qrCodeUrl) {
+		return <div>QR Code introuvable</div>;
+	}
 
 	const handleVerify = async (e) => {
 		e.preventDefault();
@@ -26,9 +31,14 @@ export default function TwoFAQRCode() {
 		console.log("Code entered:", fullCode);
 
 		try {
+			const token = localStorage.getItem("token");
+			console.log("2FA QRCODE TOKEN: \n", token);
 			const response = await sendData("/api/auth/2fa/verify", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
 				body: JSON.stringify({
 					code: fullCode })
 				});
@@ -56,7 +66,7 @@ export default function TwoFAQRCode() {
 				<h1 className="text-2xl font-bold mt-4 mb-4">Authentification à deux facteurs</h1>
 				<p className="text-black font-bold mb-4">Scannez le QR code et entrez le code</p>
 				<img
-					src="" // replace with dynamic QR
+					src={qrCodeUrl}
 					alt="QR Code pour l’authentification à deux facteurs"
 					className="mx-auto mb-4 w-48 h-48"
 				/>
@@ -70,7 +80,6 @@ export default function TwoFAQRCode() {
 				<p className="mt-3 mb-3 font-medium text-red-500">
 					{message}
 				</p>
-
 				<FormButton onClick={handleVerify}>Vérifier</FormButton>
 			</div>
 		</div>

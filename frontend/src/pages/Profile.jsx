@@ -83,8 +83,6 @@ export default function ProfilePage() {
 			console.log("FORM DATA: ", key, value);
 		}
 
-		navigate("/qrCode");
-
 		// try {
 		// 	const response = await sendData("/api/players/me", {
 		// 		method: "PATCH",
@@ -100,34 +98,34 @@ export default function ProfilePage() {
 		// 	console.error("Erreur lors de la mise à jour du profile de l'utilisateur", error);
 		// }
 
-		// // If enabling 2FA
-		// if (enable2FA) {
-		// 	try {
-		// 		const token = localStorage.getItem("token");
-		// 		console.log("ENABLE 2FA TOKEN: \n", token);
-		// 		const twoFAResponse = await sendData("/api/auth/2fa/enable", {
-		// 			method: "POST",
-		// 			headers: {
-		// 				Authorization: `Bearer ${token}`,
-		// 			},
-		// 		});
+		// If enabling 2FA
+		if (enable2FA) {
+			try {
+				const token = localStorage.getItem("token");
+				console.log("ENABLE 2FA TOKEN: \n", token);
+				const twoFAResponse = await sendData("/api/auth/2fa/enable", {
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				});
 
-		// 		console.log("2FA response: \n", twoFAResponse);
-		// 		if (twoFAResponse.success) {
-		// 			navigate("/twoFAQRCode", {
-		// 				state: {
-		// 					secret: twoFAResponse.secret,
-		// 					qrCodeUrl: twoFAResponse.qrCodeUrl,
-		// 					backupCodes
-		// 				},
-		// 			});
-		// 		} else {
-		// 			console.log("DISPLAY 2FA QRCODE FAILED\n");
-		// 		}
-		// 	} catch (error) {
-		// 		console.error("Erreur lors de la mise à jour du profile de l'utilisateur", error);
-		// 	}
-		// }
+				console.log("2FA response: \n", twoFAResponse);
+				if (twoFAResponse.success) {
+					navigate("/qrCode", {
+						state: {
+							secret: twoFAResponse.secret,
+							qrCodeUrl: twoFAResponse.qrCodeUrl,
+							backupCodes: twoFAResponse.backupCodes
+						},
+					});
+				} else {
+					console.log("DISPLAY 2FA QRCODE FAILED\n");
+				}
+			} catch (error) {
+				console.error("Erreur lors de la mise à jour du profile de l'utilisateur", error);
+			}
+		}
 	};
 
 	return (

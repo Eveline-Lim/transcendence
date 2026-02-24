@@ -67,6 +67,10 @@ export default function AuthForm() {
 
 				console.log("API response:", response);
 
+				if (response.requires2FA) {
+					navigate("/twofaCode", { replace: true });
+					return;
+				}
 				if (response.success) {
 					console.log("Login OK:", response.user);
 					localStorage.setItem("token", response.accessToken);
@@ -121,8 +125,8 @@ export default function AuthForm() {
 					}),
 				});
 				console.log("response: ", response.success);
+
 				if (response.success) {
-					console.log("Signup OK:", response.user);
 					localStorage.setItem("token", response.accessToken);
 					navigate("/game", { replace: true });
 				} else {

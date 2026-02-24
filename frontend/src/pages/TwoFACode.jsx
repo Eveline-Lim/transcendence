@@ -24,9 +24,14 @@ export default function TwoFACode() {
 		console.log("Code entered:", fullCode);
 
 		try {
+			const token = localStorage.getItem("token");
+			console.log("2FA CODE: \n", token);
 			const response = await sendData("/api/auth/2fa/verify", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
 				body: JSON.stringify({
 					code: fullCode })
 				});
@@ -35,12 +40,14 @@ export default function TwoFACode() {
 
 			if (response.success) {
 				setMessage("L'authentification à deux facteurs a été vérifiée avec succès");
-				navigate("/");
+				setTimeout(() => {
+					navigate("/game", { replace: true });
+				}, 2500);
 			} else {
 				setMessage("Erreur lors de la vérification du code. Veuillez réessayer.");
 			}
 		} catch (error) {
-			setMessage({ form: "Une erreur est survenue. Veuillez réessayer" });
+			setMessage("Une erreur est survenue. Veuillez réessayer");
 		}
 	};
 
