@@ -121,7 +121,7 @@ class StatisticsServiceTest extends AbstractIntegrationTest {
     @Test
     @Order(3)
     void getMatchHistory_filterByResult_win() {
-        MatchHistoryResponse history = statisticsService.getMatchHistory(stats1Id, 1, 20, "win", null);
+        MatchHistoryResponse history = statisticsService.getMatchHistory(stats1Id, 1, 20, MatchResult.win, null);
 
         assertThat(history.getMatches()).hasSize(1);
         assertThat(history.getMatches().get(0).getResult()).isEqualTo("win");
@@ -130,7 +130,7 @@ class StatisticsServiceTest extends AbstractIntegrationTest {
     @Test
     @Order(4)
     void getMatchHistory_filterByGameMode_casual() {
-        MatchHistoryResponse history = statisticsService.getMatchHistory(stats1Id, 1, 20, null, "casual");
+        MatchHistoryResponse history = statisticsService.getMatchHistory(stats1Id, 1, 20, null, GameMode.casual);
 
         assertThat(history.getMatches()).hasSize(1);
         assertThat(history.getMatches().get(0).getGameMode()).isEqualTo("casual");
@@ -139,7 +139,7 @@ class StatisticsServiceTest extends AbstractIntegrationTest {
     @Test
     @Order(5)
     void getMatchHistory_filterByResultAndGameMode() {
-        MatchHistoryResponse history = statisticsService.getMatchHistory(stats1Id, 1, 20, "win", "ranked");
+        MatchHistoryResponse history = statisticsService.getMatchHistory(stats1Id, 1, 20, MatchResult.win, GameMode.ranked);
         assertThat(history.getMatches()).hasSize(1);
     }
 

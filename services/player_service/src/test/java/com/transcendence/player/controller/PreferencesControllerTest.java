@@ -18,6 +18,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.transcendence.player.config.AvatarProperties;
 import com.transcendence.player.dto.GamePreferences;
 import com.transcendence.player.dto.NotificationPreferences;
 import com.transcendence.player.dto.PlayerPreferencesResponse;
@@ -35,6 +36,9 @@ class PreferencesControllerTest {
 
     @MockBean
     private PreferencesService preferencesService;
+
+    @MockBean
+    private AvatarProperties avatarProperties;
 
     private static final UUID PLAYER_ID = UUID.randomUUID();
 

@@ -12,4 +12,5 @@ jwt:
 
 avatar:
   upload-dir: /tmp/test-avatars
+  base-url: /uploads/avatars
   max-size: 5242880
