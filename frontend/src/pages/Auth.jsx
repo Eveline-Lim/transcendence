@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { validateUsername, validateEmail } from "../utils/validators.js";
 import { sendData } from "../sendData.jsx";
 
-import InputField from "../components/InputField.jsx";
 import FormButton from "../components/FormButton";
+import InputField from "../components/InputField.jsx";
 
 export default function AuthForm() {
 	const [mode, setMode] = useState("login"); // login | signup

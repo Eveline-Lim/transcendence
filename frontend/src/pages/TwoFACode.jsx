@@ -3,35 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { sendData } from "../sendData.jsx";
 
 import BackButton from "../components/BackButton";
+import FormButton from "../components/FormButton.jsx";
+import TwoFACodeInput from "../components/TwoFACodeInput.jsx";
 
 export default function TwoFACode() {
 	const [code, setCode] = useState(Array(6).fill(""));
-	const [error, setError] = useState("");
-	const inputsRef = useRef([]);
-
+	const [message, setMessage] = useState("");
 	const navigate = useNavigate();
-
-	const handleChange = (value, index) => {
-		if (!/^[0-9]?$/.test(value)) {
-			return;
-		}
-
-		const newCode = [...code];
-		newCode[index] = value;
-		setCode(newCode);
-
-		// Move to next input automatically
-		if (value && index < 5) {
-			inputsRef.current[index + 1].focus();
-		}
-	};
-
-	const handleKeyDown = (e, index) => {
-		// Go back on backspace
-		if (e.key === "Backspace" && !code[index] && index > 0) {
-			inputsRef.current[index - 1].focus();
-		}
-	};
 
 	const handleVerify = async (e) => {
 		e.preventDefault();
@@ -39,7 +17,7 @@ export default function TwoFACode() {
 		const fullCode = code.join("");
 
 		if (fullCode.length !== 6) {
-			setError("Entrez le code à six chiffres");
+			setMessage("Entrez le code à six chiffres");
 			return;
 		}
 
@@ -56,13 +34,13 @@ export default function TwoFACode() {
 			console.log("response: \n", response);
 
 			if (response.success) {
-				setError("L'authentification à deux facteurs a été vérifiée avec succès");
+				setMessage("L'authentification à deux facteurs a été vérifiée avec succès");
 				navigate("/");
 			} else {
-				setError("Erreur lors de la vérification du code. Veuillez réessayer.");
+				setMessage("Erreur lors de la vérification du code. Veuillez réessayer.");
 			}
 		} catch (error) {
-			setError({ form: "Une erreur est survenue. Veuillez réessayer" });
+			setMessage({ form: "Une erreur est survenue. Veuillez réessayer" });
 		}
 	};
 
@@ -72,31 +50,16 @@ export default function TwoFACode() {
 				<BackButton to="/" />
 				<p className="text-black font-bold mt-4 mb-4">Entrez le code</p>
 
-				<div className="flex justify-center space-x-2 mb-4">
-					{code.map((digit, index) => (
-						<input
-							key={index}
-							ref={(el) => (inputsRef.current[index] = el)}
-							type="text"
-							maxLength="1"
-							value={digit}
-							onChange={(e) => handleChange(e.target.value, index)}
-							onKeyDown={(e) => handleKeyDown(e, index)}
-							className="w-10 h-12 text-center border border-gray-300 rounded-md text-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-						/>
-					))}
-				</div>
+				<TwoFACodeInput
+					value={code}
+					onChange={setCode}
+					length={6}
+				/>
 
 				<p className="mt-3 mb-3 font-medium text-red-500">
-					{error}
+					{message}
 				</p>
-
-				<button
-					onClick={handleVerify}
-					className="bg-blue-700 text-white font-bold px-4 py-2 rounded-lg w-full mb-2 cursor-pointer hover:bg-blue-600 transition"
-				>
-					Vérifier
-				</button>
+				<FormButton onClick={handleVerify}>Vérifier</FormButton>
 			</div>
 		</div>
 	);

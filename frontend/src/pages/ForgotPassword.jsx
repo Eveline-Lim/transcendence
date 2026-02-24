@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { validateEmail } from "../utils/validators.js";
 import { sendData } from "../sendData.jsx";
 
-import InputField from "../components/InputField.jsx";
-import FormButton from "../components/FormButton";
 import BackButton from "../components/BackButton";
+import FormButton from "../components/FormButton";
+import InputField from "../components/InputField.jsx";
 
 export default function ForgotPassword() {
 	const emailRef = useRef(null);
