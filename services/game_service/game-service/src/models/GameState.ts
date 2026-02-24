@@ -12,6 +12,8 @@ export interface GameState {
 	gameId: string;			// ID unique
 	player1_id: string;
 	player2_id: string;
+	IA_level: null | 'easy' | 'medium' | 'hard';
+	mode: 'matchmaking' | 'local' | 'IA';
 
 	status: 'waiting' | 'playing' | 'finished';	//State of the game
 	

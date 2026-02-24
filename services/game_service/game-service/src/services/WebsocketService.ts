@@ -5,6 +5,7 @@
 import { Server, Socket } from 'socket.io';
 import { redis } from './RedisInstance';
 import { GameLoopService } from './GameLoopService';
+import { INSPECT_MAX_BYTES } from 'buffer';
 
 
   /***********/
@@ -25,9 +26,16 @@ export class WebsocketService {
 		this.io.on('connection', (socket: Socket) => {
 			console.log(`WebSocket connected: ${socket.id}`);
 
+			// Save playerId in socket from header
+			const player_id = socket.handshake.headers['player_id'];
+			socket.data.player_id = player_id ?? null;
+
+			// same handle for everyone mode
 			this.handlePing(socket);
-			this.handleDisconnect(socket);
+
+			// different handler
 			this.handleJoinGame(socket);
+			this.handleDisconnect(socket);
 			this.handlePlayerInput(socket);
 		});
 	}
@@ -46,9 +54,12 @@ export class WebsocketService {
 	}
 
 	private handleJoinGame(socket: Socket) {
-		socket.on('join-game', async (data: { player_id: string}) => {
+		socket.on('join-game', async () => {
+			
+			const player_id = socket.data.player_id ?? null; //ID player who connect
+
+			// if ()
 			try {
-				const {player_id} = data; //ID player who connect
 
 				const gameId = await redis!.getPlayerGame(player_id);
 				if (!gameId) {

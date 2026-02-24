@@ -45,7 +45,7 @@ export class RedisService {
 	}
 
 
-	async createGame(gameId: string, player1_id: string, player2_id: string): Promise<void> {
+	async createGameMatchmaking(gameId: string, player1_id: string, player2_id: string): Promise<void> {
 		
 		if (!this.client) throw new Error('Redis not initialized');
 
@@ -57,6 +57,8 @@ export class RedisService {
 			gameId: gameId,
 			player1_id,
 			player2_id,
+			IA_level: null,
+			mode: 'matchmaking',
 			status: 'waiting',
 			score: { player1: 0, player2: 0},
 			ball: { x: 50, y: 50, vx: vx, vy: vy},
@@ -71,6 +73,30 @@ export class RedisService {
 			JSON.stringify(gameState)
 		);
 	}
+
+	async createGameIA(gameId: string, player: string, IA_level: 'easy' | 'medium' | 'hard'): Promise<void> {
+		
+		if (!this.client) throw new Error('Redis not initialized');
+
+		const direction = Math.random() > 0.5 ? 1 : -1;
+		const vx = 0.5 * direction;
+		const vy = (Math.random() - 0.5) * 0.5;
+
+		const gameState: GameState = {
+			gameId: gameId,
+			player1_id: player,
+			player2_id: 'IA_' + IA_level,
+			IA_level: IA_level,
+			mode: 'IA',
+			status: 'waiting',
+			score: { player1: 0, player2: 0},
+			ball: { x: 50, y: 50, vx: vx, vy: vy},
+			paddles: { player1: 50, player2: 50},
+			created_at: Date.now(),
+			inputs: { player1_up: false, player1_down: false, player2_up: false, player2_down: false },
+		};
+	}
+
 
 	//return GameState avec JSON.parse
 	async getGameState(gameId: string): Promise<GameState | null> {
