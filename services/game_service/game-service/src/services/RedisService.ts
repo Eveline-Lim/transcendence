@@ -13,11 +13,21 @@ export class RedisService {
 	private client: Redis;
 
 	constructor() {
-		// Connexion à Redis sur le port 6379
-		this.client = new Redis({
-			host: 'localhost',
-			port: 6379,
-		});
+		// Use REDIS_URL if provided, otherwise fall back to individual params
+		const redisUrl = process.env.REDIS_URL;
+		
+		if (redisUrl) {
+			this.client = new Redis(redisUrl, {
+				password: process.env.REDIS_PASSWORD,
+			});
+		} else {
+			this.client = new Redis({
+				host: process.env.REDIS_HOST || 'localhost',
+				port: parseInt(process.env.REDIS_PORT || '6379'),
+				password: process.env.REDIS_PASSWORD,
+				db: parseInt(process.env.REDIS_DB || '0'),
+			});
+		}
 
 		// Gestion des événements
 		this.client.on('connect', () => {
