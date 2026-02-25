@@ -8,7 +8,10 @@ RUN mvn package -DskipTests -q
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
+    && apk add --no-cache curl \
+    && mkdir -p /app/uploads/avatars \
+    && chmod 777 /app/uploads/avatars
 USER appuser
 EXPOSE 8080
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
