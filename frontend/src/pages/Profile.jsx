@@ -16,6 +16,8 @@ export default function ProfilePage() {
 	const [error, setError] = useState({});
 	const [avatar, setAvatar] = useState(null);
 	const [enable2FA, setEnable2FA] = useState(false);
+	const [initial2FA, setInitial2FA] = useState(false);
+
 
 	const navigate = useNavigate();
 	const clearErrors = () => setError({});
@@ -83,44 +85,57 @@ export default function ProfilePage() {
 			console.log("FORM DATA: ", key, value);
 		}
 
-		// try {
-		// 	const response = await sendData("/api/players/me", {
-		// 		method: "PATCH",
-		// 		body: formData
-		// 	});
-		// 	if (response.success) {
-		// 		console.log("MODIFY PROFILE: \n", response);
-		// 	} else {
-		// 		console.log("MODIFY PROFILE FAILED\n");
-		// 		navigate("/game");
-		// 	}
-		// } catch (error) {
-		// 	console.error("Erreur lors de la mise à jour du profile de l'utilisateur", error);
-		// }
-
-		// If enabling 2FA
-		if (enable2FA) {
+		// 2FA was OFF and is now ON → enable
+		if (!initial2FA && enable2FA) {
 			try {
 				const token = localStorage.getItem("token");
 				console.log("ENABLE 2FA TOKEN: \n", token);
-				const twoFAResponse = await sendData("/api/auth/2fa/enable", {
+				const response = await sendData("/api/auth/2fa/enable", {
 					method: "POST",
 					headers: {
 						Authorization: `Bearer ${token}`,
 					},
 				});
 
-				console.log("2FA response: \n", twoFAResponse);
-				if (twoFAResponse.success) {
+				console.log("2FA response: \n", response);
+				if (response.success) {
 					navigate("/qrCode", {
 						state: {
-							secret: twoFAResponse.secret,
-							qrCodeUrl: twoFAResponse.qrCodeUrl,
-							backupCodes: twoFAResponse.backupCodes
+							secret: response.secret,
+							qrCodeUrl: response.qrCodeUrl,
+							backupCodes: response.backupCodes
 						},
 					});
 				} else {
-					console.log("DISPLAY 2FA QRCODE FAILED\n");
+					setError("Failed to enable 2FA");
+				}
+			} catch (error) {
+				console.error("Erreur lors de la mise à jour du profile de l'utilisateur", error);
+			}
+		}
+
+		// 2FA was ON and is now OFF → disable
+		if (initial2FA && !enable2FA) {
+			try {
+				const token = localStorage.getItem("token");
+				console.log("DISABLE 2FA TOKEN: \n", token);
+				const twofaresponse = await sendData("/api/auth/2fa/disable", {
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				});
+
+				console.log("2FA response: \n", twofaresponse);
+				if (twofaresponse.success) {
+					console.log("2FA disabled");
+					setInitial2FA(false);
+					navigate("/qrCode", {
+
+					});
+				} else {
+					setError("Failed to disable 2FA");
+					setEnable2FA(true); // revert checkbox on failure
 				}
 			} catch (error) {
 				console.error("Erreur lors de la mise à jour du profile de l'utilisateur", error);
@@ -198,6 +213,21 @@ export default function ProfilePage() {
 					/>
 					<span>Activer l'authentification à deux facteurs</span>
 				</div>
+
+				{!initial2FA && enable2FA && (
+					<p className="text-lg text-green-600">
+						L’authentification à deux facteurs sera activée lors de l’enregistrement.
+					</p>
+				)}
+				{initial2FA && !enable2FA && (
+					<p className="text-lg text-red-500">
+						L’authentification à deux facteurs sera désactivée lors de l’enregistrement.
+					</p>
+				)}
+
+				{error.form && (
+					<p className="text-lg text-red-500">{error.form}</p>
+				)}
 				<FormButton type="submit">Modifier le profil</FormButton>
 			</form>
 		</div>
