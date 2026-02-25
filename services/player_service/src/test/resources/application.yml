@@ -1,0 +1,16 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+jwt:
+  secret: test-secret-key-that-is-at-least-32-characters-long
+
+avatar:
+  upload-dir: /tmp/test-avatars
+  base-url: /uploads/avatars
+  max-size: 5242880

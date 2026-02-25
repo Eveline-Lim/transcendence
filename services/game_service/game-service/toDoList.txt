@@ -1,0 +1,5 @@
+gameStates avec Redis
+
+Test envoie de data a Redis, et les recups
+
+utiliser jest pour des tests avec serveur actif
