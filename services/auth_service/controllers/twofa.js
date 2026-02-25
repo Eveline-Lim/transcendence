@@ -1,15 +1,17 @@
 import { redisClient } from "../redisClient.js";
 import { ACCESS_TOKEN_TTL, REFRESH_TOKEN_TTL } from "../utils/macros.js";
+import bcrypt from "bcrypt";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import speakeasy from "speakeasy";
 import qrcode from "qrcode";
+import { validate2FACode } from "../utils/validators.js"
 import { generateBackupCodes } from "../utils/generateBackupCodes.js";
 
 export async function enableTwoFA(req, reply) {
 	try {
 		const token = req.headers.authorization.split(" ")[1];
-		console.log("HEREEEEEE TOKEN: ", token);
+		console.log("TOKEN: ", token);
 		if (!token) {
 			return reply.code(401).send({
 				code: "AUTH_REQUIRED",
@@ -137,7 +139,10 @@ export async function verifyTwoFA(req, reply) {
 		  });
 		}
 
-		await redisClient.hSet(userKey, "has2FAEnabled", "true");
+		await redisClient.hSet(userKey, {
+			has2FAEnabled: "true",
+			requires2FA: "true"
+		});
 
 		// Access Token (short-lived JWT)
 		const accessToken = jwt.sign(
@@ -176,9 +181,9 @@ export async function verifyTwoFA(req, reply) {
 				displayName: user.displayName,
 				email: user.email,
 				avatarUrl: user.avatar,
-				has2FAEnabled: true,
+				has2FAEnabled: user.has2FAEnabled,
 			},
-			requires2FA: true,
+			requires2FA: user.requires2FA,
 		});
 	} catch (error) {
 		console.log("error: ", error);
@@ -194,7 +199,8 @@ export async function disable2FA(req, reply) {
 	console.log("code: ", code);
 	console.log("password: ", password);
 
-	if (!validate2FACode(code) || !validatePassword(password)) {
+	//if (!validate2FACode(code) || !validatePassword(password)) {
+	if (!validate2FACode(code)) {
 		return reply.code(400).send({
 			success: false,
 			code: "INVALID_FIELDS",
@@ -262,6 +268,7 @@ export async function disable2FA(req, reply) {
 		// Disable 2FA
 		await redisClient.hSet(userKey, {
 			has2FAEnabled: "false",
+			requires2FA: "false"
 		});
 
 		await redisClient.hDel(userKey, "twoFASecret");
@@ -301,9 +308,9 @@ export async function disable2FA(req, reply) {
 				displayName: user.displayName,
 				email: user.email,
 				avatarUrl: user.avatarUrl,
-				has2FAEnabled: false,
+				has2FAEnabled: user.has2FAEnabled
 			},
-			requires2FA: false
+			requires2FA: user.requires2FA
 		});
 	} catch (error) {
 		console.log("disable2FA error:", error);

@@ -21,7 +21,7 @@ export default async function authRoutes(fastify) {
 	// 2FA
 	fastify.post("/2fa/enable", { preHandler: authenticate }, enableTwoFA);
 	fastify.post("/2fa/verify", { preHandler: authenticate }, verifyTwoFA);
-	// fastify.post("/2fa/disable", { preHandler: authenticate }, disable2FA);
+	fastify.post("/2fa/disable", { preHandler: authenticate }, disable2FA);
 
 	// OAuth
 	fastify.get("/oauth/:provider", initiateOauth);
