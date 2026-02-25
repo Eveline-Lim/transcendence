@@ -13,6 +13,7 @@ RUN npm ci
 
 # Copier le reste du code source
 COPY index.html vite.config.js ./
+COPY public/ ./public/
 COPY src/ ./src/
 
 # Build de production
