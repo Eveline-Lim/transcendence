@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { validateEmail } from "../utils/validators.js";
 import { sendData } from "../sendData.jsx";
 
-import InputField from "../components/InputField.jsx";
-import FormButton from "../components/FormButton";
 import BackButton from "../components/BackButton";
+import FormButton from "../components/FormButton";
+import InputField from "../components/InputField.jsx";
 
 export default function ForgotPassword() {
 	const emailRef = useRef(null);
@@ -31,24 +31,28 @@ export default function ForgotPassword() {
 
 		console.log("Reset password for:", email);
 
-		await sendData("/api/auth/password/forgot", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				email
-			}),
-		});
+		try {
+			await sendData("/api/auth/password/forgot", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					email
+				}),
+			});
 
-		setSuccess(true);
-		// Redirect after 3 seconds
-		setTimeout(() => {
-			navigate("/", { replace: true });
-		}, 2500);
+			setSuccess(true);
+			// Redirect after 3 seconds
+			setTimeout(() => {
+				navigate("/", { replace: true });
+			}, 2500);
+		} catch (error) {
+			setError({ form: "Une erreur est survenue. Veuillez réessayer" });
+		}
 	};
 
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-gray-50">
-			<div className="relative flex flex-col items-center bg-white border border-gray-200 p-8 rounded-lg shadow-lg max-w-md mx-auto text-black">
+			<div className="relative flex flex-col items-center bg-white border border-gray-200 p-8 rounded-lg shadow-lg max-w-md w-full mx-auto text-black">
 				<BackButton />
 
 				<h1 className="text-2xl font-bold mt-4 mb-4">Mot de passe oublié ?</h1>

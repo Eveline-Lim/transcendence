@@ -56,31 +56,35 @@ export default function ResetPassword() {
 
 		console.log("new password: ", password);
 
-		const response = await sendData("/api/auth/password/reset", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				token,
-				password
-			}),
-		});
+		try {
+			const response = await sendData("/api/auth/password/reset", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					token,
+					password
+				}),
+			});
 
-		console.log("response: ", response);
+			console.log("response: ", response);
 
-		if (response.success) {
-			setSuccess(true);
-			// Redirect after 3 seconds
-			setTimeout(() => {
-				navigate("/", { replace: true });
-			}, 2500);
-		} else {
-			setError({ form: "Lien expiré ou invalide" });
+			if (response.success) {
+				setSuccess(true);
+				// Redirect after 3 seconds
+				setTimeout(() => {
+					navigate("/", { replace: true });
+				}, 2500);
+			} else {
+				setError({ form: "Lien expiré ou invalide" });
+			}
+		} catch (error) {
+			setError({ form: "Une erreur est survenue. Veuillez réessayer" });
 		}
 	};
 
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-gray-50">
-			<div className="relative flex flex-col items-center bg-white border border-gray-200 p-8 rounded-lg shadow-lg max-w-md mx-auto text-black">
+			<div className="relative flex flex-col items-center bg-white border border-gray-200 p-8 rounded-lg shadow-lg max-w-md w-full mx-auto text-black">
 				{/* <BackButton /> */}
 
 				<h1 className="text-2xl font-bold mt-4 mb-4">Réinitialisation du mot de passe</h1>

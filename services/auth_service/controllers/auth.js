@@ -139,7 +139,7 @@ export async function signup(req, reply) {
 				displayName: user.displayName,
 				email: user.email,
 				avatarUrl : user.avatarUrl,
-				has2FAEnabled: user.has2FAEnabled,
+				has2FAEnabled: user.has2FAEnabled === "true",
 			},
 			requires2FA: user.requires2FA
 		});
@@ -172,7 +172,8 @@ export async function login(req, reply) {
 	}
 
 	try {
-		let username;
+		let username = identifier;
+		console.log("username: ", username);
 		if (identifier.includes("@")) {
 			username = await redisClient.get(`email:${identifier}`);
 			if (!username) {
@@ -182,8 +183,6 @@ export async function login(req, reply) {
 					message: "Invalid username/email or password",
 				});
 			}
-		} else {
-			username = identifier;
 		}
 
 		const userKey = `user:${username}`;
@@ -277,7 +276,7 @@ export async function login(req, reply) {
 		);
 		const storedRefreshToken = await redisClient.get(`refresh:${user.id}`);
 		console.log("storedRefreshToken: ", storedRefreshToken);
-
+		console.log("2FA: ", user.has2FAEnabled, user.requires2FA );
 		return reply.code(200).send({
 			success: true,
 			code: "LOGIN_SUCCESS",
@@ -292,7 +291,7 @@ export async function login(req, reply) {
 				displayName: user.displayName,
 				email: user.email,
 				avatarUrl: user.avatarUrl,
-				has2FAEnabled: user.has2FAEnabled,
+				has2FAEnabled: user.has2FAEnabled === "true",
 			},
 			requires2FA: user.requires2FA
 		});
@@ -321,7 +320,7 @@ export async function logout(req, reply) {
 			decoded = jwt.verify(token, process.env.JWT_SECRET);
 		} catch (error) {
 			return reply.code(401).send({
-				code: "AUTH_REQUIRED/INVALID_TOKEN",
+				code: "INVALID_TOKEN",
 				message: "Invalid or expired token",
 			});
 		}
