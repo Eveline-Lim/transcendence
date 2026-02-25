@@ -9,6 +9,9 @@ const app = Fastify({
 	logger: true
 });
 
+// Health check
+app.get("/health", async () => ({ status: "ok" }));
+
 // Register auth routes with prefix /auth
 app.register(authRoutes, {
 	prefix: "api/auth"
