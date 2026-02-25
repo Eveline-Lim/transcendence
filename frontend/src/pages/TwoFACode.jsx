@@ -1,12 +1,14 @@
-import { useState, useRef } from "react";
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { sendData } from "../sendData.jsx";
+import { AuthContext } from "../context/AuthContext";
 
 import BackButton from "../components/BackButton";
 import FormButton from "../components/FormButton.jsx";
 import TwoFACodeInput from "../components/TwoFACodeInput.jsx";
 
 export default function TwoFACode() {
+	const { login } = useContext(AuthContext);
 	const [code, setCode] = useState(Array(6).fill(""));
 	const [message, setMessage] = useState("");
 	const navigate = useNavigate();
@@ -40,6 +42,7 @@ export default function TwoFACode() {
 
 			if (response.success) {
 				setMessage("L'authentification à deux facteurs a été vérifiée avec succès");
+				login(response.user, response.accessToken);
 				setTimeout(() => {
 					navigate("/game", { replace: true });
 				}, 2500);

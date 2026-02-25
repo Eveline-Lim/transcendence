@@ -61,7 +61,8 @@ export async function enableTwoFA(req, reply) {
 		await redisClient.hSet(userKey, {
 			twoFASecret: secret.base32,
 			twoFABackupCodes: JSON.stringify(backupCodes),
-			has2FAEnabled: "false",
+			has2FAEnabled: "true",
+			requires2FA: "true"
 		});
 
 		return reply.code(200).send({
@@ -164,7 +165,7 @@ export async function verifyTwoFA(req, reply) {
 		// console.log("storedRefreshToken: ", storedRefreshToken);
 
 		return reply.code(200).send({
-			success: "true",
+			success: true,
 			accessToken,
 			refreshToken,
 			tokenType: "Bearer",
@@ -175,15 +176,141 @@ export async function verifyTwoFA(req, reply) {
 				displayName: user.displayName,
 				email: user.email,
 				avatarUrl: user.avatar,
-				has2FAEnabled: "true",
+				has2FAEnabled: true,
 			},
-			requires2FA: "true",
+			requires2FA: true,
 		});
 	} catch (error) {
 		console.log("error: ", error);
 		return reply.code(500).send({
 			code: "INTERNAL_ERROR",
 			message: "Unable to verify 2FA",
+		});
+	}
+}
+
+export async function disable2FA(req, reply) {
+	const { code, password } = req.body;
+	console.log("code: ", code);
+	console.log("password: ", password);
+
+	if (!validate2FACode(code) || !validatePassword(password)) {
+		return reply.code(400).send({
+			success: false,
+			code: "INVALID_FIELDS",
+			message: "Invalid fields",
+		});
+	}
+	try {
+		const token = req.headers.authorization.split(" ")[1];
+		if (!token) {
+			return reply.code(401).send({
+				success: false,
+				code: "AUTH_REQUIRED",
+				message: "Authentication required",
+			});
+		}
+
+		let decoded;
+		try {
+			decoded = jwt.verify(token, process.env.JWT_SECRET);
+		} catch {
+			return reply.code(401).send({
+				success: false,
+				code: "INVALID_TOKEN",
+				message: "Invalid or expired token",
+			});
+		}
+
+		const userKey = `user:${decoded.username}`;
+		const user = await redisClient.hGetAll(userKey);
+		console.log("user:" ,user);
+		if (!user || user.has2FAEnabled !== "true" || !user.twoFASecret) {
+			return reply.code(401).send({
+				success: false,
+				code: "2FA_NOT_ENABLED",
+			});
+		}
+
+		// Verify password
+		const isValid = await bcrypt.compare(password, user.password);
+		if (!isValid) {
+			return reply.code(401).send({
+				success: false,
+				code: "INVALID_CREDENTIALS",
+				message: "Password is incorrect",
+			});
+		}
+
+		// Verify TOTP
+		const verified = speakeasy.totp.verify({
+			secret: user.twoFASecret,
+			encoding: "base32",
+			token: code,
+			window: 1,
+		});
+
+		console.log("verified: ", verified);
+		if (!verified) {
+			return reply.code(400).send({
+				success: false,
+				code: "INVALID_2FA_CODE",
+				message: "Invalid 2FA code"
+			});
+		}
+
+		// Disable 2FA
+		await redisClient.hSet(userKey, {
+			has2FAEnabled: "false",
+		});
+
+		await redisClient.hDel(userKey, "twoFASecret");
+		await redisClient.hDel(userKey, "twoFABackupCodes");
+
+		// Issue new tokens
+		const sessionId = crypto.randomUUID();
+
+		const accessToken = jwt.sign(
+			{
+				userId: user.id,
+				username: user.username,
+				sessionId,
+			},
+			process.env.JWT_SECRET,
+			{ expiresIn: ACCESS_TOKEN_TTL }
+		);
+
+		const refreshToken = crypto.randomBytes(64).toString("hex");
+		const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+
+		await redisClient.set(
+			`refresh:${user.id}`,
+			hashedRefreshToken,
+			{ EX: REFRESH_TOKEN_TTL }
+		);
+
+		return reply.code(200).send({
+			success: true,
+			code: "2FA_DISABLED_SUCCESS",
+			message: "2FA successfully disabled",
+			accessToken,
+			refreshToken,
+			user: {
+				id: user.id,
+				username: user.username,
+				displayName: user.displayName,
+				email: user.email,
+				avatarUrl: user.avatarUrl,
+				has2FAEnabled: false,
+			},
+			requires2FA: false
+		});
+	} catch (error) {
+		console.log("disable2FA error:", error);
+		return reply.code(500).send({
+			success: false,
+			code: "INTERNAL_ERROR",
+			message: "Unable to disable 2FA",
 		});
 	}
 }

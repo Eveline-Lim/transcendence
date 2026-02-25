@@ -139,7 +139,7 @@ export async function signup(req, reply) {
 				displayName: user.displayName,
 				email: user.email,
 				avatarUrl : user.avatarUrl,
-				has2FAEnabled: user.has2FAEnabled,
+				has2FAEnabled: user.has2FAEnabled === "true",
 			},
 			requires2FA: user.requires2FA
 		});
@@ -276,7 +276,7 @@ export async function login(req, reply) {
 		);
 		const storedRefreshToken = await redisClient.get(`refresh:${user.id}`);
 		console.log("storedRefreshToken: ", storedRefreshToken);
-
+		console.log("2FA: ", user.has2FAEnabled, user.requires2FA );
 		return reply.code(200).send({
 			success: true,
 			code: "LOGIN_SUCCESS",
@@ -291,7 +291,7 @@ export async function login(req, reply) {
 				displayName: user.displayName,
 				email: user.email,
 				avatarUrl: user.avatarUrl,
-				has2FAEnabled: user.has2FAEnabled,
+				has2FAEnabled: user.has2FAEnabled === "true",
 			},
 			requires2FA: user.requires2FA
 		});
