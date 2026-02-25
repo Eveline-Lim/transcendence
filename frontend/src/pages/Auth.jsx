@@ -77,7 +77,7 @@ export default function AuthForm() {
 			console.log("LOGIN response:", response);
 
 			console.log("BOOL: ", response.requires2FA);
-			if (response.requires2FA) {
+			if (response.requires2FA == "true") {
 				navigate("/twofaCode", { replace: true });
 				return;
 			}

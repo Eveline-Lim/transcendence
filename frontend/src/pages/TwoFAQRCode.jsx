@@ -9,6 +9,7 @@ import TwoFACodeInput from "../components/TwoFACodeInput.jsx";
 export default function TwoFAQRCode() {
 	const [code, setCode] = useState(Array(6).fill(""));
 	const [message, setMessage] = useState("");
+	const [messageType, setMessageType] = useState("");
 	const inputsRef = useRef([]);
 
 	const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function TwoFAQRCode() {
 
 		if (fullCode.length !== 6) {
 			setMessage("Entrez le code à six chiffres");
+			setMessageType("error");
 			return;
 		}
 
@@ -43,18 +45,21 @@ export default function TwoFAQRCode() {
 					code: fullCode })
 				});
 
-			console.log("response: \n", response);
+			console.log("VERIFY response: \n", response);
 
 			if (response.success) {
 				setMessage("L'authentification à deux facteurs a été vérifiée avec succès");
+				setMessageType("success");
 				navigate("/");
 			} else {
 				setMessage("Code invalide. Veuillez réessayer.");
+				setMessageType("error");
 				setCode(Array(6).fill(""));
 				inputsRef.current[0].focus();
 			}
 		} catch (error) {
 			setMessage("Une erreur est survenue. Veuillez réessayer");
+			setMessageType("error");
 		}
 	};
 
@@ -76,8 +81,9 @@ export default function TwoFAQRCode() {
 					onChange={setCode}
 					length={6}
 				/>
-
-				<p className="mt-3 mb-3 font-medium text-red-500">
+				<p className={`mt-3 mb-3 font-medium ${
+					messageType === "success" ? "text-black" : "text-red-500"
+				}`}>
 					{message}
 				</p>
 				<FormButton onClick={handleVerify}>Vérifier</FormButton>

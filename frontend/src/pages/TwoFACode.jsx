@@ -11,6 +11,7 @@ export default function TwoFACode() {
 	const { login } = useContext(AuthContext);
 	const [code, setCode] = useState(Array(6).fill(""));
 	const [message, setMessage] = useState("");
+	const [messageType, setMessageType] = useState("");
 	const navigate = useNavigate();
 
 	const handleVerify = async (e) => {
@@ -20,6 +21,7 @@ export default function TwoFACode() {
 
 		if (fullCode.length !== 6) {
 			setMessage("Entrez le code à six chiffres");
+			setMessageType("error");
 			return;
 		}
 
@@ -38,19 +40,22 @@ export default function TwoFACode() {
 					code: fullCode })
 				});
 
-			console.log("response: \n", response);
+			console.log("VERIFY BIS response: \n", response);
 
 			if (response.success) {
 				setMessage("L'authentification à deux facteurs a été vérifiée avec succès");
+				setMessageType("success");
 				login(response.user, response.accessToken);
 				setTimeout(() => {
 					navigate("/game", { replace: true });
 				}, 2500);
 			} else {
 				setMessage("Erreur lors de la vérification du code. Veuillez réessayer.");
+				setMessageType("error");
 			}
 		} catch (error) {
 			setMessage("Une erreur est survenue. Veuillez réessayer");
+			setMessageType("error");
 		}
 	};
 
@@ -66,7 +71,9 @@ export default function TwoFACode() {
 					length={6}
 				/>
 
-				<p className="mt-3 mb-3 font-medium text-red-500">
+				<p className={`mt-3 mb-3 font-medium ${
+					messageType === "success" ? "text-black" : "text-red-500"
+				}`}>
 					{message}
 				</p>
 				<FormButton onClick={handleVerify}>Vérifier</FormButton>

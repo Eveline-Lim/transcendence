@@ -12,6 +12,7 @@ export default function ConfirmDisable2FA() {
 	const { login } = useContext(AuthContext);
 	const [code, setCode] = useState(Array(6).fill(""));
 	const [message, setMessage] = useState("");
+	const [messageType, setMessageType] = useState("");
 	const passwordRef = useRef(null);
 	const navigate = useNavigate();
 
@@ -49,15 +50,18 @@ export default function ConfirmDisable2FA() {
 
 			if (!response.success) {
 				setMessage("Code ou mot de passe incorrect");
+				setMessageType("error");
 				return;
 			}
 			setMessage("L'authentification à deux facteurs a été désactivée");
+			setMessageType("success");
 			login(response.user, response.accessToken);
 			setTimeout(() => {
 				navigate("/game", { replace: true });
 			}, 2500);
 		} catch (error) {
 			setMessage("Une erreur est survenue. Veuillez réessayer");
+			setMessageType("error");
 		}
 	};
 
@@ -86,8 +90,11 @@ export default function ConfirmDisable2FA() {
 						placeholder="Entrez votre mot de passe"
 						inputRef={passwordRef}
 					/>
-
-					{message && (<p className="text-red-500 text-center">{message}</p>)}
+					<p className={`mt-3 mb-3 font-medium${
+						messageType === "success" ? "text-black" : "text-red-500"
+					}`}>
+						{message}
+					</p>
 
 					<FormButton type="submit">
 						Confirmer la désactivation
