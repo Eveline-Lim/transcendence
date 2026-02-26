@@ -38,8 +38,8 @@ export async function initiateOauth(req, reply) {
 		const authUrl =
 			"https://api.intra.42.fr/oauth/authorize?" +
 			new URLSearchParams({
-				client_id: process.env.FORTYTWO_CLIENT_ID,
-				redirect_uri: process.env.FORTYTWO_CALLBACK_URL,
+				client_id: process.env.OAUTH_42_CLIENT_ID,
+				redirect_uri: process.env.OAUTH_42_CLIENT_CALLBACK_URL,
 				response_type: "code",
 				state
 			});
@@ -97,10 +97,10 @@ export async function oauthCallback(req, reply) {
 			headers: { "Content-Type": "application/x-www-form-urlencoded" },
 			body: new URLSearchParams({
 				grant_type: "authorization_code",
-				client_id: process.env.FORTYTWO_CLIENT_ID,
-				client_secret: process.env.FORTYTWO_CLIENT_SECRET,
+				client_id: process.env.OAUTH_42_CLIENT_ID,
+				client_secret: process.env.OAUTH_42_CLIENT_SECRET,
 				code,
-				redirect_uri: `${process.env.FORTYTWO_CALLBACK_URL}`
+				redirect_uri: `${process.env.OAUTH_42_CLIENT_CALLBACK_URL}`
 			})
 		});
 
