@@ -7,6 +7,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+  IMAGE_PREFIX_LC: '' # set dynamically in steps
 
 jobs:
   build-and-push:
@@ -28,6 +29,9 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Set lowercase image prefix
+        run: echo "IMAGE_PREFIX_LC=${IMAGE_PREFIX,,}" >> $GITHUB_ENV
 
       - name: Determine image tag
         id: tag
@@ -54,8 +58,8 @@ jobs:
               continue
             fi
 
-            image_branch="${{ env.IMAGE_PREFIX }}/transcendence-${service}:${TAG}"
-            image_sha="${{ env.IMAGE_PREFIX }}/transcendence-${service}:${SHA}"
+            image_branch="${IMAGE_PREFIX_LC}/transcendence-${service}:${TAG}"
+            image_sha="${IMAGE_PREFIX_LC}/transcendence-${service}:${SHA}"
 
             echo "Building ${service} as ${image_branch} / ${image_sha}"
 
