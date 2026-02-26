@@ -1,6 +1,7 @@
 import { validateInputs } from "../utils/validators.js"
 import { redisClient } from "../redisClient.js";
 import { ACCESS_TOKEN_TTL, REFRESH_TOKEN_TTL, MAX_LOGIN_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS } from "../utils/macros.js";
+import { createPlayerProfile } from "../utils/playerService.js";
 import bcrypt from "bcrypt";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
@@ -49,14 +50,30 @@ export async function signup(req, reply) {
 			});
 		}
 
-		// Create user
-		const uuid = crypto.randomUUID();
-		console.log("UUID: ", uuid);
+		// Call player service to create player profile
+		const playerResult = await createPlayerProfile({ username, displayName, email, password });
+
+		if (!playerResult.ok) {
+			console.log("PLAYER SERVICE ERROR: ", playerResult.data);
+			return reply.code(playerResult.status).send({
+				success: false,
+				code: "PLAYER_CREATION_FAILED",
+				message: playerResult.data.message || "Failed to create player profile",
+			});
+		}
+
+		const playerData = playerResult.data;
+		console.log("PLAYER CREATED: ", playerData);
+
+		// Use the player ID from the player service (PostgreSQL) as the single source of truth
+		const uuid = playerData.id;
+		console.log("UUID (from player service): ", uuid);
+
 		// console.log("password: ", password);
 		password = await bcrypt.hash(password, 10);
 		// console.log("hashedPassword: ", password);
 
-		// Save user
+		// Save auth credentials
 		await redisClient.hSet(userKey, {
 			id: uuid,
 			username,

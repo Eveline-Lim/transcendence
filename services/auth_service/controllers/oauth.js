@@ -1,5 +1,6 @@
 import { redisClient } from "../redisClient.js";
 import { ACCESS_TOKEN_TTL, REFRESH_TOKEN_TTL } from "../utils/macros.js";
+import { createPlayerProfile } from "../utils/playerService.js";
 import bcrypt from "bcrypt";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
@@ -128,7 +129,25 @@ export async function oauthCallback(req, reply) {
 		let user = await redisClient.hGetAll(userKey);
 
 		if (!user || Object.keys(user).length === 0) {
-			const uuid = crypto.randomUUID();
+			// Create player profile in player service
+			const tempPassword = crypto.randomBytes(32).toString("hex");
+			const playerResult = await createPlayerProfile({
+				username: fortyTwoUser.login,
+				displayName: fortyTwoUser.displayname || fortyTwoUser.login,
+				email: fortyTwoUser.email,
+				password: tempPassword
+			});
+
+			if (!playerResult.ok) {
+				console.error("PLAYER SERVICE ERROR: ", playerResult.data);
+				throw new Error("Failed to create player profile");
+			}
+
+			const playerData = playerResult.data;
+			console.log("PLAYER CREATED (OAuth): ", playerData);
+
+			// Use the player ID from the player service as the single source of truth
+			const uuid = playerData.id;
 			user = {
 				id: uuid,
 				username: fortyTwoUser.login,
