@@ -4,6 +4,28 @@
 
 import Redis from 'ioredis';
 import { GameState } from '../models/GameState';
+import { readFileSync } from 'fs';
+
+  /***********/
+ /*	HELPER	*/
+/***********/
+
+function getRedisPassword(): string | undefined {
+	if (process.env.REDIS_PASSWORD_FILE) {
+		try {
+			return readFileSync(process.env.REDIS_PASSWORD_FILE, 'utf8').trim();
+		} catch (err) {
+			console.error('Failed to read Redis password file:', (err as Error).message);
+		}
+	}
+	return process.env.REDIS_PASSWORD;
+}
+
+function safeParseInt(value: string | undefined, fallback: number): number {
+	if (value === undefined) return fallback;
+	const parsed = parseInt(value, 10);
+	return Number.isNaN(parsed) ? fallback : parsed;
+}
 
   /***********/
  /*	CLASS	*/
@@ -15,17 +37,18 @@ export class RedisService {
 	constructor() {
 		// Use REDIS_URL if provided, otherwise fall back to individual params
 		const redisUrl = process.env.REDIS_URL;
+		const password = getRedisPassword();
 		
 		if (redisUrl) {
 			this.client = new Redis(redisUrl, {
-				password: process.env.REDIS_PASSWORD,
+				password,
 			});
 		} else {
 			this.client = new Redis({
 				host: process.env.REDIS_HOST || 'localhost',
-				port: parseInt(process.env.REDIS_PORT || '6379'),
-				password: process.env.REDIS_PASSWORD,
-				db: parseInt(process.env.REDIS_DB || '0'),
+				port: safeParseInt(process.env.REDIS_PORT, 6379),
+				password,
+				db: safeParseInt(process.env.REDIS_DB, 0),
 			});
 		}
 

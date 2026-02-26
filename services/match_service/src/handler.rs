@@ -14,7 +14,7 @@ use crate::waiting_player::{PlayerInfo, PlayerInfoFactory, WaitingPlayer};
 /// Extract player information from API Gateway headers.
 ///
 /// **Production Pattern**: API Gateway validates JWT and passes claims via headers:
-/// - `X-Player-Id`: Player UUID (validated by gateway)
+/// - `X-User-Id`: Player UUID (validated by gateway)
 /// - `X-Username`: Player username
 /// - `X-Avatar-Url`: Player avatar URL (optional)
 ///
@@ -197,7 +197,7 @@ mod tests {
              Connection: Upgrade\r\n\
              Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
              Sec-WebSocket-Version: 13\r\n\
-             X-Player-Id: {}\r\n\
+             X-User-Id: {}\r\n\
              X-Username: alice\r\n\
              X-Avatar-Url: https://example.com/alice.jpg\r\n\
              \r\n",
@@ -241,7 +241,7 @@ mod tests {
              Connection: Upgrade\r\n\
              Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
              Sec-WebSocket-Version: 13\r\n\
-             X-Player-Id: {}\r\n\
+             X-User-Id: {}\r\n\
              X-Username: bob\r\n\
              \r\n",
             test_uuid
@@ -314,7 +314,7 @@ mod tests {
              Connection: Upgrade\r\n\
              Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
              Sec-WebSocket-Version: 13\r\n\
-             X-Player-Id: not-a-valid-uuid\r\n\
+             X-User-Id: not-a-valid-uuid\r\n\
              X-Username: charlie\r\n\
              \r\n";
 
@@ -354,7 +354,7 @@ mod tests {
              Connection: Upgrade\r\n\
              Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
              Sec-WebSocket-Version: 13\r\n\
-             X-Player-Id: {}\r\n\
+             X-User-Id: {}\r\n\
              X-Username: dave\r\n\
              X-Avatar-Url: https://example.com/dave.jpg\r\n\
              \r\n",
