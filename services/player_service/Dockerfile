@@ -8,7 +8,14 @@ RUN mvn package -DskipTests -q
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+COPY entrypoint.sh /app/entrypoint.sh
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
+    && apk add --no-cache curl \
+    && mkdir -p /app/uploads/avatars \
+    && chown -R appuser:appgroup /app/uploads/avatars \
+    && chmod 770 /app/uploads/avatars \
+    && chmod +x /app/entrypoint.sh
 USER appuser
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
