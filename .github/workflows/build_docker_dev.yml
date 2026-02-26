@@ -43,7 +43,17 @@ jobs:
           TAG="${{ steps.tag.outputs.tag }}"
           SHA="${{ steps.tag.outputs.sha_short }}"
 
+          # Get the compose project name (used as image name prefix)
+          PROJECT=$(docker compose config --format json | jq -r '.name')
+
           for service in $(docker compose config --services); do
+            # Skip services without a build context (e.g. postgres, redis)
+            has_build=$(docker compose config --format json | jq -r --arg s "$service" '.services[$s].build // empty')
+            if [[ -z "$has_build" ]]; then
+              echo "Skipping ${service} (no build context)"
+              continue
+            fi
+
             image_branch="${{ env.IMAGE_PREFIX }}/transcendence-${service}:${TAG}"
             image_sha="${{ env.IMAGE_PREFIX }}/transcendence-${service}:${SHA}"
 
@@ -51,7 +61,8 @@ jobs:
 
             docker compose build ${service}
 
-            local_image=$(docker compose images ${service} --format json | jq -r '.[0].Repository + ":" + .[0].Tag')
+            # The local image name follows the pattern: <project>-<service>
+            local_image="${PROJECT}-${service}"
 
             docker tag "${local_image}" "${image_branch}"
             docker tag "${local_image}" "${image_sha}"
