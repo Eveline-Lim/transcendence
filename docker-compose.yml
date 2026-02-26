@@ -57,6 +57,7 @@ services:
       - oauth_42_client_id
       - oauth_42_client_secret
       - oauth_42_client_callback_url
+      - frontend_url
     environment:
       NODE_ENV: production
       REDIS_URL: redis://redis:6379/0
@@ -66,6 +67,7 @@ services:
       OAUTH_42_CLIENT_ID_FILE: /run/secrets/oauth_42_client_id
       OAUTH_42_CLIENT_SECRET_FILE: /run/secrets/oauth_42_client_secret
       OAUTH_42_CLIENT_CALLBACK_URL_FILE: /run/secrets/oauth_42_client_callback_url
+      FRONTEND_URL_FILE: /run/secrets/frontend_url
     depends_on:
       redis:
         condition: service_healthy
@@ -85,12 +87,14 @@ services:
   player_service:
     build: ./services/player_service
     container_name: transcendence_player
+    secrets:
+      - db_password
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: transcendence
       DB_USER: transcendence
-      DB_PASSWORD: transcendence
+      DB_PASSWORD_FILE: /run/secrets/db_password
       AVATAR_UPLOAD_DIR: /app/uploads/avatars
       AVATAR_BASE_URL: /uploads/avatars
     volumes:
@@ -163,8 +167,8 @@ services:
       - ssl_cert
       - ssl_key
     ports:
-      - "8080:80"
-      - "8443:443"
+      - "8080:8080"
+      - "8443:8443"
     volumes:
       - avatar_data:/app/uploads/avatars:ro
     depends_on:
@@ -176,7 +180,7 @@ services:
       - transcendence_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -209,3 +213,5 @@ secrets:
     file: ./secrets/oauth_42_client_secret
   oauth_42_client_callback_url:
     file: ./secrets/oauth_42_client_callback_url
+  frontend_url:
+    file: ./secrets/frontend_url
