@@ -57,3 +57,40 @@ export async function handleJoinGameMatchmaking(socket: Socket, io: Server, game
 	})
 	
 };
+
+export async function handlePlayerInputMatchmaking(socket: Socket, io: Server) {
+	
+	socket.on('paddle-input', async (data: { up: boolean, down: boolean }) => {
+		
+		try {
+			const { up, down } = data;
+
+			if (!up || !down) {
+				socket.emit('error', {message: 'Wrong input'})
+				console.log('Error front: Wrong input');
+				return ;
+			}
+
+			const gameState = await redis!.getGameState(socket.data.gameId);
+			if (!gameState) {
+				socket.emit('error', {message: 'No game found'});
+				return ;
+			}
+
+			const isPlayerOne = socket.data.playerId === gameState.player1_id;
+			if (isPlayerOne) {
+				gameState.inputs.player1_up = up;
+				gameState.inputs.player1_down = down;
+			}
+			else {
+				gameState.inputs.player2_up = up;
+				gameState.inputs.player2_down = down;
+			}
+
+			await redis!.updateGameState(socket.data.gameId, gameState);
+		}
+		catch(error) {
+			console.error('Error in Player-input', error);
+		}
+	})
+}
