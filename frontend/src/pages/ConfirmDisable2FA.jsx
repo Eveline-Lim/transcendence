@@ -1,14 +1,12 @@
-import { useState, useContext, useRef } from "react";
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { sendData } from "../sendData.jsx";
-import { AuthContext } from "../context/AuthContext";
-
-import BackButton from "../components/BackButton";
+import { AuthContext } from "../context/AuthContext.jsx";
 import FormButton from "../components/FormButton.jsx";
-import TwoFACodeInput from "../components/TwoFACodeInput.jsx";
-import InputField from "../components/InputField.jsx";
+import BackButton from "../components/BackButton.jsx";
 
 export default function ConfirmDisable2FA() {
+<<<<<<< HEAD
 	const { login } = useContext(AuthContext);
 	const [code, setCode] = useState(Array(6).fill(""));
 	const [message, setMessage] = useState("");
@@ -62,13 +60,36 @@ export default function ConfirmDisable2FA() {
 		} catch (error) {
 			setMessage("Une erreur est survenue. Veuillez réessayer");
 			setMessageType("error");
+=======
+	const { currentUser, updateUser } = useContext(AuthContext);
+	const [error, setError] = useState(null);
+	const [msg, setMsg] = useState(null);
+	const navigate = useNavigate();
+
+	const handleDisable = async () => {
+		setError(null);
+		const token = localStorage.getItem("token");
+		const res = await sendData("/api/v1/auth/2fa/disable", {
+			method: "POST",
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		if (res.success !== false) {
+			updateUser({ ...currentUser, has2FAEnabled: "false" });
+			setMsg("2FA disabled");
+			setTimeout(() => navigate("/profile", { replace: true }), 1500);
+		} else {
+			setError(res.message || "Failed to disable 2FA");
+>>>>>>> b9bc338 (feat: changing front)
 		}
 	};
 
+	if (!currentUser) return null;
+
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-gray-50">
-			<div className="relative flex flex-col items-center bg-white border border-gray-200 p-8 rounded-lg shadow-lg max-w-md mx-auto text-black w-full">
+		<div className="min-h-screen flex items-center justify-center p-4">
+			<div className="card w-full max-w-sm text-center">
 				<BackButton to="/profile" />
+<<<<<<< HEAD
 				<h1 className="text-xl font-bold mt-4 mb-4">Désactiver l'authentification à deux facteurs</h1>
 
 				<form onSubmit={handleVerify} className="w-full flex flex-col gap-6">
@@ -100,6 +121,17 @@ export default function ConfirmDisable2FA() {
 						Confirmer la désactivation
 					</FormButton>
 				</form>
+=======
+				<h1 className="text-xl font-bold mb-1">Disable 2FA</h1>
+				<p className="msg-info mb-4">This will remove two-factor authentication from your account.</p>
+				<hr className="divider" />
+				{error && <p className="msg-error mb-3">{error}</p>}
+				{msg && <p className="msg-success mb-3">{msg}</p>}
+				<div className="flex gap-3 justify-center">
+					<FormButton variant="danger" onClick={handleDisable}>Confirm Disable</FormButton>
+					<FormButton variant="secondary" onClick={() => navigate("/profile")}>Cancel</FormButton>
+				</div>
+>>>>>>> b9bc338 (feat: changing front)
 			</div>
 		</div>
 	);

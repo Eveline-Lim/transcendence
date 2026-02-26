@@ -15,14 +15,13 @@ export function AuthProvider({ children }) {
 	const login = (user, token) => {
 		localStorage.setItem("token", token);
 		localStorage.setItem("user", JSON.stringify(user));
-		console.log("USER: \n", user);
 		setCurrentUser(user);
 	};
 
-	// const updateUser = (updatedUser) => {
-	// 	localStorage.setItem("user", JSON.stringify(updatedUser));
-	// 	setCurrentUser(updatedUser);
-	// };
+	const updateUser = (updatedUser) => {
+		localStorage.setItem("user", JSON.stringify(updatedUser));
+		setCurrentUser(updatedUser);
+	};
 
 	const logout = () => {
 		localStorage.removeItem("token");
@@ -31,7 +30,7 @@ export function AuthProvider({ children }) {
 	};
 
 	return (
-		<AuthContext.Provider value={{ currentUser, login, logout }}>
+		<AuthContext.Provider value={{ currentUser, login, logout, updateUser }}>
 			{children}
 		</AuthContext.Provider>
 	);

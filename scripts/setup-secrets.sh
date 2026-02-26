@@ -35,7 +35,7 @@ create_secret "node_env" "development"
 create_secret "log_level" "debug"
 create_secret "oauth_42_client_id" "u-s42-xxxx"
 create_secret "oauth_42_client_secret" "s-s42-xxxx"
-create_secret "oauth_42_client_callback_url" "http://localhost:8080/api/auth/callback/42"
+create_secret "oauth_42_client_callback_url" "http://localhost:8080/api/v1/auth/callback/42"
 
 # Nginx
 create_secret "nginx_port" "80"
