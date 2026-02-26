@@ -142,6 +142,11 @@ export async function signup(req, reply) {
 		// const storedRefreshToken = await redisClient.get(`refresh:${user.id}`);
 		// console.log("storedRefreshToken: ", storedRefreshToken);
 
+		let has2FA = false;
+		if (user.has2FAEnabled == "true") {
+			has2FA = true;
+		}
+
 		return reply.code(201).send({
 			success: true,
 			code: "USER_CREATED",
@@ -156,9 +161,9 @@ export async function signup(req, reply) {
 				displayName: user.displayName,
 				email: user.email,
 				avatarUrl : user.avatarUrl,
-				has2FAEnabled: user.has2FAEnabled === "true",
+				has2FAEnabled: has2FA
 			},
-			requires2FA: user.requires2FA
+			requires2FA: has2FA
 		});
 	} catch (error) {
 		await redisClient.quit();
