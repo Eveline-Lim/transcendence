@@ -5,9 +5,7 @@
 import { Server, Socket } from 'socket.io';
 import { redis } from './RedisInstance';
 import { GameLoopService } from './GameLoopService';
-import { INSPECT_MAX_BYTES } from 'buffer';
 import { handleJoinGameLocal, handlePingLocal, handlePlayerInputLocal } from './handle.Local';
-import { start } from 'repl';
 import { handleJoinGameMatchmaking, handlePingMatchmaking, handlePlayerInputMatchmaking } from './handle.Matchmaking';
 import { handleJoinGameIA, handlePingIA, handlePlayerInputIA } from './handle.IA';
 
@@ -45,13 +43,11 @@ export class WebsocketService {
 			socket.data.gameId = gameId;
 			socket.data.mode = gameState.mode;
 
-			// same handle for everyone mode
+			/* HANDLER	*/
 			this.handlePing(socket); // DONE
-
-			// different handler
 			this.handleJoinGame(socket); // DONE
 			this.handlePlayerInput(socket); // DONE
-			this.handleDisconnect(socket);
+			this.handleDisconnect(socket); // IN PROGRESS
 		});
 	}
 
