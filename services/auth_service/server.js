@@ -1,5 +1,4 @@
 import authRoutes from "./routes/auth.js";
-import playersRoutes from "./routes/players.js";
 import Fastify from "fastify";
 import dotenv from "dotenv";
 import { readFileSync } from "fs";
@@ -27,12 +26,7 @@ app.get("/health", async () => ({ status: "ok" }));
 
 // Register auth routes with prefix /auth
 app.register(authRoutes, {
-	prefix: "api/auth"
-});
-
-// Register players routes with prefix /players
-app.register(playersRoutes, {
-	prefix: "api/players"
+	prefix: "/auth"
 });
 
 // Run the server
