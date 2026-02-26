@@ -57,11 +57,12 @@ export async function enableTwoFA(req, reply) {
 		const { codes, backupCodes } = generateBackupCodes();
 		console.log("codes: ", codes);
 
-		// Store 2FA secret as pending (not yet enabled until verified)
+		// Store 2FA data
 		await redisClient.hSet(userKey, {
 			twoFASecret: secret.base32,
 			twoFABackupCodes: JSON.stringify(backupCodes),
-			twoFAPending: "true"
+			has2FAEnabled: "true",
+			requires2FA: "true"
 		});
 
 		return reply.code(200).send({
@@ -136,12 +137,7 @@ export async function verifyTwoFA(req, reply) {
 		  });
 		}
 
-		// Now mark 2FA as fully enabled and clear pending flag
-		await redisClient.hSet(userKey, {
-			has2FAEnabled: "true",
-			requires2FA: "true"
-		});
-		await redisClient.hDel(userKey, "twoFAPending");
+		await redisClient.hSet(userKey, "has2FAEnabled", "true");
 
 		// Access Token (short-lived JWT)
 		const accessToken = jwt.sign(

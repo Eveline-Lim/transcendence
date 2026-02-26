@@ -1,236 +1,254 @@
-import { useState, useEffect, useContext, useRef } from "react";
+import { useRef, useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { validateUsername, validateEmail } from "../utils/validators.js";
+import { sendData } from "../sendData.jsx";
 import { AuthContext } from "../context/AuthContext";
-import { api } from "../utils/api";
-import NavBar from "../components/NavBar";
-import FormButton from "../components/FormButton";
+
 import InputField from "../components/InputField";
+import FormButton from "../components/FormButton";
+import BackButton from "../components/BackButton";
 
-export default function Profile() {
-	const { currentUser, updateUser, logout } = useContext(AuthContext);
+export default function ProfilePage() {
+	const { currentUser, updateUser } = useContext(AuthContext);
 	const navigate = useNavigate();
-	const [profile, setProfile] = useState(null);
-	const [editing, setEditing] = useState(false);
-	const [msg, setMsg] = useState(null);
-	const [error, setError] = useState(null);
-	const [prefs, setPrefs] = useState(null);
-	const displayNameRef = useRef(null);
-	const emailRef = useRef(null);
-	const avatarRef = useRef(null);
 
+	const usernameRef = useRef(null);
+	const displayNameRef = useRef(null);
+	const passwordRef = useRef(null);
+	const emailRef = useRef(null);
+
+	const [error, setError] = useState({});
+	const [avatar, setAvatar] = useState(null);
+	const [avatarPreview, setAvatarPreview] = useState(null);
+	const [enable2FA, setEnable2FA] = useState(false);
+	const [initial2FA, setInitial2FA] = useState(false);
+
+	const clearErrors = () => setError({});
+
+	console.log("CURRENT USER: ", currentUser);
+
+	// Initialize from currentUser
 	useEffect(() => {
-		if (!currentUser) { navigate("/", { replace: true }); return; }
-		fetchProfile();
-		fetchPrefs();
+		if (currentUser) {
+			setEnable2FA(currentUser.has2FAEnabled);
+			setInitial2FA(currentUser.has2FAEnabled);
+			setAvatarPreview(currentUser.avatarUrl || null);
+		}
 	}, [currentUser]);
 
-	const fetchProfile = async () => {
-		const res = await api("/api/v1/players/me");
-		if (res.success) {
-			const { success, ...data } = res;
-			setProfile(data);
+	if (!currentUser) {
+		return
+	}
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		clearErrors();
+
+		const username = usernameRef.current.value.trim();
+		const displayName = displayNameRef.current.value.trim();
+		const password = passwordRef.current.value.trim();
+		const email = emailRef.current.value.trim();
+
+		const newErrors = {};
+
+		if (username && !validateUsername(username)) {
+			newErrors.username = "Nom d'utilisateur invalide";
+		}
+		if (displayName && !displayName) {
+			newErrors.displayName = "Pseudo invalide";
+		}
+
+		// COMMENTED OUT TO SIMPLIFY TESTING
+		// if (!validatePassword(password)) {
+		// 	newErrors.password = "Mot de passe invalide (6–15 caractères, majuscule, minuscule, chiffre, caractère spécial)";
+		// }
+
+		if (password && !password) {
+			newErrors.password = "Mot de passe invalide (6–15 caractères, majuscule, minuscule, chiffre, caractère spécial)";
+		}
+		if (email && !validateEmail(email)) {
+			newErrors.email = "Email invalide";
+		}
+		if (Object.keys(newErrors).length > 0) {
+			setError(newErrors);
+			return;
+		}
+
+		const token = localStorage.getItem("token");
+
+		// ================= PROFILE UPDATE =================
+		// try {
+		// 	const formData = new FormData();
+
+		// if (username) {
+		// 	formData.append("username", username);
+		// }
+		// if (displayName) {
+		// 	formData.append("displayName", displayName);
+		// }
+		// if (password) {
+		// 	formData.append("password", password);
+		// }
+		// if (email) {
+		// 	formData.append("email", email);
+		// }
+		// if (enable2FA) {
+		// 	formData.append("enable2FA", enable2FA);
+		// }
+		// if (avatar) {
+		// 	formData.append("avatar", avatar);
+		// }
+
+		// console.log("username: \n", username);
+		// console.log("pseudo: \n", displayName);
+		// console.log("password: ", password);
+		// console.log("email: ", email);
+		// console.log("avatar: ", avatar);
+		// console.log("2FA: ", enable2FA);
+
+		// for (let [key, value] of formData.entries()) {
+		// 	console.log("FORM DATA: ", key, value);
+		// }
+
+		// 	const response = await sendData("/api/users/update", {
+		// 		method: "PATCH",
+		// 		headers: {
+		// 			Authorization: `Bearer ${token}`,
+		// 		},
+		// 		body: formData,
+		// 	});
+
+		// 	if (response.success) {
+		// 		updateUser(response.user);
+		// 	} else {
+		// 		setError({ form: "Erreur lors de la mise à jour du profil." });
+		// 		return;
+		// 	}
+		// } catch (err) {
+		// 	setError({ form: "Une erreur est survenue." });
+		// 	return;
+		// }
+
+		// ================= 2FA ENABLE =================
+		if (!initial2FA && enable2FA) {
+			try {
+				const response = await sendData("/api/auth/2fa/enable", {
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${token}`
+					},
+				});
+
+				console.log("2FA enable response: \n", response);
+				if (response.success) {
+					navigate("/qrCode", {
+						state: {
+							secret: response.secret,
+							qrCodeUrl: response.qrCodeUrl,
+							backupCodes: response.backupCodes,
+						},
+					});
+				}
+			} catch {
+				setError({ form: "Erreur lors de l’activation du 2FA." });
+			}
+		}
+
+		// ================= 2FA DISABLE =================
+		if (initial2FA && !enable2FA) {
+			navigate("/twofa/disable", { replace: true });
 		}
 	};
-
-	const fetchPrefs = async () => {
-		const res = await api("/api/v1/players/me/preferences");
-		if (res.success) {
-			const { success, ...data } = res;
-			setPrefs(data);
-		}
-	};
-
-	const handleSave = async () => {
-		setError(null);
-		setMsg(null);
-		const body = {};
-		const dn = displayNameRef.current?.value.trim();
-		const em = emailRef.current?.value.trim();
-		if (dn) body.displayName = dn;
-		if (em) body.email = em;
-		const res = await api("/api/v1/players/me", {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(body),
-		});
-		if (res.success) {
-			const { success, ...data } = res;
-			setProfile(data);
-			updateUser({ ...currentUser, displayName: data.displayName, email: data.email });
-			setEditing(false);
-			setMsg("Profile updated");
-		} else {
-			setError(res.message);
-		}
-	};
-
-	const handleAvatarUpload = async () => {
-		const file = avatarRef.current?.files?.[0];
-		if (!file) return;
-		const form = new FormData();
-		form.append("avatar", file);
-		const res = await api("/api/v1/players/me/avatar", { method: "PUT", body: form });
-		if (res.success) {
-			setMsg("Avatar updated");
-			fetchProfile();
-		} else {
-			setError(res.message);
-		}
-	};
-
-	const handleDeleteAvatar = async () => {
-		const res = await api("/api/v1/players/me/avatar", { method: "DELETE" });
-		if (res.success) {
-			setMsg("Avatar removed");
-			fetchProfile();
-		} else {
-			setError(res.message);
-		}
-	};
-
-	const handleDeleteAccount = async () => {
-		if (!confirm("Permanently delete your account?")) return;
-		const res = await api("/api/v1/players/me", { method: "DELETE" });
-		if (res.success) {
-			logout();
-			navigate("/", { replace: true });
-		} else {
-			setError(res.message);
-		}
-	};
-
-	const handleEnable2FA = () => navigate("/twofa/enable");
-	const handleDisable2FA = () => navigate("/twofa/disable");
-
-	const togglePref = async (key, value) => {
-		const body = { [key]: value };
-		const res = await api("/api/v1/players/me/preferences", {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(body),
-		});
-		if (res.success) fetchPrefs();
-	};
-
-	if (!currentUser) return null;
 
 	return (
-		<div className="min-h-screen">
-			<NavBar />
-			<div className="max-w-lg mx-auto p-6 mt-6">
-				<h1 className="text-xl font-bold mb-4">Profile</h1>
-
-				{msg && <p className="msg-success mb-3">{msg}</p>}
-				{error && <p className="msg-error mb-3">{error}</p>}
+		<div className="min-h-screen flex items-center justify-center bg-gray-50">
+			<form
+				onSubmit={handleSubmit}
+				className="relative bg-white rounded-xl shadow-lg p-8 w-105 flex flex-col gap-6"
+			>
+				<BackButton to="/game" />
+				<h1 className="text-2xl font-bold text-center">Mon profil</h1>
 
 				{/* Avatar */}
-				<div className="flex items-center gap-4 mb-6">
-					{profile?.avatarUrl ? (
-						<img src={profile.avatarUrl} alt="avatar" className="avatar" />
-					) : (
-						<div className="avatar bg-slate-700 flex items-center justify-center text-2xl">
-							{(profile?.username || "?")[0].toUpperCase()}
-						</div>
-					)}
-					<div className="flex flex-col gap-2">
-						<input type="file" ref={avatarRef} accept="image/*" className="text-xs text-slate-400" onChange={handleAvatarUpload} />
-						{profile?.avatarUrl && (
-							<button onClick={handleDeleteAvatar} className="link text-xs">Remove avatar</button>
-						)}
-					</div>
+				<div className="flex flex-col items-center gap-3">
+					<h2 className="text-xl">Photo de profil</h2>
+					<img
+						src={avatarPreview || currentUser.avatarUrl}
+						alt="Avatar de l'utilisateur"
+						className="w-32 h-32 rounded-full border border-gray-400 object-cover"
+					/>
+					<input
+						type="file"
+						accept="image/*"
+						onChange={(e) => {
+							const file = e.target.files[0];
+							setAvatar(file);
+							setAvatarPreview(URL.createObjectURL(file));
+						}}
+					/>
 				</div>
 
-				{/* Profile info */}
-				<div className="card mb-4">
-					{!editing ? (
-						<>
-							<div className="mb-2"><span className="label">Username</span><p>{profile?.username}</p></div>
-							<div className="mb-2"><span className="label">Display Name</span><p>{profile?.displayName}</p></div>
-							<div className="mb-2"><span className="label">Email</span><p>{profile?.email || "—"}</p></div>
-							<div className="mb-2">
-								<span className="label">Status</span>
-								<span className={`badge ${profile?.status === "online" ? "badge-green" : profile?.status === "in_game" ? "badge-blue" : "badge-gray"}`}>
-									{profile?.status || "offline"}
-								</span>
-							</div>
-							<div className="mb-2"><span className="label">Joined</span><p className="text-sm text-slate-400">{profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "—"}</p></div>
-							<hr className="divider" />
-							<FormButton variant="secondary" onClick={() => setEditing(true)}>Edit Profile</FormButton>
-						</>
-					) : (
-						<>
-							<InputField label="Display Name" inputRef={displayNameRef} placeholder={profile?.displayName} />
-							<div className="mt-3"></div>
-							<InputField label="Email" type="email" inputRef={emailRef} placeholder={profile?.email} />
-							<div className="flex gap-2 mt-4">
-								<FormButton onClick={handleSave}>Save</FormButton>
-								<FormButton variant="secondary" onClick={() => setEditing(false)}>Cancel</FormButton>
-							</div>
-						</>
-					)}
-				</div>
+				<InputField
+					label="Nouveau nom d'utilisateur"
+					type="text"
+					placeholder={currentUser.username}
+					inputRef={usernameRef}
+					error={error.username}
+					autoFocus
+				/>
+
+				<InputField
+					label="Pseudo"
+					type="text"
+					placeholder={currentUser.displayName}
+					inputRef={displayNameRef}
+					error={error.displayName}
+				/>
+
+				<InputField
+					label="Mot de passe"
+					type="password"
+					placeholder="Nouveau mot de passe"
+					inputRef={passwordRef}
+					error={error.password}
+				/>
+
+				<InputField
+					label="Email"
+					type="email"
+					placeholder={currentUser.email}
+					inputRef={emailRef}
+					error={error.email}
+				/>
 
 				{/* 2FA */}
-				<div className="card mb-4">
-					<h2 className="font-bold text-sm mb-2">Two-Factor Authentication</h2>
-					<p className="msg-info mb-3">
-						{currentUser.has2FAEnabled === "true" || currentUser.has2FAEnabled === true
-							? "2FA is enabled on your account."
-							: "Add extra security to your account."}
-					</p>
-					{currentUser.has2FAEnabled === "true" || currentUser.has2FAEnabled === true ? (
-						<FormButton variant="danger" onClick={handleDisable2FA}>Disable 2FA</FormButton>
-					) : (
-						<FormButton onClick={handleEnable2FA}>Enable 2FA</FormButton>
-					)}
+				<div className="flex items-center gap-2">
+					<input
+						type="checkbox"
+						checked={enable2FA}
+						onChange={() => setEnable2FA(!enable2FA)}
+						className="w-5 h-5 cursor-pointer"
+					/>
+					<span>Activer l'authentification à deux facteurs</span>
 				</div>
 
-				{/* Preferences */}
-				{prefs && (
-					<div className="card mb-4">
-						<h2 className="font-bold text-sm mb-3">Preferences</h2>
-						<div className="flex flex-col gap-2">
-							{[
-								["soundEnabled", "Sound effects"],
-								["musicEnabled", "Music"],
-							].map(([key, label]) => (
-								<label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
-									<input type="checkbox" className="checkbox" checked={!!prefs[key]} onChange={(e) => togglePref(key, e.target.checked)} />
-									{label}
-								</label>
-							))}
-							{prefs.privacy && (
-								<>
-									<hr className="divider" />
-									<p className="label">Privacy</p>
-									{[
-										["showOnlineStatus", "Show online status"],
-										["allowFriendRequests", "Allow friend requests"],
-										["showMatchHistory", "Show match history"],
-										["showStatistics", "Show statistics"],
-									].map(([key, label]) => (
-										<label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
-											<input
-												type="checkbox"
-												className="checkbox"
-												checked={!!prefs.privacy[key]}
-												onChange={(e) => togglePref("privacy", { ...prefs.privacy, [key]: e.target.checked })}
-											/>
-											{label}
-										</label>
-									))}
-								</>
-							)}
-						</div>
-					</div>
+				{!initial2FA && enable2FA && (
+					<p className="text-lg text-green-600">
+						L’authentification à deux facteurs sera activée lors de l’enregistrement.
+					</p>
+				)}
+				{initial2FA && !enable2FA && (
+					<p className="text-lg text-red-500">
+						L’authentification à deux facteurs sera désactivée lors de l’enregistrement.
+					</p>
 				)}
 
-				{/* Danger zone */}
-				<div className="card">
-					<h2 className="font-bold text-sm mb-2 text-red-400">Danger Zone</h2>
-					<FormButton variant="danger" onClick={handleDeleteAccount}>Delete Account</FormButton>
-				</div>
-			</div>
+				{error.form && (
+					<p className="text-lg text-red-500">{error.form}</p>
+				)}
+
+				<FormButton type="submit">Modifier le profil</FormButton>
+			</form>
 		</div>
 	);
 }
