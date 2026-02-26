@@ -1,43 +1,81 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { validateEmail } from "../utils/validators.js";
 import { sendData } from "../sendData.jsx";
+
+import BackButton from "../components/BackButton";
+import FormButton from "../components/FormButton";
 import InputField from "../components/InputField.jsx";
-import FormButton from "../components/FormButton.jsx";
-import BackButton from "../components/BackButton.jsx";
 
 export default function ForgotPassword() {
 	const emailRef = useRef(null);
-	const [msg, setMsg] = useState(null);
-	const [error, setError] = useState(null);
+	const [error, setError] = useState({});
+	const [success, setSuccess] = useState(false);
+	const navigate = useNavigate();
+
+	const clearErrors = () => setError({});
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		setError(null);
-		setMsg(null);
+		clearErrors();
+
 		const email = emailRef.current.value.trim();
-		if (!email) { setError("Email required"); return; }
-		const res = await sendData("/api/v1/auth/password/forgot", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ email }),
-		});
-		if (res.success !== false) setMsg("If that email exists, a reset link was sent.");
-		else setError(res.message || "Error sending reset email");
+		const newErrors = {};
+
+		if (!validateEmail(email)) {
+			newErrors.email = "Email invalide";
+		}
+		if (Object.keys(newErrors).length > 0) {
+			return setError(newErrors);
+		}
+
+		console.log("Reset password for:", email);
+
+		try {
+			await sendData("/api/auth/password/forgot", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					email
+				}),
+			});
+
+			setSuccess(true);
+			// Redirect after 3 seconds
+			setTimeout(() => {
+				navigate("/", { replace: true });
+			}, 2500);
+		} catch (error) {
+			setError({ form: "Une erreur est survenue. Veuillez réessayer" });
+		}
 	};
 
 	return (
-		<div className="min-h-screen flex items-center justify-center p-4">
-			<div className="card w-full max-w-sm">
-				<BackButton to="/" />
-				<h1 className="text-xl font-bold text-center mb-1">Forgot Password</h1>
-				<p className="msg-info text-center mb-4">Enter your email to receive a reset link</p>
-				<hr className="divider" />
-				<form onSubmit={handleSubmit} className="flex flex-col gap-3">
-					<InputField label="Email" type="email" inputRef={emailRef} autoFocus />
-					{error && <p className="msg-error text-center">{error}</p>}
-					{msg && <p className="msg-success text-center">{msg}</p>}
-					<FormButton type="submit">Send Reset Link</FormButton>
-				</form>
+		<div className="min-h-screen flex items-center justify-center bg-gray-50">
+			<div className="relative flex flex-col items-center bg-white border border-gray-200 p-8 rounded-lg shadow-lg max-w-md w-full mx-auto text-black">
+				<BackButton />
+
+				<h1 className="text-2xl font-bold mt-4 mb-4">Mot de passe oublié ?</h1>
+
+				{success && (
+					<p className="text-lg text-center">
+						Si un compte est associé à cette adresse e-mail, vous recevrez un lien pour réinitialiser votre mot de passe.
+					</p>
+				)}
+				{!success && (
+					<form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
+						<InputField
+							label="Email"
+							type="email"
+							placeholder="Email"
+							inputRef={emailRef}
+							error={error.email}
+							autoFocus
+						/>
+
+						<FormButton>Réinitialiser mon mot de passe</FormButton>
+					</form>
+				)}
 			</div>
 		</div>
 	);

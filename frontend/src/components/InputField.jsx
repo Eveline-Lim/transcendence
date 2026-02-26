@@ -1,15 +1,19 @@
-export default function InputField({ label, type = "text", placeholder, inputRef, error, autoFocus }) {
+export default function InputField({ label, type = "text", placeholder, error, inputRef, autoFocus = false }) {
+	const inputClass = `w-full rounded-md border px-4 py-3 text-lg text-black focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+		error ? "border-red-500" : "border-gray-300"
+	}`;
+
 	return (
-		<div>
-			{label && <label className="label">{label}</label>}
+		<div className="flex flex-col gap-2">
+			<label className="text-left text-xl">{label}</label>
 			<input
+				ref={inputRef}
 				type={type}
 				placeholder={placeholder}
-				ref={inputRef}
+				className={inputClass}
 				autoFocus={autoFocus}
-				className="input"
 			/>
-			{error && <p className="msg-error mt-1">{error}</p>}
+			{error && <p className="text-red-500 text-lg text-left">{error}</p>}
 		</div>
 	);
 }

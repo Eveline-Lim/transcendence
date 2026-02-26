@@ -4,28 +4,6 @@
 
 import Redis from 'ioredis';
 import { GameState } from '../models/GameState';
-import { readFileSync } from 'fs';
-
-  /***********/
- /*	HELPER	*/
-/***********/
-
-function getRedisPassword(): string | undefined {
-	if (process.env.REDIS_PASSWORD_FILE) {
-		try {
-			return readFileSync(process.env.REDIS_PASSWORD_FILE, 'utf8').trim();
-		} catch (err) {
-			console.error('Failed to read Redis password file:', (err as Error).message);
-		}
-	}
-	return process.env.REDIS_PASSWORD;
-}
-
-function safeParseInt(value: string | undefined, fallback: number): number {
-	if (value === undefined) return fallback;
-	const parsed = parseInt(value, 10);
-	return Number.isNaN(parsed) ? fallback : parsed;
-}
 
   /***********/
  /*	CLASS	*/
@@ -35,22 +13,11 @@ export class RedisService {
 	private client: Redis;
 
 	constructor() {
-		// Use REDIS_URL if provided, otherwise fall back to individual params
-		const redisUrl = process.env.REDIS_URL;
-		const password = getRedisPassword();
-		
-		if (redisUrl) {
-			this.client = new Redis(redisUrl, {
-				password,
-			});
-		} else {
-			this.client = new Redis({
-				host: process.env.REDIS_HOST || 'localhost',
-				port: safeParseInt(process.env.REDIS_PORT, 6379),
-				password,
-				db: safeParseInt(process.env.REDIS_DB, 0),
-			});
-		}
+		// Connexion à Redis sur le port 6379
+		this.client = new Redis({
+			host: 'localhost',
+			port: 6379,
+		});
 
 		// Gestion des événements
 		this.client.on('connect', () => {

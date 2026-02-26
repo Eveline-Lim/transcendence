@@ -28,9 +28,6 @@ export const io = new Server(httpServer, {
 // Indique qu'on accepte du JSON
 app.use(express.json());
 
-// Health check
-app.get('/health', (_req, res) => { res.json({ status: 'ok' }); });
-
 //configuration pour les routes
 app.use('/test', debugRouter);
 app.use('/api', gameRouter);
