@@ -102,7 +102,8 @@ export class GameLoopService {
 		}
 		catch(error) {
 			console.error(`Error in game loop for ${gameId}:`, error);
-			// this.stopGameLoop(gameId);
+			this.stopGameLoop(gameId);
+			//emit internal server error 500 ?
 		}
 	}
 

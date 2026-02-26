@@ -6,6 +6,10 @@ import { Server, Socket } from 'socket.io';
 import { redis } from './RedisInstance';
 import { GameLoopService } from './GameLoopService';
 import { INSPECT_MAX_BYTES } from 'buffer';
+import { handleJoinGameLocal, handlePingLocal } from './handle.Local';
+import { start } from 'repl';
+import { handleJoinGameMatchmaking, handlePingMatchmaking } from './handle.Matchmaking';
+import { handleJoinGameIA, handlePingIA } from './handle.IA';
 
 
   /***********/
@@ -23,28 +27,46 @@ export class WebsocketService {
 	}
 
 	private setupHandlers() {
-		this.io.on('connection', (socket: Socket) => {
+		this.io.on('connection', async (socket: Socket) => {
 			console.log(`WebSocket connected: ${socket.id}`);
 
-			// Save playerId in socket from header
-			const player_id = socket.handshake.headers['player_id'];
-			socket.data.player_id = player_id ?? null;
+			// Save playerId && mode in socket from header
+
+			const player_id: string = socket.handshake.headers['player_id'] as string ?? null;
+			if (!player_id) { return; }
+
+			const gameId = await redis!.getPlayerGame(player_id);
+			if (!gameId) return;
+
+			const gameState = await redis!.getGameState(gameId);
+			if (!gameState) return;
+
+			socket.data.playerId = player_id ?? null;
+			socket.data.gameId = gameId;
+			socket.data.mode = gameState.mode;
 
 			// same handle for everyone mode
-			this.handlePing(socket);
+			this.handlePing(socket); // DONE
 
 			// different handler
-			this.handleJoinGame(socket);
-			this.handleDisconnect(socket);
-			this.handlePlayerInput(socket);
+			this.handleJoinGame(socket); // IN PROGRESS
+			// this.handleDisconnect(socket);
+			// this.handlePlayerInput(socket);
 		});
 	}
 
 	private handlePing(socket: Socket) {
-		socket.on('ping', () => {
-			console.log('Received ping');
-			socket.emit('pong', { message: 'Pong!' });
-		});
+		switch(socket.data.mode) {
+			case 'matchmaking':
+				handlePingMatchmaking(socket);
+				break;
+			case 'local':
+				handlePingLocal(socket);
+				break;
+			case 'IA':
+				handlePingIA(socket);
+				break;
+		}
 	}
 
 	private handleDisconnect(socket: Socket) {
@@ -53,93 +75,55 @@ export class WebsocketService {
 		});
 	}
 
-	private handleJoinGame(socket: Socket) {
-		socket.on('join-game', async () => {
-			
-			const player_id = socket.data.player_id ?? null; //ID player who connect
+	private async handleJoinGame(socket: Socket) {
 
-			// if ()
-			try {
-
-				const gameId = await redis!.getPlayerGame(player_id);
-				if (!gameId) {
-					socket.emit('error', { message: 'No game found for this player' });
-					return ;
+		const mode = socket.data.mode;
+		
+				if (mode === 'local') {
+					await handleJoinGameLocal(socket, this.io, this.gameLoopService);
 				}
-
-				const gameState = await redis!.getGameState(gameId);
-				if (!gameState) {
-					socket.emit('error', {message: 'Game not found'});
-					return ;
+				else if (mode === 'matchmaking') {
+					await handleJoinGameMatchmaking(socket, this.io, this.gameLoopService);
 				}
-
-				if (gameState.player1_id !== player_id && gameState.player2_id !== player_id) {
-					socket.emit('error', {message: 'Player not in this game'})
-					return ;
-				}
-				
-				socket.join(gameId);
-				console.log(`Player ${player_id} joined game ${gameId}`);
-
-				socket.emit('joined-game', {
-					game_id: gameId,
-					game_state: gameState
-				})
-
-				const socketsInRoom = await this.io.in(gameId).fetchSockets();
-
-				if (socketsInRoom.length === 2) {
-					gameState.status = 'playing';
-					await redis!.updateGameState(gameId, gameState);
-				
-					this.io.to(gameId).emit('game-start', {
-						message: 'Both players connected, game starting!',
-						game_state: gameState
-					});
-
-					this.gameLoopService.startGameLoop(gameId);
+				else if (mode === 'IA') {
+					await handleJoinGameIA(socket, this.io, this.gameLoopService);
 				}
 			}
-			catch(error) {
-				console.error('Error in join-game', error);
-				socket.emit('error', {message: 'Failed to join game'});
-			}
-		});
-	}
-
-	private handlePlayerInput(socket: Socket) {
-		socket.on('paddle-input', async (data: {player_id: string, action: string}) => {
-			try {
-				const { player_id, action } = data;
-
-				const gameId = await redis!.getPlayerGame(player_id);
-				if (!gameId) return;
-
-				const gameState = await redis!.getGameState(gameId);
-				if (!gameState) return;
-
-				const isPlayerOne = (player_id === gameState.player1_id);
-
-				switch(action) {
-					case 'up-pressed':
-						if (isPlayerOne) gameState.inputs.player1_up = true;
-						else gameState.inputs.player2_up = true;
-					case 'up-released':
-						if (isPlayerOne) gameState.inputs.player1_up = false;
-						else gameState.inputs.player2_up = false;
-					case 'down-pressed':
-						if (isPlayerOne) gameState.inputs.player1_down = true;
-						else gameState.inputs.player2_down = true;
-					case 'down-released':
-						if (isPlayerOne) gameState.inputs.player1_down = false;
-						else gameState.inputs.player2_down = false;
-				}
-
-				await redis!.updateGameState(gameId, gameState);
-			}
-			catch(error) {
-				console.error('Error in Player-input', error);
-			}
-		})
-	}
 }
+
+	// private handlePlayerInput(socket: Socket) {
+	// 	socket.on('paddle-input', async (data: {player_id: string, action: string}) => {
+	// 		try {
+
+	// 			const { player_id, action } = data;
+
+	// 			const gameId = await redis!.getPlayerGame(player_id);
+	// 			if (!gameId) return;
+
+	// 			const gameState = await redis!.getGameState(gameId);
+	// 			if (!gameState) return;
+
+	// 			const isPlayerOne = (player_id === gameState.player1_id);
+
+	// 			switch(action) {
+	// 				case 'up-pressed':
+	// 					if (isPlayerOne) gameState.inputs.player1_up = true;
+	// 					else gameState.inputs.player2_up = true;
+	// 				case 'up-released':
+	// 					if (isPlayerOne) gameState.inputs.player1_up = false;
+	// 					else gameState.inputs.player2_up = false;
+	// 				case 'down-pressed':
+	// 					if (isPlayerOne) gameState.inputs.player1_down = true;
+	// 					else gameState.inputs.player2_down = true;
+	// 				case 'down-released':
+	// 					if (isPlayerOne) gameState.inputs.player1_down = false;
+	// 					else gameState.inputs.player2_down = false;
+	// 			}
+
+	// 			await redis!.updateGameState(gameId, gameState);
+	// 		}
+	// 		catch(error) {
+	// 			console.error('Error in Player-input', error);
+	// 		}
+	// 	})
+	// }
