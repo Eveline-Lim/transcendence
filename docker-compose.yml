@@ -161,6 +161,7 @@ services:
   # NGINX
   ##################################################################
   nginx:
+    user: root
     build: ./services/nginx
     container_name: transcendence_nginx
     secrets:

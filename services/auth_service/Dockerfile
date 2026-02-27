@@ -13,6 +13,7 @@ RUN addgroup -g 1001 -S nodejs \
 
 COPY --chown=node:node controllers ./controllers
 COPY --chown=node:node middleware ./middleware
+COPY --chown=node:node model ./model
 COPY --chown=node:node routes ./routes
 COPY --chown=node:node utils ./utils
 COPY --chown=node:node mailService.js ./

@@ -6,10 +6,30 @@ import bcrypt from "bcrypt";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 
+import LoginRequest from "../model/LoginRequest.js";
+import RegisterRequest from "../model/RegisterRequest.js";
+
 export async function signup(req, reply) {
-	const { username, displayName, email } = req.body;
-	console.log("REQ BODY:", req.body);
-	let password = req.body.password;
+	// const { username, displayName, email } = req.body;
+	// console.log("REQ BODY:", req.body);
+	let displayName = req.body.displayName;
+
+	let registerRequest;
+
+	console.log("HEREEEEEEEEE");
+	try {
+		RegisterRequest.validateJSON(req.body);
+		registerRequest = RegisterRequest.constructFromObject(req.body);
+		console.log("111111111111");
+	} catch (error) {
+		return reply.code(400).send({
+			success: false,
+			code: "INVALID_REQUEST_PARAMETERS",
+			message: error.message,
+		});
+	}
+
+	const { username, password, email } = registerRequest;
 	const avatarUrl = "/assets/avatar.jpg";
 
 	// const validation = validateInputs({ username, email, password }, false);
@@ -177,14 +197,26 @@ export async function signup(req, reply) {
 }
 
 export async function login(req, reply) {
-	const { identifier, password } = req.body;
-	console.log("REQ BODY: ", req.body);
+	let loginRequest;
+
+	try {
+		LoginRequest.validateJSON(req.body);
+		loginRequest = LoginRequest.constructFromObject(req.body);
+	} catch (error) {
+		return reply.code(400).send({
+			success: false,
+			code: "INVALID_REQUEST_PARAMETERS",
+			message: error.message,
+		});
+	}
+
+	const { identifier, password } = loginRequest;
 
 	// For rate limiting per IP
 	const ip = req.ip;
 	console.log("IP: ", ip);
 
-	const validation = validateInputs({ identifier, password }, true);
+	const validation = validateInputs(loginRequest, true);
 	if (!validation.success) {
 		return reply.code(400).send({
 			success: false,
