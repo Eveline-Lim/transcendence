@@ -34,10 +34,8 @@ impl PlayerInfoFactory {
         let avatar_url = Arc::clone(&self.avatar_url);
 
         move |req: &Request, resp: Response| {
-            if let Some(player_id_str) = req
-                .headers()
-                .get("X-User-Id")
-                .and_then(|v| v.to_str().ok())
+            if let Some(player_id_str) =
+                req.headers().get("X-User-Id").and_then(|v| v.to_str().ok())
                 && let Ok(uuid) = Uuid::parse_str(player_id_str)
                 && let Ok(mut guard) = player_id.try_lock()
             {
