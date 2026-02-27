@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "fastify start --options index.js",
-    "test": "c8 node --test test/test-*.js",
+    "test": "c8 node --test unitTests/test/test-*.js",
     "dev": "node -r dotenv/config server.js"
   },
   "directories": {
