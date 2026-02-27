@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Socket</title>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+</head>
+<body>
+    <button onclick="createGame()">Create Game</button>
+    <button onclick="joinGame()">Join Game</button>
+    <button onclick="sendPing()">Ping</button>
+    <div id="logs"></div>
+
+    <script>
+        let socket = null;
+
+        function log(msg) {
+            document.getElementById('logs').innerHTML += `<p>${msg}</p>`;
+        }
+
+        async function createGame() {
+            const response = await fetch('http://localhost:3001/api/game/local', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await response.json();
+            const gameId = data.gameId;
+            log('Game created: ' + gameId);
+
+            socket = io('http://localhost:3001', {
+                query: { gameId: gameId }
+            });
+
+            socket.on('connect', () => log('Connected: ' + socket.id));
+            socket.on('disconnect', () => log('Disconnected'));
+            socket.on('error', (data) => log('Error: ' + JSON.stringify(data)));
+            socket.on('joined-game', (data) => log('Joined: ' + JSON.stringify(data)));
+            socket.on('game-start', (data) => log('Game start: ' + JSON.stringify(data)));
+            socket.on('custom-pong', (data) => log('Pong: ' + JSON.stringify(data)));
+        }
+
+        function joinGame() {
+            if (!socket) return log('Create game first!');
+            socket.emit('join-game');
+        }
+
+        function sendPing() {
+            if (!socket) return log('Create game first!');
+            socket.emit('custom-ping');
+        }
+    </script>
+</body>
+</html>

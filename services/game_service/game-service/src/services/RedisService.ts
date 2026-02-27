@@ -74,7 +74,7 @@ export class RedisService {
 		);
 	}
 
-	async createGameIA(gameId: string, player: string, IA_level: 'easy' | 'medium' | 'hard'): Promise<void> {
+	async createGameIA(gameId: string, player: string | null, IA_level: 'easy' | 'medium' | 'hard'): Promise<void> {
 		
 		if (!this.client) throw new Error('Redis not initialized');
 
@@ -84,7 +84,7 @@ export class RedisService {
 
 		const gameState: GameState = {
 			gameId: gameId,
-			player1_id: player,
+			player1_id: player ?? 'player',
 			player2_id: 'IA_' + IA_level,
 			IA_level: IA_level,
 			mode: 'IA',
@@ -95,6 +95,41 @@ export class RedisService {
 			created_at: Date.now(),
 			inputs: { player1_up: false, player1_down: false, player2_up: false, player2_down: false },
 		};
+
+		await this.client.setex(
+			`game:${gameId}`,
+			3600,
+			JSON.stringify(gameState)
+		);
+	}
+
+	async createGameLocal(gameId: string, player: string | null): Promise<void> {
+
+		if (!this.client) throw new Error('Redis not initialized');
+
+		const direction = Math.random() > 0.5 ? 1 : -1;
+		const vx = 0.5 * direction;
+		const vy = (Math.random() - 0.5) * 0.5;
+
+		const gameState: GameState = {
+			gameId: gameId,
+			player1_id: player ?? 'player_1',
+			player2_id: 'player_2',
+			IA_level: null,
+			mode: 'local',
+			status: 'waiting',
+			score: { player1: 0, player2: 0},
+			ball: { x: 50, y: 50, vx: vx, vy: vy},
+			paddles: { player1: 50, player2: 50},
+			created_at: Date.now(),
+			inputs: { player1_up: false, player1_down: false, player2_up: false, player2_down: false },
+		};
+		
+		await this.client.setex(
+			`game:${gameId}`,
+			3600,
+			JSON.stringify(gameState)
+		);
 	}
 
 
@@ -139,4 +174,11 @@ export class RedisService {
 		
 		return await this.client.get(`player:${playerId}:game`);
 	}
+
+	// suppress playergame
+	async deletePlayerGame(playerId: string): Promise<void> {
+    if (!this.client) throw new Error('Redis not initialized');
+    
+    await this.client.del(`player:${playerId}:game`);
+}
 }

@@ -57,13 +57,12 @@ gameRouter.post('/game/IA', async (req, res) => {
 
 
 	if (!player) return res.status(400).json({error: 'Missing player IDs'});
-	if (!IA_level || IA_level < 0 || IA_level > 3) return res.status(400).json({error: 'Missing or forbidden IA level'});
+	// if (!IA_level || IA_level < 0 || IA_level > 3) return res.status(400).json({error: 'Missing or forbidden IA level'});
 
 	try {
 		const gameId = `game_${Date.now()}_${Math.random().toString(36).slice(2, 11)}_${IA_level}`;
 
 		await redis.createGameIA(gameId, player, IA_level);
-
 		await redis.setPlayerGame(player, gameId);
 
 		res.status(201).json({
@@ -82,12 +81,19 @@ gameRouter.post('/game/local', async (req, res) => {
 
 	if (!redis) return res.status(503).json({error: 'Redis unavailable'});
 
-	const player = req.body;
+	const player = req.body?.player_id ?? null;
 
 	try {
 		const gameId = `game_${Date.now()}_${Math.random().toString(36).slice(2, 11)}_local`;
 
-		// if ()
+		await redis.createGameLocal(gameId, player);
+		if (player) await redis.setPlayerGame(player, gameId);
+
+		res.status(201).json({
+			gameId: gameId,
+			status: 'created',
+			message: 'Game created successfully',
+		});
 	}
 	catch(error) {
 		console.error('Error CreateGame in local:', error);

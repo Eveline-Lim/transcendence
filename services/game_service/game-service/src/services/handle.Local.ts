@@ -5,9 +5,9 @@ import { GameLoopService } from './GameLoopService';
 
 
 export function handlePingLocal(socket: Socket) {
-	socket.on('ping', () => {
+	socket.on('custom-ping', () => {
 			console.log('Received ping! From Local');
-			socket.emit('pong', { message: 'Pong! from Local' });
+			socket.emit('custom-pong', { message: 'Pong! from Local' });
 		});
 }
 
@@ -25,7 +25,7 @@ export async function handleJoinGameLocal(socket: Socket, io: Server, gameLoopSe
 			}
 
 			socket.join(gameId);
-			console.log(`Player ${playerId} joined game ${gameId}`);
+			console.log(`Player ${playerId ?? 'player 1'} joined game ${gameId}`);
 
 			socket.emit('joined-game', {//usefull data ?
 				game_id: gameId,
@@ -35,7 +35,7 @@ export async function handleJoinGameLocal(socket: Socket, io: Server, gameLoopSe
 		// ----------------------------------------------
 			const socketsInRoom = await io.in(gameId).fetchSockets();
 
-			if (socketsInRoom.length === 2) {
+			if (socketsInRoom.length === 1) {
 				gameState.status = 'playing';
 				await redis!.updateGameState(gameId, gameState);
 			

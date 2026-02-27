@@ -28,24 +28,28 @@ export class WebsocketService {
 		this.io.on('connection', async (socket: Socket) => {
 			console.log(`WebSocket connected: ${socket.id}`);
 
-			// Save playerId && mode in socket from header
-
+			// Save GameId from querry
+			const gameId = socket.handshake.query.gameId as string ?? null;
+			
 			const player_id: string = socket.handshake.headers['player_id'] as string ?? null;
-			if (!player_id) { return; }
-
-			const gameId = await redis!.getPlayerGame(player_id);
-			if (!gameId) return;
-
+			
+			if (!gameId) {
+				socket.disconnect();
+				return ;
+			}
 			const gameState = await redis!.getGameState(gameId);
-			if (!gameState) return;
+			if (!gameState) {
+				socket.disconnect();
+				return ;
+			}
 
 			socket.data.playerId = player_id ?? null;
 			socket.data.gameId = gameId;
 			socket.data.mode = gameState.mode;
 
 			/* HANDLER	*/
-			this.handlePing(socket); // DONE
 			this.handleJoinGame(socket); // DONE
+			this.handlePing(socket); // DONE
 			this.handlePlayerInput(socket); // DONE
 			this.handleDisconnect(socket); // IN PROGRESS
 		});
@@ -62,6 +66,11 @@ export class WebsocketService {
 			case 'IA':
 				handlePingIA(socket);
 				break;
+			default:
+				socket.on('custom-ping', () => {
+					console.log('Received ping! From General');
+					socket.emit('custom-pong', { message: 'Pong! from General' });
+				})
 		}
 	}
 
