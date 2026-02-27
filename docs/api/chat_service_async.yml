@@ -1,0 +1,148 @@
+asyncapi: 2.6.0
+info:
+  title: Chat Service AsyncAPI
+  version: 1.0.0
+  description: |
+    WebSocket API for the Chat Service.
+    Handles real-time delivery of direct messages between friends.
+    Messages are stored in the server's in-memory collection (not in a database)
+    and are lost on service restart.
+
+    **Authentication**: The browser `WebSocket` API does not support custom headers,
+    so authentication uses a short-lived ticket:
+    1. Client calls `GET /api/v1/chat/ticket` (REST, with `Authorization: Bearer <JWT>`).
+    2. Server returns a single-use ticket valid for 10 seconds.
+    3. Client opens the WebSocket: `wss://host/ws/chat?ticket=<ticket>`.
+    4. The API Gateway validates the ticket and rejects the connection if invalid or expired.
+    The Chat Service trusts the forwarded identity (`X-User-Id`, `X-Username`) and does not
+    re-validate the ticket.
+  contact:
+    name: Transcendence Team
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  gateway:
+    url: wss://{host}/ws/chat
+    protocol: wss
+    description: |
+      API Gateway WebSocket endpoint.
+      Requires a short-lived ticket as a query parameter: `?ticket=<ticket>`.
+      Obtain the ticket via `GET /api/v1/chat/ticket` before connecting.
+    variables:
+      host:
+        default: localhost
+        description: Host of the API Gateway
+
+defaultContentType: application/json
+
+channels:
+  chat/message:
+    description: |
+      Channel for real-time direct messages between friends.
+      The server pushes incoming messages to the recipient.
+      Sending a message is done via the REST API: POST /chat/messages.
+    subscribe:
+      summary: Receive a direct message from a friend
+      operationId: receiveMessage
+      security:
+        - TicketAuth: []
+      message:
+        $ref: '#/components/messages/ChatMessage'
+
+  chat/error:
+    description: Error events pushed by the server for invalid operations.
+    subscribe:
+      summary: Receive an error from the server
+      operationId: receiveError
+      security:
+        - TicketAuth: []
+      message:
+        $ref: '#/components/messages/ChatError'
+
+components:
+  securitySchemes:
+    TicketAuth:
+      type: httpApiKey
+      in: query
+      name: ticket
+      description: |
+        Short-lived, single-use ticket obtained via `GET /api/v1/chat/ticket`
+        (which itself requires a JWT Bearer token).
+        Passed as a query parameter during the WebSocket handshake:
+        `wss://host/ws/chat?ticket=<ticket>`
+
+  messages:
+    ChatMessage:
+      name: ChatMessage
+      title: Incoming direct message
+      summary: A message received from a friend in real-time
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ChatMessage'
+      examples:
+        - name: friendMessage
+          payload:
+            messageId: "b3d9f1e2-4c5a-4b6d-9f7e-112233445566"
+            senderId: "550e8400-e29b-41d4-a716-446655440000"
+            senderUsername: "player42"
+            content: "Hey, want to play a game?"
+            sentAt: "2026-02-27T14:32:00Z"
+
+
+    ChatError:
+      name: ChatError
+      title: Chat error
+      summary: Error event pushed by the server
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ChatError'
+      examples:
+        - name: notFriendsError
+          payload:
+            code: "NOT_FRIENDS"
+            message: "You can only message users who are your friends."
+
+  schemas:
+    ChatMessage:
+      type: object
+      required:
+        - messageId
+        - senderId
+        - senderUsername
+        - content
+        - sentAt
+      properties:
+        messageId:
+          type: string
+          format: uuid
+          description: Ephemeral unique ID for this message
+        senderId:
+          type: string
+          format: uuid
+        senderUsername:
+          type: string
+        content:
+          type: string
+          maxLength: 1000
+        sentAt:
+          type: string
+          format: date-time
+
+    ChatError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: |
+            Error codes:
+            - NOT_FRIENDS: Recipient is not in the sender's friend list
+            - USER_NOT_FOUND: Recipient does not exist
+            - RATE_LIMITED: Too many messages sent
+            - INVALID_PAYLOAD: Malformed message payload
+        message:
+          type: string
