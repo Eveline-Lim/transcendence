@@ -24,13 +24,12 @@ flowchart TB
         PlayerDB[("Player DB<br>PostgreSQL<br>(via ORM)")]
   end
  subgraph GameDomain["🏓 Game Domain"]
-        GameEngine["Game Engine Service<br>━━━━━━━━━━<br>• Pong Physics<br>• Game State<br>• Power-ups Logic<br>• Score Management<br>• Reconnection Logic"]
+        GameEngine["Game Engine Service<br>━━━━━━━━━━<br>• Pong Physics<br>• Game State<br>• Power-ups Logic<br>• Score Management<br>• Reconnection Logic<br>• POST Routes"]
         GameState[("Game State<br>Redis")]
         AIService["AI Opponent Service<br>━━━━━━━━━━<br>• Difficulty Levels<br>• Human-like Behavior<br>• Pattern Learning<br>• Game Customization"]
   end
  subgraph MatchDomain["🎯 Matchmaking Domain"]
         MatchService["Matchmaking Service<br>━━━━━━━━━━<br>• Player Matching<br>• Remote Play<br>• Queue System<br>• Latency Handling"]
-        MatchDB[("Match Queue<br>Redis")]
   end
     Browser -- HTTPS --> WAF
     Browser <-- WSS --> WAF
@@ -40,6 +39,7 @@ flowchart TB
     Vault -. Secrets .-> AuthService & APIGW
     APIGW --> AuthService & PlayerService
     APIGW <-- Game events (WS) --> GameEngine
+    APIGW -- POST --> GameEngine
     APIGW <-- Match events (WS) --> MatchService
     AuthService --> AuthDB
     AuthService -. JWT validation .-> APIGW
@@ -47,7 +47,6 @@ flowchart TB
     GameEngine --> GameState
     GameEngine -- Update stats --> PlayerService
     GameEngine <-- AI moves --> AIService
-    MatchService --> MatchDB
     MatchService -- Create game --> GameEngine
 
      Browser:::client
@@ -63,7 +62,6 @@ flowchart TB
      GameState:::db
      AIService:::game
      MatchService:::match
-     MatchDB:::db
     classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef security fill:#ffebee,stroke:#b71c1c,stroke-width:2px
     classDef gateway fill:#fff3e0,stroke:#e65100,stroke-width:2px
