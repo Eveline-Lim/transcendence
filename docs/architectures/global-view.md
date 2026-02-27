@@ -31,6 +31,9 @@ flowchart TB
  subgraph MatchDomain["🎯 Matchmaking Domain"]
         MatchService["Matchmaking Service<br>━━━━━━━━━━<br>• Player Matching<br>• Remote Play<br>• Queue System<br>• Latency Handling"]
   end
+ subgraph ChatDomain["💬 Chat Domain"]
+        ChatService["Chat Service<br>━━━━━━━━━━<br>• Friend Messaging<br>• Real-time Chat<br>• Online Presence<br>• Send Message<br>• Get Online Status"]
+  end
     Browser -- HTTPS --> WAF
     Browser <-- WSS --> WAF
     Mobile -- HTTPS --> WAF
@@ -39,8 +42,9 @@ flowchart TB
     Vault -. Secrets .-> AuthService & APIGW
     APIGW --> AuthService & PlayerService
     APIGW <-- Game events (WS) --> GameEngine
-    APIGW -- POST --> GameEngine
     APIGW <-- Match events (WS) --> MatchService
+    APIGW <-- Chat events (WS) --> ChatService
+    APIGW -- get messages / send message --> ChatService
     AuthService --> AuthDB
     AuthService -. JWT validation .-> APIGW
     PlayerService --> PlayerDB
@@ -48,6 +52,7 @@ flowchart TB
     GameEngine -- Update stats --> PlayerService
     GameEngine <-- AI moves --> AIService
     MatchService -- Create game --> GameEngine
+    ChatService -. Verify friends .-> PlayerService
 
      Browser:::client
      Mobile:::client
@@ -62,6 +67,7 @@ flowchart TB
      GameState:::db
      AIService:::game
      MatchService:::match
+     ChatService:::chat
     classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef security fill:#ffebee,stroke:#b71c1c,stroke-width:2px
     classDef gateway fill:#fff3e0,stroke:#e65100,stroke-width:2px
