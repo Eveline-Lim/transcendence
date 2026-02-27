@@ -1,13 +1,14 @@
 // implementation of the operations in the openapi specification
-import { redisClient } from "./redisClient.js";
-import { validateEmail, validateInputs, validatePassword, validate2FACode } from "./utils/validators.js";
+import { redisClient } from "../redisClient.js";
+import { validateEmail, validateInputs, validatePassword, validate2FACode } from "../utils/validators.js";
+import { initiateOauth } from "../controllers/oauth.js";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import crypto from 'node:crypto';
 import jwt from "jsonwebtoken";
 import speakeasy from "speakeasy";
 import qrcode from "qrcode";
-import { generateBackupCodes } from "./utils/generateBackupCodes.js";
+import { generateBackupCodes } from "../utils/generateBackupCodes.js";
 
 const MAX_LOGIN_ATTEMPTS = 5; // per 15 minutes
 const RATE_LIMIT_WINDOW_SECONDS = 5 * 60;
@@ -231,167 +232,160 @@ export class Service {
 		}
 	}
 
-	// // LOGOUT
-	// async logout(req, reply) {
-	// 	try {
-	// 		const token = req.headers.authorization?.split(" ")[1];
-	// 		console.log("LOGOUT TOKEN: ", token);
-	// 		if (!token) {
-	// 			return reply.code(401).send({
-	// 				code: "AUTH_REQUIRED",
-	// 				message: "Authentication required",
-	// 			});
-	// 		}
+	// LOGOUT
+	async logout(req, reply) {
+		try {
+			const token = req.headers.authorization?.split(" ")[1];
+			console.log("LOGOUT TOKEN: ", token);
+			if (!token) {
+				return reply.code(401).send({
+					code: "AUTH_REQUIRED",
+					message: "Authentication required",
+				});
+			}
 
-	// 		let decoded;
-	// 		try {
-	// 			decoded = jwt.verify(token, process.env.SECRET_TOKEN);
-	// 		} catch (error) {
-	// 			return reply.code(401).send({
-	// 				code: "AUTH_REQUIRED/INVALID_TOKEN",
-	// 				message: "Invalid or expired token",
-	// 			});
-	// 		}
+			let decoded;
+			try {
+				decoded = jwt.verify(token, process.env.JWT_SECRET);
+			} catch (error) {
+				return reply.code(401).send({
+					code: "AUTH_REQUIRED/INVALID_TOKEN",
+					message: "Invalid or expired token",
+				});
+			}
 
-	// 		// Hash token before blacklisting ?
-	// 		// const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+			// Add JWT token to blacklist
+			await redisClient.set(
+				`blacklist:${token}`,
+				"1",
+				{ EX: JWT_TTL }
+			);
 
-	// 		// Add JWT token to blacklist
-	// 		await redisClient.set(
-	// 			`blacklist:${token}`,
-	// 			"1",
-	// 			{ EX: JWT_TTL }
-	// 		);
-
-	// 		reply.code(204).send({
-	// 			code: "LOGOUT_SUCCESS",
-	// 			message: "User successfully logged out",
-	// 		});
-	// 	} catch (error) {
-	// 		return reply.code(500).send({
-	// 			code: "INTERNAL_ERROR",
-	// 			message: "Unable to log out user",
-	// 		});
-	// 	}
-	// }
+			reply.code(204).send({
+				code: "LOGOUT_SUCCESS",
+				message: "User successfully logged out",
+			});
+		} catch (error) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Unable to log out user",
+			});
+		}
+	}
 
 	// REFRESH TOKEN
-	// async refreshToken(req, reply) {
-	// 	const { refreshToken } = req.body;
-	// 	console.log("REFRESH TOKEN: ", refreshToken);
-	// 	if (!refreshToken) {
-	// 		return reply.code(400).send({
-	// 			code: "INVALID_REQUEST",
-	// 			message: "Refresh token required",
-	// 		});
-	// 	}
+	async refreshToken(req, reply) {
+		const { refreshToken } = req.body;
+		console.log("REFRESH TOKEN: ", refreshToken);
+		if (!refreshToken) {
+			return reply.code(400).send({
+				code: "INVALID_REQUEST",
+				message: "Refresh token required",
+			});
+		}
 
-	// 	try {
-	// 		// Check if refresh token exists
-	// 		const userId = await redisClient.get(`refresh:${refreshToken}`);
-	// 		console.log("refreshtoken storedRefreshToken: ", userId);
-	// 		if (!userId) {
-	// 			return reply.code(401).send({
-	// 				code: "INVALID_REFRESH_TOKEN",
-	// 				message: "Invalid or expired refresh token",
-	// 			});
-	// 		}
+		try {
+			const userId = await redisClient.get(`refresh:${refreshToken}`);
+			console.log("refreshtoken storedRefreshToken: ", userId);
+			if (!userId) {
+				return reply.code(401).send({
+					code: "INVALID_REFRESH_TOKEN",
+					message: "Invalid or expired refresh token",
+				});
+			}
 
-	// 		await redisClient.del(`refresh:${refreshToken}`);
+			await redisClient.del(`refresh:${refreshToken}`);
 
-	// 		const username = await redisClient.get(`userid:${userId}`);
-	// 		if (!username) {
-	// 			return reply.code(401).send({
-	// 				code: "INVALID_REFRESH_TOKEN",
-	// 				message: "Invalid refresh token",
-	// 			});
-	// 		}
-	// 		// console.log("REFRESH TOKEN USERNAME: ", username);
+			const username = await redisClient.get(`userid:${userId}`);
+			if (!username) {
+				return reply.code(401).send({
+					code: "INVALID_REFRESH_TOKEN",
+					message: "Invalid refresh token",
+				});
+			}
 
-	// 		const user = await redisClient.hGetAll(`user:${username}`);
+			const user = await redisClient.hGetAll(`user:${username}`);
 
-	// 		const newRefreshToken = crypto.randomBytes(64).toString("hex");
-	// 		// console.log("NEW REFRESH TOKEN: ", newRefreshToken);
+			const newRefreshToken = crypto.randomBytes(64).toString("hex");
 
-	// 		await redisClient.set(
-	// 			`refresh:${newRefreshToken}`,
-	// 			userId,
-	// 			{ EX: REFRESH_TOKEN_TTL }
-	// 		);
+			await redisClient.set(
+				`refresh:${newRefreshToken}`,
+				userId,
+				{ EX: REFRESH_TOKEN_TTL }
+			);
 
-	// 		const accessToken = jwt.sign(
-	// 			{
-	// 				userId,
-	// 				username: user.username
-	// 			},
-	// 			process.env.SECRET_TOKEN,
-	// 			{ expiresIn: ACCESS_TOKEN_TTL }
-	// 		);
-	// 		console.log("ACCES TOKEN: ", accessToken);
+			const accessToken = jwt.sign(
+				{
+					userId,
+					username: user.username
+				},
+				process.env.JWT_SECRET,
+				{ expiresIn: ACCESS_TOKEN_TTL }
+			);
+			console.log("ACCESS TOKEN: ", accessToken);
 
-	// 		const requires2FA = user.has2FAEnabled === "1";
-	// 		console.log("requires2FA: ", requires2FA);
+			const requires2FA = user.has2FAEnabled === "1";
 
-	// 		return reply.code(200).send({
-	// 			accessToken,
-	// 			refreshToken: newRefreshToken,
-	// 			tokenType: "Bearer",
-	// 			expiresIn: ACCESS_TOKEN_TTL,
-	// 			user: {
-	// 				id: user.id,
-	// 				username: user.username,
-	// 				displayName: user.displayName,
-	// 				email: user.email,
-	// 				avatarUrl: user.avatarUrl,
-	// 				has2FAEnabled: user.has2FAEnabled,
-	// 			},
-	// 			requires2FA
-	// 		});
-	// 	} catch (err) {
-	// 		return reply.code(500).send({
-	// 			code: "INTERNAL_ERROR",
-	// 			message: "Unable to refresh token",
-	// 		});
-	// 	}
-	// }
+			return reply.code(200).send({
+				accessToken,
+				refreshToken: newRefreshToken,
+				tokenType: "Bearer",
+				expiresIn: ACCESS_TOKEN_TTL,
+				user: {
+					id: user.id,
+					username: user.username,
+					displayName: user.displayName,
+					email: user.email,
+					avatarUrl: user.avatarUrl,
+					has2FAEnabled: user.has2FAEnabled,
+				},
+				requires2FA
+			});
+		} catch (err) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Unable to refresh token",
+			});
+		}
+	}
 
 	// VERIFY TOKEN
-	// async verifyToken(req, reply) {
-	// 	try {
-	// 		const token = req.headers.authorization?.split(" ")[1];
-	// 		console.log("VERIFY TOKEN: ", token);
-	// 		if (!token) {
-	// 			return reply.code(401).send({
-	// 				code: "AUTH_REQUIRED",
-	// 				message: "Authentication required",
-	// 			});
-	// 		}
+	async verifyToken(req, reply) {
+		try {
+			const token = req.headers.authorization?.split(" ")[1];
+			console.log("VERIFY TOKEN: ", token);
+			if (!token) {
+				return reply.code(401).send({
+					code: "AUTH_REQUIRED",
+					message: "Authentication required",
+				});
+			}
 
-	// 		let decoded;
-	// 		try {
-	// 			decoded = jwt.verify(token, process.env.SECRET_TOKEN);
-	// 		} catch (error) {
-	// 			return reply.code(401).send({
-	// 				code: "AUTH_REQUIRED/INVALID_TOKEN",
-	// 				message: "Invalid or expired token",
-	// 			});
-	// 		}
-	// 		console.log("DECODED: ", decoded);
+			let decoded;
+			try {
+				decoded = jwt.verify(token, process.env.JWT_SECRET);
+			} catch (error) {
+				return reply.code(401).send({
+					code: "AUTH_REQUIRED/INVALID_TOKEN",
+					message: "Invalid or expired token",
+				});
+			}
+			console.log("DECODED: ", decoded);
 
-	// 		return reply.code(200).send({
-	// 			valid: true,
-	// 			userId: decoded.userId,
-	// 			username: decoded.username,
-	// 			issuedAt: new Date(decoded.iat * 1000).toISOString(),
-	// 			expiresAt: new Date(decoded.exp * 1000).toISOString(),
-	// 		});
-	// 	} catch (error) {
-	// 		return reply.code(500).send({
-	// 			code: "INTERNAL_ERROR",
-	// 			message: "Unable to verify token",
-	// 		});
-	// 	}
-	// }
+			return reply.code(200).send({
+				valid: true,
+				userId: decoded.userId,
+				username: decoded.username,
+				issuedAt: new Date(decoded.iat * 1000).toISOString(),
+				expiresAt: new Date(decoded.exp * 1000).toISOString(),
+			});
+		} catch (error) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Unable to verify token",
+			});
+		}
+	}
 
 	// FORGOT PASSWORD
 	async forgotPassword(req, reply) {
@@ -519,78 +513,74 @@ export class Service {
 	}
 
 	// CHANGE PASSWORD
-	// async changePassword(req, reply) {
-	// 	const { currentPassword, newPassword } = req.body;
-	// 	console.log("REQ BODY:", req.body);
+	async changePassword(req, reply) {
+		const { currentPassword, newPassword } = req.body;
+		console.log("REQ BODY:", req.body);
 
-	// 	if (!validatePassword(newPassword)) {
-	// 		return reply.code(400).send({
-	// 			code: "INVALID_CREDENTIALS",
-	// 			message: "Invalid fields",
-	// 		});
-	// 	}
-	// 	try {
-	// 		const token = req.headers.authorization?.split(" ")[1];
-	// 		if (!token) {
-	// 			return reply.code(401).send({
-	// 				code: "AUTH_REQUIRED",
-	// 				message: "Authentication required",
-	// 			});
-	// 		}
-	// 		let decoded;
-	// 		try {
-	// 			decoded = jwt.verify(token, process.env.SECRET_TOKEN);
-	// 		} catch {
-	// 			return reply.code(401).send({
-	// 				code: "INVALID_TOKEN",
-	// 				message: "Invalid or expired token",
-	// 			});
-	// 		}
-	// 		const username = decoded.username;
-	// 		const userKey = `user:${username}`;
-	// 		const user = await redisClient.hGetAll(userKey);
-	// 		if (!user || !user.hashedPassword) {
-	// 			return reply.code(401).send({
-	// 				code: "USER_NOT_FOUND",
-	// 				message: "User does not exist",
-	// 			});
-	// 		}
-	// 		console.log("CURRENT PASSWORD: ", currentPassword);
-	// 		console.log("DB PASSWORD: ", user.hashedPassword);
-	// 		// Verify current password
-	// 		const isValid = await bcrypt.compare(currentPassword, user.hashedPassword);
-	// 		if (!isValid) {
-	// 			return reply.code(401).send({
-	// 				code: "INVALID_CREDENTIALS",
-	// 				message: "Current password is incorrect",
-	// 			});
-	// 		}
-	// 		// Prevent same password reuse
-	// 		const isSame = await bcrypt.compare(newPassword, user.hashedPassword);
-	// 		if (isSame) {
-	// 			return reply.code(400).send({
-	// 			code: "PASSWORD_UNCHANGED",
-	// 			message: "New password must be different from current password",
-	// 			});
-	// 		}
-	// 		// Hash new password
-	// 		const hashedPassword = await bcrypt.hash(newPassword, 10);
-	// 		// Update user
-	// 		await redisClient.hSet(userKey, {
-	// 			...user,
-	// 			hashedPassword,
-	// 		});
-	// 		return reply.code(200).send({
-	// 			code: "PASSWORD_CHANGE_SUCCESS",
-	// 			message: "Password successfully changed",
-	// 		});
-	// 	} catch (error) {
-	// 		return reply.code(500).send({
-	// 			code: "INTERNAL_ERROR",
-	// 			message: "Unable to change password",
-	// 		});
-	// 	}
-	// }
+		if (!validatePassword(newPassword)) {
+			return reply.code(400).send({
+				code: "INVALID_CREDENTIALS",
+				message: "Invalid fields",
+			});
+		}
+		try {
+			const token = req.headers.authorization?.split(" ")[1];
+			if (!token) {
+				return reply.code(401).send({
+					code: "AUTH_REQUIRED",
+					message: "Authentication required",
+				});
+			}
+			let decoded;
+			try {
+				decoded = jwt.verify(token, process.env.JWT_SECRET);
+			} catch {
+				return reply.code(401).send({
+					code: "INVALID_TOKEN",
+					message: "Invalid or expired token",
+				});
+			}
+			const username = decoded.username;
+			const userKey = `user:${username}`;
+			const user = await redisClient.hGetAll(userKey);
+			if (!user || !user.hashedPassword) {
+				return reply.code(401).send({
+					code: "USER_NOT_FOUND",
+					message: "User does not exist",
+				});
+			}
+			console.log("CURRENT PASSWORD: ", currentPassword);
+			console.log("DB PASSWORD: ", user.hashedPassword);
+			const isValid = await bcrypt.compare(currentPassword, user.hashedPassword);
+			if (!isValid) {
+				return reply.code(401).send({
+					code: "INVALID_CREDENTIALS",
+					message: "Current password is incorrect",
+				});
+			}
+			const isSame = await bcrypt.compare(newPassword, user.hashedPassword);
+			if (isSame) {
+				return reply.code(400).send({
+					code: "PASSWORD_UNCHANGED",
+					message: "New password must be different from current password",
+				});
+			}
+			const hashedPassword = await bcrypt.hash(newPassword, 10);
+			await redisClient.hSet(userKey, {
+				...user,
+				hashedPassword,
+			});
+			return reply.code(200).send({
+				code: "PASSWORD_CHANGE_SUCCESS",
+				message: "Password successfully changed",
+			});
+		} catch (error) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Unable to change password",
+			});
+		}
+	}
 
 	// Operation: initiateOAuth
 	// URL: /auth/oauth/:provider
@@ -652,11 +642,9 @@ export class Service {
 	//         schema: *ref_0
 	//
 
-	// // INITIATE OAUTH
-	// async initiateOAuth(req, reply) {
-	// 	const { provider } = req.params;
-	// 	console.log("provider: ", provider);
-	// }
+	async initiateOAuth(req, reply) {
+		return initiateOauth(req, reply);
+	}
 
 	// Operation: oauthCallback
 	// URL: /auth/oauth/:provider/callback
@@ -751,7 +739,7 @@ export class Service {
 
 			let decoded;
 			try {
-				decoded = jwt.verify(token, process.env.SECRET_TOKEN);
+				decoded = jwt.verify(token, process.env.JWT_SECRET);
 			} catch {
 				return reply.code(401).send({
 					code: "INVALID_TOKEN",
@@ -834,7 +822,7 @@ export class Service {
 
 			let decoded;
 			try {
-				decoded = jwt.verify(token, process.env.SECRET_TOKEN);
+				decoded = jwt.verify(token, process.env.JWT_SECRET);
 			} catch {
 				return reply.code(401).send({
 					code: "INVALID_TOKEN",
@@ -878,7 +866,7 @@ export class Service {
 					userId: user.id,
 					username: user.username,
 				},
-				process.env.SECRET_TOKEN,
+				process.env.JWT_SECRET,
 				{ expiresIn: ACCESS_TOKEN_TTL }
 			);
 			// console.log("ACCESS TOKEN: ", accessToken);
@@ -944,7 +932,7 @@ export class Service {
 
 			let decoded;
 			try {
-				decoded = jwt.verify(token, process.env.SECRET_TOKEN);
+				decoded = jwt.verify(token, process.env.JWT_SECRET);
 			} catch {
 				return reply.code(401).send({
 					code: "INVALID_TOKEN",
@@ -1006,143 +994,121 @@ export class Service {
 	}
 
 	// LIST SESSIONS
-	// async listSessions(req, reply) {
-	// 	try {
-	// 		const token = req.headers.authorization?.split(" ")[1];
-	// 		if (!token) {
-	// 			return reply.code(401).send({
-	// 				code: "AUTH_REQUIRED",
-	// 				message: "Authentication required",
-	// 			});
-	// 		}
+	async listSessions(req, reply) {
+		try {
+			const token = req.headers.authorization?.split(" ")[1];
+			if (!token) {
+				return reply.code(401).send({
+					code: "AUTH_REQUIRED",
+					message: "Authentication required",
+				});
+			}
 
-	// 		let decoded;
-	// 		try {
-	// 			decoded = jwt.verify(token, process.env.SECRET_TOKEN);
-	// 		} catch {
-	// 			return reply.code(401).send({
-	// 				code: "INVALID_TOKEN",
-	// 				message: "Invalid or expired token",
-	// 			});
-	// 		}
+			let decoded;
+			try {
+				decoded = jwt.verify(token, process.env.JWT_SECRET);
+			} catch {
+				return reply.code(401).send({
+					code: "INVALID_TOKEN",
+					message: "Invalid or expired token",
+				});
+			}
 
-	// 		const { username, sessionId: currentSessionId } = decoded;
-	// 		console.log("decoded: ", decoded);
-	// 		// Retrieve all sessions for the current user
-	// 		const sessionIds = await redisClient.sMembers(`user:sessions:${username}`);
-	// 		console.log("sessionIds: ", sessionIds);
+			const { username, sessionId: currentSessionId } = decoded;
+			console.log("decoded: ", decoded);
+			const sessionIds = await redisClient.sMembers(`user:sessions:${username}`);
+			console.log("sessionIds: ", sessionIds);
 
-	// 		const sessions = await Promise.all(
-	// 			sessionIds.map(async (id) => {
-	// 				try {
-	// 					const data = await redisClient.hGetAll(`session:${id}`);
-	// 					console.log("data:", data);
-
-	// 					if (!data || Object.keys(data).length === 0) {
-	// 						return null;
-	// 					}
-
-	// 					return {
-	// 						id,
-	// 						deviceInfo: data.deviceInfo,
-	// 						ipAddress: data.ipAddress,
-	// 						location: data.location,
-	// 						createdAt: data.createdAt,
-	// 						lastActiveAt: data.lastActiveAt,
-	// 						isCurrent: id === currentSessionId,
-	// 					};
-	// 				} catch (error) {
-	// 					console.error(`Erreur pour la session ${id}:`, error);
-	// 					return null;
-	// 				}
-	// 			})
-	// 		);
-	// 		console.log("sessions: ", sessions);
-	// 		return reply.code(200).send({
-	// 			sessions
-	// 		});
-	// 	} catch (error) {
-	// 		return reply.code(500).send({
-	// 			code: "INTERNAL_ERROR",
-	// 			message: "Internal server error",
-	// 		});
-	// 	}
-	// }
+			const sessions = await Promise.all(
+				sessionIds.map(async (id) => {
+					try {
+						const data = await redisClient.hGetAll(`session:${id}`);
+						if (!data || Object.keys(data).length === 0) return null;
+						return {
+							id,
+							deviceInfo: data.deviceInfo,
+							ipAddress: data.ipAddress,
+							location: data.location,
+							createdAt: data.createdAt,
+							lastActiveAt: data.lastActiveAt,
+							isCurrent: id === currentSessionId,
+						};
+					} catch (error) {
+						console.error(`Erreur pour la session ${id}:`, error);
+						return null;
+					}
+				})
+			);
+			console.log("sessions: ", sessions);
+			return reply.code(200).send({ sessions });
+		} catch (error) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Internal server error",
+			});
+		}
+	}
 
 	// REVOKE SESSION
-	// async revokeSession(req, reply) {
-	// 	try {
-	// 		const token = req.headers.authorization.split(" ")[1];
-	// 		if (!token) {
-	// 			return reply.code(401).send({
-	// 				code: "AUTH_REQUIRED",
-	// 				message: "Authentication required",
-	// 			});
-	// 		}
+	async revokeSession(req, reply) {
+		try {
+			const token = req.headers.authorization.split(" ")[1];
+			if (!token) {
+				return reply.code(401).send({
+					code: "AUTH_REQUIRED",
+					message: "Authentication required",
+				});
+			}
 
-	// 		let decoded;
-	// 		try {
-	// 			decoded = jwt.verify(token, process.env.SECRET_TOKEN);
-	// 		} catch {
-	// 			return reply.code(401).send({
-	// 				code: "INVALID_TOKEN",
-	// 				message: "Invalid or expired token",
-	// 			});
-	// 		}
-	// 		const { username } = decoded;
-	// 		if (!username) {
-	// 			return reply.code(401).send({
-	// 				code: "INVALID_TOKEN",
-	// 				message: "Token invalid",
-	// 		  });
-	// 		}
-	// 		const { sessionId } = req.params;
-	// 		// const sessionId = "49756f1a-e9be-45ae-81e6-094f8d1e0408";
-	// 		if (!sessionId) {
-	// 			return reply.code(400).send({
-	// 				code: "INVALID_REQUEST_PARAMETERS",
-	// 				message: "Session ID is required",
-	// 			});
-	// 		}
-	// 		// Check if the session exists
-	// 		const sessionKey = `session:${sessionId}`;
-	// 		const session = await redisClient.hGetAll(sessionKey);
-	// 		console.log("session: ", session);
-	// 		if (!session || Object.keys(session).length === 0){
-	// 			return reply.code(404).send({
-	// 				code: "SESSION_NOT_FOUND",
-	// 				message: "Ressource not found",
-	// 			});
-	// 		}
-
-	// 		// Check if the session belongs to the user
-	// 		const userSessionsKey = `user:sessions:${username}`;
-	// 		const belongsToUser = await redisClient.sIsMember(
-	// 			userSessionsKey,
-	// 			sessionId
-	// 		);
-	// 		if (!belongsToUser) {
-	// 			return reply.code(404).send({
-	// 				code: "SESSION_NOT_FOUND",
-	// 				message: "Resource not found",
-	// 			});
-	// 		}
-
-	// 		// Delete the session
-	// 		await redisClient
-	// 			.multi()
-	// 			.del(sessionKey)
-	// 			.sRem(userSessionsKey, sessionId)
-	// 			.exec();
-
-	// 		return reply.code(204).send();
-	// 	} catch (error) {
-	// 		return reply.code(500).send({
-	// 			code: "INTERNAL_ERROR",
-	// 			message: "Internal server error",
-	// 		});
-	// 	}
-	// }
+			let decoded;
+			try {
+				decoded = jwt.verify(token, process.env.JWT_SECRET);
+			} catch {
+				return reply.code(401).send({
+					code: "INVALID_TOKEN",
+					message: "Invalid or expired token",
+				});
+			}
+			const { username } = decoded;
+			if (!username) {
+				return reply.code(401).send({
+					code: "INVALID_TOKEN",
+					message: "Token invalid",
+				});
+			}
+			const { sessionId } = req.params;
+			if (!sessionId) {
+				return reply.code(400).send({
+					code: "INVALID_REQUEST_PARAMETERS",
+					message: "Session ID is required",
+				});
+			}
+			const sessionKey = `session:${sessionId}`;
+			const session = await redisClient.hGetAll(sessionKey);
+			console.log("session: ", session);
+			if (!session || Object.keys(session).length === 0) {
+				return reply.code(404).send({
+					code: "SESSION_NOT_FOUND",
+					message: "Resource not found",
+				});
+			}
+			const userSessionsKey = `user:sessions:${username}`;
+			const belongsToUser = await redisClient.sIsMember(userSessionsKey, sessionId);
+			if (!belongsToUser) {
+				return reply.code(404).send({
+					code: "SESSION_NOT_FOUND",
+					message: "Resource not found",
+				});
+			}
+			await redisClient.multi().del(sessionKey).sRem(userSessionsKey, sessionId).exec();
+			return reply.code(204).send();
+		} catch (error) {
+			return reply.code(500).send({
+				code: "INTERNAL_ERROR",
+				message: "Internal server error",
+			});
+		}
+	}
 
 	async revokeAllSessions(req, reply) {
 		try {
@@ -1156,7 +1122,7 @@ export class Service {
 
 			let decoded;
 			try {
-				decoded = jwt.verify(token, process.env.SECRET_TOKEN);
+				decoded = jwt.verify(token, process.env.JWT_SECRET);
 			} catch {
 				return reply.code(401).send({
 					code: "INVALID_TOKEN",
@@ -1165,7 +1131,7 @@ export class Service {
 			}
 
 			const { username, sessionId: currentSessionId } = decoded;
-			if (!username || !currentSessionId) {
+			if (!username) {
 				return reply.code(401).send({
 					code: "INVALID_TOKEN",
 					message: "Token invalid",
