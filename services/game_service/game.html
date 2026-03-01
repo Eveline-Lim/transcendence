@@ -9,35 +9,76 @@
     <button onclick="joinGame()">Join Game</button>
     <button onclick="sendPing()">Ping</button>
     <div id="logs"></div>
+    <canvas id="pong" width="800" height="600" style="background:black; display:block; margin-top:20px;"></canvas>
 
     <script>
         let socket = null;
+        const canvas = document.getElementById('pong');
+        const ctx = canvas.getContext('2d');
 
         function log(msg) {
             document.getElementById('logs').innerHTML += `<p>${msg}</p>`;
         }
 
-        async function createGame() {
-            const response = await fetch('http://localhost:3001/api/game/local', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
-            });
-            const data = await response.json();
-            const gameId = data.gameId;
-            log('Game created: ' + gameId);
+        function render(gameState) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            socket = io('http://localhost:3001', {
-                query: { gameId: gameId }
-            });
+            // Balle
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(
+                gameState.ball.x * canvas.width / 100,
+                gameState.ball.y * canvas.height / 100,
+                10, 0, Math.PI * 2
+            );
+            ctx.fill();
 
-            socket.on('connect', () => log('Connected: ' + socket.id));
-            socket.on('disconnect', () => log('Disconnected'));
-            socket.on('error', (data) => log('Error: ' + JSON.stringify(data)));
-            socket.on('joined-game', (data) => log('Joined: ' + JSON.stringify(data)));
-            socket.on('game-start', (data) => log('Game start: ' + JSON.stringify(data)));
-            socket.on('custom-pong', (data) => log('Pong: ' + JSON.stringify(data)));
+            // Paddle player 1 (gauche)
+            ctx.fillRect(
+                10,
+                gameState.paddles.player1 * canvas.height / 100 - 40,
+                10, 80
+            );
+
+            // Paddle player 2 (droite)
+            ctx.fillRect(
+                canvas.width - 20,
+                gameState.paddles.player2 * canvas.height / 100 - 40,
+                10, 80
+            );
         }
+
+async function createGame() {
+    try {
+        const response = await fetch('http://localhost:3001/api/game/local', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        const data = await response.json();
+        log('Response: ' + JSON.stringify(data));
+        const gameId = data.gameId;
+        if (!gameId) return log('No gameId received');
+        log('Game created: ' + gameId);
+
+        socket = io('http://localhost:3001', {
+            query: { gameId: gameId }
+        });
+
+        socket.on('connect', () => log('Connected: ' + socket.id));
+        socket.on('disconnect', () => log('Disconnected'));
+        socket.on('error', (data) => log('Error: ' + JSON.stringify(data)));
+        socket.on('joined-game', (data) => log('Joined: ' + JSON.stringify(data)));
+        socket.on('game-start', (data) => log('Game start: ' + JSON.stringify(data)));
+        socket.on('custom-pong', (data) => log('Pong: ' + JSON.stringify(data)));
+        socket.on('game-update', (data) => {
+            render(data.gameState);
+        });
+    } catch(error) {
+        log('Error: ' + error.message);
+    }
+}
+
 
         function joinGame() {
             if (!socket) return log('Create game first!');

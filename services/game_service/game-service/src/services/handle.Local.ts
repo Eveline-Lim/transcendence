@@ -40,7 +40,7 @@ export async function handleJoinGameLocal(socket: Socket, io: Server, gameLoopSe
 				await redis!.updateGameState(gameId, gameState);
 			
 				io.to(gameId).emit('game-start', {
-					message: 'Both players connected, game starting!',
+					message: 'Player connected, game starting!',
 					game_state: gameState
 				});
 				// Start Game

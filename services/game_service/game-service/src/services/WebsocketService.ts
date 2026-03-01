@@ -35,10 +35,12 @@ export class WebsocketService {
 			
 			if (!gameId) {
 				socket.disconnect();
+				console.log('Error gameID');
 				return ;
 			}
 			const gameState = await redis!.getGameState(gameId);
 			if (!gameState) {
+				console.log('Error getGameState');
 				socket.disconnect();
 				return ;
 			}

@@ -92,11 +92,12 @@ export class GameLoopService {
 			}
 
 			this.io.to(gameId).emit('game-update', {
-				ball: gameState.ball,
-				paddles: gameState.paddles,
-				score: gameState.score,
-				status: gameState.status,
-				winner: gameState.winner
+				// ball: gameState.ball,
+				// paddles: gameState.paddles,
+				// score: gameState.score,
+				// status: gameState.status,
+				// winner: gameState.winner
+				gameState: gameState
 			});
 
 		}
@@ -220,7 +221,9 @@ export class GameLoopService {
 
 		ball.y += ball.vy * distanceToRun;
 
-		while (ball.y < 0 + BALL_RADIUS || ball.y > 100 - BALL_RADIUS) {
+		// while (ball.y < 0 + BALL_RADIUS || ball.y > 100 - BALL_RADIUS) {
+
+
 			if (ball.y > 100 - BALL_RADIUS) {
 				const limit = 100 - BALL_RADIUS;
 				const diff = ball.y - limit;
@@ -233,7 +236,7 @@ export class GameLoopService {
 				ball.y = limit - diff;
 				ball.vy = -ball.vy;
 			}
-		}
+		// }
 	}
 
 	protected resetBall(gameState: GameState) {
