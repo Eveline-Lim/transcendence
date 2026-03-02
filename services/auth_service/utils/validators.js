@@ -58,10 +58,11 @@ export function validateInputs(fields, isLogin = false) {
 		// console.log("data: ", data);
 	}
 
-	// console.log("DATA ", data.username, data.password);
-
 	if (isLogin) {
 		console.log("DATA IDENTIFIER: ", data.identifier);
+		if (!data.identifier) {
+			return { success: false };
+		}
 		if (data.identifier.includes("@")) {
 			data.email = data.identifier;
 			// console.log("data email: ", data.email);
@@ -70,26 +71,20 @@ export function validateInputs(fields, isLogin = false) {
 			// console.log("data username: ", data.username);
 		}
 	}
-
-	if (data.username) {
-		if (!data.username) {
-			return { success: false };
-		}
-		if (!validateUsername(data.username)) {
+	if (data.username !== undefined) {
+		if (!data.username || !validateUsername(data.username)) {
 			return { success: false };
 		}
 	}
-	// if (!validatePassword(data.password)) {
-	// 	return { success: false };
-	// }
-
-	if (data.email) {
-		if (!data.email) {
-			return { success: false };
-		}
-		if (!validateEmail(data.email)) {
+	if (data.password !== undefined) {
+		if (!data.password || !validatePassword(data.password)) {
 			return { success: false };
 		}
 	}
-	return { success: true };
+	if (data.email !== undefined) {
+		if (!data.email || !validateEmail(data.email)) {
+			return { success: false };
+		}
+	}
+	return { success: true, data };
 }
