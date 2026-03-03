@@ -167,6 +167,8 @@ services:
       - "8443:443"
     volumes:
       - avatar_data:/app/uploads/avatars:ro
+      - ./services/nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./services/nginx/conf/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - auth_service
       - frontend
