@@ -46,7 +46,7 @@ class LoginRequest {
 	toJSON() {
 		return {
 			identifier: this.identifier,
-			password:   this.password,
+			password: this.password,
 		};
 	}
 }

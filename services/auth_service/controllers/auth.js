@@ -3,7 +3,6 @@ import RegisterRequest from "../models/RegisterRequest.js";
 import LoginRequest from "../models/LoginRequest.js";
 import UserInfo from "../models/UserInfo.js";
 import AuthResponse from "../models/AuthResponse.js";
-import Session from "../models/Session.js";
 import { redisClient } from "../redisClient.js";
 import { ACCESS_TOKEN_TTL, REFRESH_TOKEN_TTL, MAX_LOGIN_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS } from "../utils/macros.js";
 import { createPlayerProfile } from "../utils/playerService.js";
@@ -16,6 +15,7 @@ export async function signup(req, reply) {
 
 	try {
 		registerData = RegisterRequest.validate(req.body);
+		console.log("REGISTER DATA: ", registerData);
 	} catch (error) {
 		return reply.code(400).send({
 			success: false,
@@ -29,7 +29,8 @@ export async function signup(req, reply) {
 
 	console.log("REGISTER DATA: ", registerData);
 
-	const validation = validateInputs(registerData, true);
+	const validation = validateInputs(registerData, false);
+	console.log("validation: ", validation);
 	if (!validation.success) {
 		return reply.code(400).send({
 			success: false,
@@ -164,10 +165,10 @@ export async function signup(req, reply) {
 }
 
 export async function login(req, reply) {
-	let loginRequest;
+	let loginData;
 
 	try {
-		loginRequest = LoginRequest.validate(req.body);
+		loginData = LoginRequest.validate(req.body);
 	} catch (error) {
 		return reply.code(400).send({
 			success: false,
@@ -176,9 +177,10 @@ export async function login(req, reply) {
 		});
 	}
 
-	const { identifier, password } = loginRequest;
+	const { identifier, password } = loginData;
 
-	const validation = validateInputs(loginRequest, true);
+	const validation = validateInputs(loginData, true);
+	console.log("validation: ", validation);
 	if (!validation.success) {
 		return reply.code(400).send({
 			success: false,
@@ -343,10 +345,7 @@ export async function logout(req, reply) {
 			{ EX: ACCESS_TOKEN_TTL}
 		);
 
-		reply.code(204).send({
-			code: "LOGOUT_SUCCESS",
-			message: "User successfully logged out",
-		});
+		reply.code(204).send();
 	} catch (error) {
 		return reply.code(500).send({
 			code: "INTERNAL_ERROR",

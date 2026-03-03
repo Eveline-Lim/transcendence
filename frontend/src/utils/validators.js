@@ -7,7 +7,6 @@
 - Apostrophe
 */
 export function validateUsername(username) {
-	// const usernameRegex = /^[a-zA-ZÀ-ÖØ-öø-ÿ '-]{3,20}$/;
 	const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
 	if (!usernameRegex.test(username)) {
 		return (false);
@@ -58,8 +57,6 @@ export function validateInputs(fields, isLogin = false) {
 		// console.log("data: ", data);
 	}
 
-	// console.log("DATA ", data.username, data.password);
-
 	if (isLogin) {
 		console.log("DATA IDENTIFIER: ", data.identifier);
 		if (data.identifier.includes("@")) {
@@ -71,25 +68,14 @@ export function validateInputs(fields, isLogin = false) {
 		}
 	}
 
-	if (data.username) {
-		if (!data.username) {
-			return { success: false };
-		}
-		if (!validateUsername(data.username)) {
-			return { success: false };
-		}
+	if (!validateUsername(data.username)) {
+		return { success: false };
 	}
-	// if (!validatePassword(data.password)) {
-	// 	return { success: false };
-	// }
-
-	if (data.email) {
-		if (!data.email) {
-			return { success: false };
-		}
-		if (!validateEmail(data.email)) {
-			return { success: false };
-		}
+	if (!validatePassword(data.password)) {
+		return { success: false };
+	}
+	if (!validateEmail(data.email)) {
+		return { success: false };
 	}
 	return { success: true };
 }
