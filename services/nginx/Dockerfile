@@ -65,7 +65,6 @@ RUN mkdir -p	/var/log/modsecurity \
 
 # Config ModSecurity
 COPY modsecurity/modsecurity.conf /etc/modsecurity/modsecurity.conf
-COPY modsecurity/crs-setup.conf /etc/modsecurity/crs/crs-setup.conf
 
 # User non-root
 RUN addgroup -S nonroot && adduser -S nonroot -G nonroot && \
