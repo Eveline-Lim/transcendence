@@ -42,15 +42,7 @@ export default function Auth() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ identifier, password }),
 			});
-<<<<<<< HEAD
-
-			console.log("LOGIN response:", response);
-
-			console.log("BOOL: ", response.requires2FA);
-			if (response.requires2FA == "true") {
-=======
 			if (res.requires2FA === "true" || res.requires2FA === true) {
->>>>>>> b9bc338 (feat: changing front)
 				navigate("/twofaCode", { replace: true });
 			} else if (res.success) {
 				login(res.user, res.accessToken);
