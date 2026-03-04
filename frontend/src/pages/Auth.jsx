@@ -44,6 +44,7 @@ export default function Auth() {
 			});
 			console.log("LOGIN RES: ", res);
 			if (res.requires2FA === "true" || res.requires2FA === true) {
+				login(res.user, res.accessToken);
 				navigate("/twofaCode", { replace: true });
 			} else if (res) {
 				login(res.user, res.accessToken);

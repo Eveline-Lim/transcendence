@@ -1,4 +1,4 @@
-import { validateEmail, validatePassword, validate2FACode } from "../utils/validators.js"
+import { validateEmail, validatePassword } from "../utils/validators.js"
 import { redisClient } from "../redisClient.js";
 import { MAX_LOGIN_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS, RESET_TOKEN_ETTL } from "../utils/macros.js";
 import { sendResetEmail } from "../mailService.js";
@@ -103,6 +103,7 @@ export async function forgotPassword(req, reply) {
 }
 
 export async function resetPassword(req, reply) {
+	console.log("RESET");
 	let resetPasswordData;
 
 	try {
@@ -120,13 +121,6 @@ export async function resetPassword(req, reply) {
 	console.log("token: ", token);
 	console.log("password: ", password);
 
-	const validationToken = validate2FACode(token);
-	if (!validationToken) {
-		return reply.code(400).send({
-			code: "INVALID_CREDENTIALS",
-			message: "Invalid fields",
-		});
-	}
 	const validationPassword = validatePassword(password);
 	if (!validationPassword) {
 		return reply.code(400).send({

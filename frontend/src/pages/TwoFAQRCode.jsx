@@ -18,6 +18,7 @@ export default function TwoFAQRCode() {
 			method: "POST",
 			headers: { Authorization: `Bearer ${token}` },
 		});
+		console.log("TWOFAQRCODE RES: ", res);
 		if (res.qrCodeUrl) {
 			setQrData(res);
 		} else {
