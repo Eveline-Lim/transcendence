@@ -1,24 +1,49 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Auth from "./pages/Auth.jsx";
-import Game from "./pages/Game.jsx";
-import ForgotPassword from "./pages/ForgotPassword.jsx";
-import ResetPassword from "./pages/ResetPassword.jsx";
+import { AuthProvider } from "./context/AuthContext";
+import Auth from "./pages/Auth";
+import Home from "./pages/Home";
+import Profile from "./pages/Profile";
+import Friends from "./pages/Friends";
+import Stats from "./pages/Stats";
+import Leaderboard from "./pages/Leaderboard";
+import Game from "./pages/Game";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import TwoFAQRCode from "./pages/TwoFAQRCode";
+import TwoFACode from "./pages/TwoFACode";
+import ConfirmDisable2FA from "./pages/ConfirmDisable2FA";
+import PageNotFound from "./pages/PageNotFound";
 
-function App() {
+export default function App() {
 	return (
-		<div className="min-h-screen">
-			<div className="min-h-screen flex items-center justify-center bg-gray-50">
-				<BrowserRouter>
+		<AuthProvider>
+			<BrowserRouter>
 				<Routes>
+					{/* Auth */}
 					<Route path="/" element={<Auth />} />
 					<Route path="/password/forgot" element={<ForgotPassword />} />
 					<Route path="/password/reset" element={<ResetPassword />} />
-					<Route path="/game" element={<Game />} />
+					<Route path="/twofaCode" element={<TwoFACode />} />
+					<Route path="/twofa/enable" element={<TwoFAQRCode />} />
+					<Route path="/twofa/disable" element={<ConfirmDisable2FA />} />
+
+					{/* Main */}
+					<Route path="/home" element={<Home />} />
+					<Route path="/profile" element={<Profile />} />
+					<Route path="/friends" element={<Friends />} />
+					<Route path="/stats" element={<Stats />} />
+					<Route path="/leaderboard" element={<Leaderboard />} />
+
+					{/* Game modes (placeholder) */}
+					<Route path="/play/ranked" element={<Game />} />
+					<Route path="/play/casual" element={<Game />} />
+					<Route path="/play/ai" element={<Game />} />
+					<Route path="/play/offline" element={<Game />} />
+
+					{/* 404 */}
+					<Route path="*" element={<PageNotFound />} />
 				</Routes>
-				</BrowserRouter>
-			</div>
-		</div>
+			</BrowserRouter>
+		</AuthProvider>
 	);
 }
-
-export default App;

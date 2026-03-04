@@ -24,13 +24,15 @@ flowchart TB
         PlayerDB[("Player DB<br>PostgreSQL<br>(via ORM)")]
   end
  subgraph GameDomain["🏓 Game Domain"]
-        GameEngine["Game Engine Service<br>━━━━━━━━━━<br>• Pong Physics<br>• Game State<br>• Power-ups Logic<br>• Score Management<br>• Reconnection Logic"]
+        GameEngine["Game Engine Service<br>━━━━━━━━━━<br>• Pong Physics<br>• Game State<br>• Power-ups Logic<br>• Score Management<br>• Reconnection Logic<br>• POST Routes"]
         GameState[("Game State<br>Redis")]
         AIService["AI Opponent Service<br>━━━━━━━━━━<br>• Difficulty Levels<br>• Human-like Behavior<br>• Pattern Learning<br>• Game Customization"]
   end
  subgraph MatchDomain["🎯 Matchmaking Domain"]
         MatchService["Matchmaking Service<br>━━━━━━━━━━<br>• Player Matching<br>• Remote Play<br>• Queue System<br>• Latency Handling"]
-        MatchDB[("Match Queue<br>Redis")]
+  end
+ subgraph ChatDomain["💬 Chat Domain"]
+        ChatService["Chat Service<br>━━━━━━━━━━<br>• Friend Messaging<br>• Real-time Chat<br>• Online Presence<br>• Send Message<br>• Get Online Status"]
   end
     Browser -- HTTPS --> WAF
     Browser <-- WSS --> WAF
@@ -41,14 +43,16 @@ flowchart TB
     APIGW --> AuthService & PlayerService
     APIGW <-- Game events (WS) --> GameEngine
     APIGW <-- Match events (WS) --> MatchService
+    APIGW <-- Chat events (WS) --> ChatService
+    APIGW -- get messages / send message --> ChatService
     AuthService --> AuthDB
     AuthService -. JWT validation .-> APIGW
     PlayerService --> PlayerDB
     GameEngine --> GameState
     GameEngine -- Update stats --> PlayerService
     GameEngine <-- AI moves --> AIService
-    MatchService --> MatchDB
     MatchService -- Create game --> GameEngine
+    ChatService -. Verify friends .-> PlayerService
 
      Browser:::client
      Mobile:::client
@@ -63,7 +67,7 @@ flowchart TB
      GameState:::db
      AIService:::game
      MatchService:::match
-     MatchDB:::db
+     ChatService:::chat
     classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef security fill:#ffebee,stroke:#b71c1c,stroke-width:2px
     classDef gateway fill:#fff3e0,stroke:#e65100,stroke-width:2px

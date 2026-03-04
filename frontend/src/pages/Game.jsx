@@ -2,27 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
 
 export default function Game() {
-
-  // States && Refs
-  const [gameState, setGameState] = useState(null);
-  const socketRef = useRef(null);
-
-  // useEffect, protected by []
-  useEffect(() => {
-    socketRef.current = io("http://localhost:3000");
-
-    socketRef.current.on('game-update', ({ gameState }) => {
-      setGameState(gameState);
-    });
-
-    return () => {
-      socketRef.current.disconnect(); // cleanup
-    };
-  }, []);
-
-  if (!gameState) return <p>Connexion en cours...</p>;
-
-  return (
-    <h1>Game Page</h1>
-  );
+	return (
+		<div className="min-h-screen flex items-center justify-center p-4">
+			<div className="card text-center max-w-sm">
+				<h1 className="text-xl font-bold mb-2">Game</h1>
+				<p className="msg-info">Game view coming soon...</p>
+			</div>
+		</div>
+	);
 }

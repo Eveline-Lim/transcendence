@@ -1,112 +1,52 @@
-import { useRef, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { sendData } from "../sendData.jsx";
-
 import InputField from "../components/InputField.jsx";
-import FormButton from "../components/FormButton";
-import BackButton from "../components/BackButton";
+import FormButton from "../components/FormButton.jsx";
 
 export default function ResetPassword() {
-	console.log("HEREEEEEEEEEEEEE");
-	const [error, setError] = useState({});
-	const [token, setToken] = useState(null);
-	const [success, setSuccess] = useState(false);
-
-	const newPasswordRef = useRef(null);
+	const [searchParams] = useSearchParams();
+	const token = searchParams.get("token");
+	const pwRef = useRef(null);
+	const confirmRef = useRef(null);
+	const [msg, setMsg] = useState(null);
+	const [error, setError] = useState(null);
 	const navigate = useNavigate();
-
-	const clearErrors = () => setError({});
-
-	// Get token from URL on mount
-	useEffect(() => {
-		const urlToken = new URLSearchParams(window.location.search).get("token");
-		if (!urlToken) {
-			setError({ form: "Token de réinitialisation invalide" });
-		} else {
-			setToken(urlToken);
-		}
-	}, []);
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		clearErrors();
-
-		if (!token) {
-			setError({ form: "Token invalide" });
-			return;
-		}
-
-		const password = newPasswordRef.current.value.trim();
-		const newErrors = {};
-
-		// COMMENTED OUT TO SIMPLIFY TESTING
-		// if (!validatePassword(password)) {
-		// 	newErrors.password = "Mot de passe invalide (6–15 caractères, majuscule, minuscule, chiffre, caractère spécial)";
-		// }
-		if (!password) {
-			newErrors.password = "Mot de passe invalide (6–15 caractères, majuscule, minuscule, chiffre, caractère spécial)";
-		}
-
-		if (Object.keys(newErrors).length > 0) {
-			setError(newErrors);
-			return;
-		}
-
-		console.log("new password: ", password);
-
-		const response = await sendData("/api/auth/password/reset", {
+		setError(null);
+		const password = pwRef.current.value;
+		const confirm = confirmRef.current.value;
+		if (password !== confirm) { setError("Passwords don't match"); return; }
+		if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
+		const res = await sendData("/api/v1/auth/password/reset", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				token,
-				password
-			}),
+			body: JSON.stringify({ token, password }),
 		});
-
-		console.log("response: ", response);
-
-		if (response.success) {
-			setSuccess(true);
-			// Redirect after 3 seconds
-			setTimeout(() => {
-				navigate("/", { replace: true });
-			}, 3000);
+		if (res.success !== false) {
+			setMsg("Password reset! Redirecting...");
+			setTimeout(() => navigate("/", { replace: true }), 2000);
 		} else {
-			setError({ form: "Lien expiré ou invalide" });
+			setError(res.message || "Reset failed");
 		}
 	};
 
 	return (
-		<div className="relative flex flex-col items-center bg-white border border-gray-200 p-8 rounded-lg shadow-lg max-w-md mx-auto text-black">
-			<BackButton />
-
-			<h1 className="text-2xl font-bold mt-4 mb-4">Réinitialisation du mot de passe</h1>
-
-			{success && (
-				<p className="text-lg text-center">
-					Le mot de passe a été bien réinitialisé.
-					<br />
-					<span className="text-sm">
-						Redirection automatique...
-					</span>
-				</p>
-			)}
-			{!success && (
-				<form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
-					<InputField
-						label="Nouveau mot de passe"
-						type="password"
-						placeholder="Nouveau mot de passe"
-						inputRef={newPasswordRef}
-						error={error.password}
-						autoFocus
-					/>
-
-					{error.form && <p className="text-red-500 text-lg text-left">{error.form}</p>}
-
-					<FormButton>Réinitialiser mon mot de passe</FormButton>
+		<div className="min-h-screen flex items-center justify-center p-4">
+			<div className="card w-full max-w-sm">
+				<h1 className="text-xl font-bold text-center mb-1">Reset Password</h1>
+				<p className="msg-info text-center mb-4">Enter your new password</p>
+				<hr className="divider" />
+				<form onSubmit={handleSubmit} className="flex flex-col gap-3">
+					<InputField label="New Password" type="password" inputRef={pwRef} autoFocus />
+					<InputField label="Confirm Password" type="password" inputRef={confirmRef} />
+					{error && <p className="msg-error text-center">{error}</p>}
+					{msg && <p className="msg-success text-center">{msg}</p>}
+					<FormButton type="submit">Reset Password</FormButton>
 				</form>
-			)}
+			</div>
 		</div>
 	);
 }

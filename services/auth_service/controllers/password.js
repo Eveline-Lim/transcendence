@@ -52,7 +52,7 @@ export async function forgotPassword(req, reply) {
 		const userId = user.id;
 
 		// Generate token
-		let token = crypto.randomBytes(64).toString("hex");
+		const token = crypto.randomBytes(64).toString("hex");
 
 		const hashedToken = crypto
 			.createHash("sha256")
@@ -62,13 +62,13 @@ export async function forgotPassword(req, reply) {
 
 		// Store hashed token in Redis
 		await redisClient.set(
-			`resetToken:${hashedToken}`,
+			`passwordReset:${hashedToken}`,
 			userId,
 			{ EX: RESET_TOKEN_ETTL }
 		);
 
-		const resetToken = await redisClient.get(`resetToken:${hashedToken}`);
-		console.log();
+		const resetToken = await redisClient.get(`passwordReset:${hashedToken}`);
+		console.log("resetToken: ", resetToken);
 		// Send raw token in email link
 		const resetLink = `${process.env.FRONTEND_URL}/password/reset?token=${token}`;
 		console.log("resetLink: ", resetLink);
@@ -91,7 +91,6 @@ export async function forgotPassword(req, reply) {
 		});
 	}
 }
-
 
 export async function resetPassword(req, reply) {
 	// const referer = req.headers.referer;
@@ -129,13 +128,13 @@ export async function resetPassword(req, reply) {
 		// console.log("RESET PASSWORD hashed token: ", hashedToken);
 
 
-		const userId = await redisClient.get(`resetToken:${hashedToken}`);
+		const userId = await redisClient.get(`passwordReset:${hashedToken}`);
 		console.log("userId: ", userId);
 		if (!userId) {
 			return reply.code(401).send({
 				success: false,
 				code: "INVALID_TOKEN",
-				message: "Invalid or expired reset token",
+				message: "Invalid or expired token",
 			});
 		}
 		const username = await redisClient.get(`userid:${userId}`);
@@ -171,7 +170,7 @@ export async function resetPassword(req, reply) {
 		// console.log("userUpdated: ", userUpdated);
 
 		// Delete token
-		await redisClient.del(`resetToken:${hashedToken}`);
+		await redisClient.del(`passwordReset:${hashedToken}`);
 
 		return reply.code(200).send({
 			success: true,
