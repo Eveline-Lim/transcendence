@@ -92,11 +92,6 @@ export class GameLoopService {
 			}
 
 			this.io.to(gameId).emit('game-update', {
-				// ball: gameState.ball,
-				// paddles: gameState.paddles,
-				// score: gameState.score,
-				// status: gameState.status,
-				// winner: gameState.winner
 				gameState: gameState
 			});
 
