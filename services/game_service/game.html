@@ -35,14 +35,14 @@
 
             // Paddle player 1 (gauche)
             ctx.fillRect(
-                10,
+                canvas.width * 0.05 - 10,
                 gameState.paddles.player1 * canvas.height / 100 - 40,
                 10, 80
             );
 
             // Paddle player 2 (droite)
             ctx.fillRect(
-                canvas.width - 20,
+                canvas.width * 0.95,
                 gameState.paddles.player2 * canvas.height / 100 - 40,
                 10, 80
             );
