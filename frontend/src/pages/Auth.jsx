@@ -117,7 +117,7 @@ export default function Auth() {
 						<>
 							<p className="link text-center" onClick={() => navigate("/password/forgot")}>Forgot password?</p>
 							<hr className="divider" />
-							<FormButton variant="secondary" onClick={() => { window.location.href = "/api/v1/auth/oauth/fortytwo"; }}>
+							<FormButton variant="secondary" onClick={() => { window.location.href = "/api/v1/auth/oauth/fortytwo" }}>
 								Login with 42
 							</FormButton>
 						</>

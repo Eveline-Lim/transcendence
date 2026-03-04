@@ -26,7 +26,7 @@ export default function App() {
 					<Route path="/twofaCode" element={<TwoFACode />} />
 					<Route path="/twofa/enable" element={<TwoFAQRCode />} />
 					<Route path="/twofa/disable" element={<ConfirmDisable2FA />} />
-
+					
 					{/* Main */}
 					<Route path="/home" element={<Home />} />
 					<Route path="/profile" element={<Profile />} />

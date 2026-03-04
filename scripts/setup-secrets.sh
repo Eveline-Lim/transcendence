@@ -33,15 +33,15 @@ create_secret "jwt_secret" "SuperSecretJWTKey_ChangeMeInProd"
 create_secret "jwt_expiration" "1d"
 create_secret "node_env" "development"
 create_secret "log_level" "debug"
-create_secret "oauth_42_client_id" "u-s42-xxxx"
-create_secret "oauth_42_client_secret" "s-s42-xxxx"
-create_secret "oauth_42_client_callback_url" "http://localhost:8080/api/v1/auth/callback/42"
+create_secret "oauth_42_client_id" "u-s4t2ud-00d9334e298a98e54a7e83dc23a70a77c93b3ccb65ff4d298418fc750036b18f"
+create_secret "oauth_42_client_secret" "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"
+create_secret "oauth_42_client_callback_url" "http://localhost:8080/api/v1/auth/oauth/fortytwo/callback"
 create_secret "smtp_user" "evelinelim03@gmail.com"
 create_secret "smtp_password" "yqmy nncu smvh srmu"
 
 # Nginx
 create_secret "nginx_port" "80"
-create_secret "frontend_url" "http://localhost:8080"
+create_secret "frontend_url" "https://localhost:8443"
 
 # SSL (Self-signed pour le dev)
 if [[ ! -f "secrets/ssl_key" ]]; then
