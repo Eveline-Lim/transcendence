@@ -166,7 +166,7 @@ export default function Profile() {
 		});
 		console.log("REVOKE ALL SESSIONS RES: ", res);
 		if (res?.revokedCount !== undefined) {
-			setMsg(`Revoked ${res.revokedCount} sessions`);
+			setMsg(`Revoked ${res.revokedCount} session(s)`);
 			fetchSessions();
 		} else {
 			setError(res?.message || "Failed to revoke sessions");

@@ -1,6 +1,10 @@
 import { redisClient } from "../redisClient.js";
 import jwt from "jsonwebtoken";
 
+import Session from "../models/Session.js";
+import ListSessionsResponse from "../models/ListSessions200Response.js";
+import RevokeAllSessionsResponse from "../models/RevokeAllSessions200Response.js";
+
 export async function listSessions(req, reply) {
 	console.log("SESSIONS");
 	try {
@@ -39,7 +43,7 @@ export async function listSessions(req, reply) {
 					return null;
 				}
 
-				return {
+				return Session.validate({
 					id,
 					deviceInfo: data.deviceInfo,
 					ipAddress: data.ipAddress,
@@ -47,7 +51,7 @@ export async function listSessions(req, reply) {
 					createdAt: data.createdAt,
 					lastActiveAt: data.lastActiveAt,
 					isCurrent: id === currentSessionId,
-				};
+				});
 			})
 		);
 
@@ -56,12 +60,13 @@ export async function listSessions(req, reply) {
 
 		// Sort by lastActiveAt descending
 		sessions.sort(
-			(a, b) =>
-				new Date(b.lastActiveAt).getTime() -
-				new Date(a.lastActiveAt).getTime()
+			(a, b) => b.lastActiveAt - a.lastActiveAt
 		);
 
-		return reply.code(200).send({ sessions });
+		const response = ListSessionsResponse.from({ sessions });
+		console.log("LIST SESSIONS RESPONSE: ", response);
+
+		return reply.code(200).send(response.toJSON());
 	} catch (error) {
 		return reply.code(500).send({
 			code: "INTERNAL_ERROR",
@@ -186,11 +191,12 @@ export async function revokeAllSessions(req, reply) {
 		});
 		await multi.exec();
 
-		console.log("count: ", sessionsToRevoke.length);
-		// Return the number of revoked sessions
-		return reply.code(200).send({
+		const response = RevokeAllSessionsResponse.validate({
 			revokedCount: sessionsToRevoke.length
 		});
+
+		// Return the number of revoked sessions
+		return reply.code(200).send(response.toJSON());
 	} catch (error) {
 		return reply.code(500).send({
 			success: false,
