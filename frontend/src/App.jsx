@@ -37,7 +37,7 @@ export default function App() {
 					{/* Game modes (placeholder) */}
 					<Route path="/play/ranked" element={<Game />} />
 					<Route path="/play/casual" element={<Game />} />
-					<Route path="/play/ai" element={<Game />} />
+					<Route path="/play/ai:difficulty" element={<Game />} />
 					<Route path="/play/offline" element={<Game />} />
 
 					{/* 404 */}
