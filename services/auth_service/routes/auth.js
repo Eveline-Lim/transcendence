@@ -4,6 +4,8 @@ import { forgotPassword, resetPassword } from "../controllers/password.js";
 import { disable2FA, enableTwoFA, verifyTwoFA } from "../controllers/twofa.js";
 import { initiateOauth, oauthCallback } from "../controllers/oauth.js";
 import { verifyToken } from "../controllers/token.js";
+import { listSessions } from "../controllers/session.js";
+import { revokeSession } from "../controllers/session.js";
 
 export default async function authRoutes(fastify) {
 	// Auth
@@ -22,6 +24,10 @@ export default async function authRoutes(fastify) {
 	fastify.post("/2fa/enable", { preHandler: authenticate }, enableTwoFA);
 	fastify.post("/2fa/verify", { preHandler: authenticate }, verifyTwoFA);
 	fastify.post("/2fa/disable", { preHandler: authenticate }, disable2FA);
+
+	// Session
+	fastify.get("/sessions", { preHandler: authenticate }, listSessions);
+	// fastify.delete("/sessions/:sessionId", { preHandler: authenticate }, revokeSession);
 
 	// OAuth
 	fastify.get("/oauth/:provider", initiateOauth);

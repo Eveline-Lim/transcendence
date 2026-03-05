@@ -5,6 +5,7 @@ import { api } from "../utils/api";
 import NavBar from "../components/NavBar";
 import FormButton from "../components/FormButton";
 import InputField from "../components/InputField";
+import { sendData } from "../sendData";
 
 export default function Profile() {
 	const { currentUser, updateUser, logout } = useContext(AuthContext);
@@ -14,14 +15,19 @@ export default function Profile() {
 	const [msg, setMsg] = useState(null);
 	const [error, setError] = useState(null);
 	const [prefs, setPrefs] = useState(null);
+	const [sessions, setSessions] = useState(null);
 	const displayNameRef = useRef(null);
 	const emailRef = useRef(null);
 	const avatarRef = useRef(null);
+
+	const token = localStorage.getItem("token");
+	console.log("token: ", token);
 
 	useEffect(() => {
 		if (!currentUser) { navigate("/", { replace: true }); return; }
 		fetchProfile();
 		fetchPrefs();
+		fetchSessions();
 	}, [currentUser]);
 
 	const fetchProfile = async () => {
@@ -37,6 +43,23 @@ export default function Profile() {
 		if (res.success) {
 			const { success, ...data } = res;
 			setPrefs(data);
+		}
+	};
+
+	const fetchSessions = async () => {
+		const res = await sendData("/api/v1/auth/sessions", {
+			method: "GET",
+			headers: {
+				Authorization: `Bearer ${token}`,
+			}
+		});
+
+		console.log("SESSION RES: ", res);
+
+		if (res && Array.isArray(res.sessions)) {
+			setSessions(res.sessions);
+		} else {
+			setSessions([]);
 		}
 	};
 
@@ -112,6 +135,33 @@ export default function Profile() {
 		if (res.success) fetchPrefs();
 	};
 
+	// const handleRevokeSession = async (sessionId) => {
+	// 	const res = await sendData(`/api/v1/auth/sessions/${sessionId}`, {
+	// 		method: "DELETE",
+	// 		headers: {
+	// 			Authorization: `Bearer ${token}`,
+	// 		}
+	// 	});
+	// 	console.log("REVOKE SESSION ID RES: ", res);
+	// 	if (res.success) {
+	// 		setMsg("Session revoked");
+	// 		fetchSessions();
+	// 	} else {
+	// 		setError(res.message);
+	// 	}
+	// };
+
+	// const handleRevokeAllSessions = async () => {
+	// 	if (!confirm("Sign out from all other sessions?")) return;
+	// 	const res = await api("/sessions/revoke-all", { method: "POST" });
+	// 	if (res.success) {
+	// 		setMsg("All other sessions revoked");
+	// 		fetchSessions();
+	// 	} else {
+	// 		setError(res.message);
+	// 	}
+	// };
+
 	if (!currentUser) return null;
 
 	return (
@@ -182,6 +232,66 @@ export default function Profile() {
 						<FormButton variant="danger" onClick={handleDisable2FA}>Disable 2FA</FormButton>
 					) : (
 						<FormButton onClick={handleEnable2FA}>Enable 2FA</FormButton>
+					)}
+				</div>
+
+				{/* Active Sessions */}
+				<div className="card mb-4">
+					<div className="flex items-center justify-between mb-3">
+						<h2 className="font-bold text-sm">Active Sessions</h2>
+						{/* {sessions && sessions.length > 1 && (
+							<button onClick={handleRevokeAllSessions} className="link text-xs text-red-400">
+								Revoke all others
+							</button>
+						)} */}
+					</div>
+					{!sessions ? (
+						<p className="text-sm text-slate-400">Loading sessions…</p>
+					) : sessions.length === 0 ? (
+						<p className="text-sm text-slate-400">No active sessions found.</p>
+					) : (
+						<div className="flex flex-col gap-2">
+							{sessions.map((session) => {
+								const isCurrentSession = session.isCurrent ?? session.current ?? false;
+								const lastSeenAt = session.lastSeenAt ?? session.lastUsedAt ?? session.updatedAt;
+								const lastSeen = lastSeenAt ? new Date(lastSeenAt).toLocaleString() : null;
+								const createdAt = session.createdAt ? new Date(session.createdAt).toLocaleString() : null;
+								return (
+									<div
+										key={session.id ?? session.sessionId}
+										className="flex items-start justify-between gap-3 rounded-lg bg-slate-800 px-3 py-2"
+									>
+										<div className="flex flex-col gap-0.5 text-xs text-slate-300 min-w-0">
+											<div className="flex items-center gap-2">
+												<span className="font-medium truncate">
+													{session.userAgent ?? session.device ?? session.clientInfo ?? "Unknown device"}
+												</span>
+												{isCurrentSession && (
+													<span className="badge badge-green shrink-0">Current</span>
+												)}
+											</div>
+											{session.ipAddress && (
+												<span className="text-slate-400">{session.ipAddress}</span>
+											)}
+											{createdAt && (
+												<span className="text-slate-500">Started: {createdAt}</span>
+											)}
+											{lastSeen && !isCurrentSession && (
+												<span className="text-slate-500">Last active: {lastSeen}</span>
+											)}
+										</div>
+										{!isCurrentSession && (
+											<button
+												onClick={() => handleRevokeSession(session.id ?? session.sessionId)}
+												className="link text-xs text-red-400 shrink-0 mt-0.5"
+											>
+												Revoke
+											</button>
+										)}
+									</div>
+								);
+							})}
+						</div>
 					)}
 				</div>
 

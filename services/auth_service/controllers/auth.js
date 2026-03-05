@@ -1,4 +1,8 @@
 import { validateInputs } from "../utils/validators.js"
+import RegisterRequest from "../models/RegisterRequest.js";
+import LoginRequest from "../models/LoginRequest.js";
+import UserInfo from "../models/UserInfo.js";
+import AuthResponse from "../models/AuthResponse.js";
 import { redisClient } from "../redisClient.js";
 import { ACCESS_TOKEN_TTL, REFRESH_TOKEN_TTL, MAX_LOGIN_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS } from "../utils/macros.js";
 import { createPlayerProfile } from "../utils/playerService.js";
@@ -7,14 +11,12 @@ import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 
 export async function signup(req, reply) {
-	const { username, displayName, email } = req.body;
-	console.log("REQ BODY:", req.body);
-	let password = req.body.password;
-	const avatarUrl = "/assets/avatar.jpg";
+	let registerData;
 
-	// const validation = validateInputs({ username, email, password }, false);
-	const validation = validateInputs({ username, email }, false);
-	if (!validation.success) {
+	try {
+		registerData = RegisterRequest.validate(req.body);
+		console.log("REGISTER DATA: ", registerData);
+	} catch (error) {
 		return reply.code(400).send({
 			success: false,
 			code: "INVALID_CREDENTIALS",
@@ -22,14 +24,25 @@ export async function signup(req, reply) {
 		});
 	}
 
+	const { username, displayName, email, password } = registerData;
+	const avatarUrl = "/assets/avatar.jpg";
+
+	console.log("REGISTER DATA: ", registerData);
+
+	const validation = validateInputs(registerData, false);
+	console.log("validation: ", validation);
+	if (!validation.success) {
+		return reply.code(400).send({
+			success: false,
+			code: "INVALID_REQUEST_PARAMETERS",
+			message: "Invalid fields",
+		});
+	}
 	try {
 		const userKey = `user:${username}`;
 		console.log("userKey: ", userKey);
 		const emailKey = `email:${email}`;
 		console.log("emailKey: ", emailKey);
-
-		// TEST
-		await redisClient.flushDb();
 
 		// Check username uniqueness
 		const existingUser = await redisClient.exists(userKey);
@@ -40,6 +53,7 @@ export async function signup(req, reply) {
 				message: "Username already exists",
 			});
 		}
+
 		// Check email uniqueness
 		const existingEmail = await redisClient.exists(emailKey);
 		if (existingEmail) {
@@ -69,20 +83,18 @@ export async function signup(req, reply) {
 		const uuid = playerData.id;
 		console.log("UUID (from player service): ", uuid);
 
-		// console.log("password: ", password);
-		password = await bcrypt.hash(password, 10);
-		// console.log("hashedPassword: ", password);
+		const hashedPassword = await bcrypt.hash(password, 10);
 
 		// Save auth credentials
 		await redisClient.hSet(userKey, {
 			id: uuid,
 			username,
 			displayName,
-			password,
+			password: hashedPassword,
 			email,
 			avatarUrl,
 			has2FAEnabled: "false",
-			requires2FA: "false"
+			requires2FA: "false",
 		});
 
 		await redisClient.set(emailKey, username);
@@ -92,27 +104,25 @@ export async function signup(req, reply) {
 
 		// Create session
 		const sessionId = crypto.randomUUID();
-		console.log("sessionId: ", sessionId);
 		const now = new Date().toISOString();
 		const ip = req.ip;
-		console.log("IP: ", ip);
 
 		await redisClient
-		.multi()
-		.hSet(`session:${sessionId}`, {
-			id: sessionId,
-			deviceInfo: req.headers["user-agent"] ?? "unknown",
-			ipAddress: ip,
-			location: "unknown",
-			createdAt: now,
-			lastActiveAt: now,
-			isCurrent: "true"
-		})
-		.sAdd(`user:sessions:${user.username}`, sessionId)
-		.exec();
+			.multi()
+			.hSet(`session:${sessionId}`, {
+				id: sessionId,
+				deviceInfo: req.headers["user-agent"] ?? "unknown",
+				ipAddress: ip,
+				location: "unknown",
+				createdAt: now,
+				lastActiveAt: now,
+				isCurrent: "true",
+			})
+			.sAdd(`user:sessions:${user.username}`, sessionId)
+			.exec();
 
 		// Access Token (short-lived JWT)
-		let accessToken = jwt.sign(
+		const accessToken = jwt.sign(
 			{
 				userId: user.id,
 				username,
@@ -121,53 +131,31 @@ export async function signup(req, reply) {
 			process.env.JWT_SECRET,
 			{ expiresIn: ACCESS_TOKEN_TTL }
 		);
-		// console.log("ACCESS TOKEN: ", accessToken);
-		// accessToken = await bcrypt.hash(accessToken, 10);
-		// console.log("hashedToken: ", accessToken);
 
 		// Refresh Token
-		// Generate a random salt (64 bytes)
 		const refreshToken = crypto.randomBytes(64).toString("hex");
-		// console.log("REFRESH_TOKEN: ", refreshToken);
 		const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-		// console.log("hashedRefreshToken: ", refreshToken);
 
-		// Store refresh token in Redis
+		// Store hashed refresh token in Redis
 		await redisClient.set(
-			`refresh:${user.id}`,
+			`refresh:${user.id}:${sessionId}`,
 			hashedRefreshToken,
 			{ EX: REFRESH_TOKEN_TTL }
 		);
 
-		// const storedRefreshToken = await redisClient.get(`refresh:${user.id}`);
-		// console.log("storedRefreshToken: ", storedRefreshToken);
+		const userInfo = UserInfo.fromRedis(user);
 
-		let has2FA = false;
-		if (user.has2FAEnabled == "true") {
-			has2FA = true;
-		}
-
-		return reply.code(201).send({
-			success: true,
-			code: "USER_CREATED",
-			message: "User successfully registered",
+		const response = new AuthResponse({
 			accessToken,
 			refreshToken,
-			tokenType: "Bearer",
-			expiresIn : ACCESS_TOKEN_TTL,
-			user: {
-				id: user.id,
-				username: user.username,
-				displayName: user.displayName,
-				email: user.email,
-				avatarUrl : user.avatarUrl,
-				has2FAEnabled: has2FA
-			},
-			requires2FA: has2FA
+			expiresIn: ACCESS_TOKEN_TTL,
+			user: userInfo,
+			requires2FA: "false",
 		});
+
+		return reply.code(201).send(response);
 	} catch (error) {
-		await redisClient.quit();
-		console.log("SIGNUP ERROR: ", error);
+		console.error("SIGNUP ERROR: ", error);
 		return reply.code(500).send({
 			success: false,
 			code: "INTERNAL_ERROR",
@@ -177,14 +165,22 @@ export async function signup(req, reply) {
 }
 
 export async function login(req, reply) {
-	const { identifier, password } = req.body;
-	console.log("REQ BODY: ", req.body);
+	let loginData;
 
-	// For rate limiting per IP
-	const ip = req.ip;
-	console.log("IP: ", ip);
+	try {
+		loginData = LoginRequest.validate(req.body);
+	} catch (error) {
+		return reply.code(400).send({
+			success: false,
+			code: "INVALID_REQUEST_PARAMETERS",
+			message: "Invalid fields",
+		});
+	}
 
-	const validation = validateInputs({ identifier, password }, true);
+	const { identifier, password } = loginData;
+
+	const validation = validateInputs(loginData, true);
+	console.log("validation: ", validation);
 	if (!validation.success) {
 		return reply.code(400).send({
 			success: false,
@@ -192,6 +188,10 @@ export async function login(req, reply) {
 			message: "Invalid fields",
 		});
 	}
+
+	// For rate limiting per IP
+	const ip = req.ip;
+	console.log("IP: ", ip);
 
 	try {
 		let username = identifier;
@@ -228,16 +228,14 @@ export async function login(req, reply) {
 		if (attempts === 1) {
 			await redisClient.expire(rlKey, RATE_LIMIT_WINDOW_SECONDS);
 		}
-		// console.log("attempts: ", attempts);
 		if (attempts > MAX_LOGIN_ATTEMPTS) {
 			return reply.code(429).send({
 				success: false,
 				code: "TOO_MANY_ATTEMPTS",
-				message: "Too many login attempts. Try again in five minutes."
+				message: "Too many login attempts. Try again in five minutes.",
 			});
 		}
 
-		// If the user exists, we compare the entered password with the stored hashed password.
 		const isMatch = await bcrypt.compare(password, user.password);
 		if (!isMatch) {
 			return reply.code(401).send({
@@ -247,7 +245,7 @@ export async function login(req, reply) {
 			});
 		}
 
-		// Reset rate limite on success
+		// Reset rate limit on success
 		await redisClient.del(rlKey);
 
 		// Create session
@@ -256,21 +254,21 @@ export async function login(req, reply) {
 		const now = new Date().toISOString();
 
 		await redisClient
-		.multi()
-		.hSet(`session:${sessionId}`, {
-			id: sessionId,
-			deviceInfo: req.headers["user-agent"] ?? "unknown",
-			ipAddress: ip,
-			location: "unknown",
-			createdAt: now,
-			lastActiveAt: now,
-			isCurrent: "true"
-		})
-		.sAdd(`user:sessions:${user.username}`, sessionId)
-		.exec();
+			.multi()
+			.hSet(`session:${sessionId}`, {
+				id: sessionId,
+				deviceInfo: req.headers["user-agent"] ?? "unknown",
+				ipAddress: ip,
+				location: "unknown",
+				createdAt: now,
+				lastActiveAt: now,
+				isCurrent: "true",
+			})
+			.sAdd(`user:sessions:${user.username}`, sessionId)
+			.exec();
 
 		// Access Token (short-lived JWT)
-		let accessToken = jwt.sign(
+		const accessToken = jwt.sign(
 			{
 				userId: user.id,
 				username: user.username,
@@ -280,44 +278,34 @@ export async function login(req, reply) {
 			{ expiresIn: ACCESS_TOKEN_TTL }
 		);
 		console.log("ACCESS TOKEN: ", accessToken);
-		// accessToken = await bcrypt.hash(accessToken, 10);
-		// console.log("hashedToken: ", accessToken);
 
 		// Refresh Token
-		// Generate a random salt (64 bytes)
 		const refreshToken = crypto.randomBytes(64).toString("hex");
 		console.log("REFRESH_TOKEN: ", refreshToken);
 		const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-		// console.log("hashedRefreshToken: ", refreshToken);
 
 		// Store refresh token in Redis
 		await redisClient.set(
-			`refresh:${user.id}`,
+			`refresh:${user.id}:${sessionId}`,
 			hashedRefreshToken,
 			{ EX: REFRESH_TOKEN_TTL }
 		);
-		const storedRefreshToken = await redisClient.get(`refresh:${user.id}`);
-		console.log("storedRefreshToken: ", storedRefreshToken);
-		console.log("2FA: ", user.has2FAEnabled, user.requires2FA );
-		return reply.code(200).send({
-			success: true,
-			code: "LOGIN_SUCCESS",
-			message: "User successfully logged in",
+
+		console.log("2FA: ", user.has2FAEnabled, user.requires2FA);
+
+		const userInfo = UserInfo.fromRedis(user);
+
+		const response = new AuthResponse({
 			accessToken,
 			refreshToken,
-			tokenType: "Bearer",
-			expiresIn : ACCESS_TOKEN_TTL,
-			user: {
-				id : user.id,
-				username: user.username,
-				displayName: user.displayName,
-				email: user.email,
-				avatarUrl: user.avatarUrl,
-				has2FAEnabled: user.has2FAEnabled === "true",
-			},
-			requires2FA: user.requires2FA
+			expiresIn: ACCESS_TOKEN_TTL,
+			user: userInfo,
+			requires2FA: user.requires2FA === "true",
 		});
+
+		return reply.code(200).send(response);
 	} catch (error) {
+		console.log("LOGIN ERROR: ", error);
 		return reply.code(500).send({
 			success: false,
 			code: "INTERNAL_ERROR",
@@ -357,10 +345,7 @@ export async function logout(req, reply) {
 			{ EX: ACCESS_TOKEN_TTL}
 		);
 
-		reply.code(204).send({
-			code: "LOGOUT_SUCCESS",
-			message: "User successfully logged out",
-		});
+		reply.code(204).send();
 	} catch (error) {
 		return reply.code(500).send({
 			code: "INTERNAL_ERROR",
