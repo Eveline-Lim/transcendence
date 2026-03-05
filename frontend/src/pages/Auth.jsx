@@ -42,9 +42,11 @@ export default function Auth() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ identifier, password }),
 			});
+			console.log("LOGIN RES: ", res);
 			if (res.requires2FA === "true" || res.requires2FA === true) {
+				login(res.user, res.accessToken);
 				navigate("/twofaCode", { replace: true });
-			} else if (res.success) {
+			} else if (res) {
 				login(res.user, res.accessToken);
 				navigate("/home", { replace: true });
 			} else {
@@ -73,7 +75,8 @@ export default function Auth() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ username, displayName, password, email }),
 			});
-			if (res.success) {
+			console.log("SIGNUP RES: ", res);
+			if (res) {
 				login(res.user, res.accessToken);
 				navigate("/home", { replace: true });
 			} else {
@@ -114,7 +117,7 @@ export default function Auth() {
 						<>
 							<p className="link text-center" onClick={() => navigate("/password/forgot")}>Forgot password?</p>
 							<hr className="divider" />
-							<FormButton variant="secondary" onClick={() => { window.location.href = "/api/v1/auth/oauth/fortytwo"; }}>
+							<FormButton variant="secondary" onClick={() => { window.location.href = "/api/v1/auth/oauth/fortytwo" }}>
 								Login with 42
 							</FormButton>
 						</>

@@ -6,13 +6,15 @@
   "scripts": {
     "start": "fastify start --options index.js",
     "test": "c8 node --test unitTests/test/test-*.js",
-    "dev": "node -r dotenv/config server.js"
+    "dev": "node -r dotenv/config server.js",
+	"generate:api": "openapi-generator-cli generate -i ../../docs/api/auth_service.yaml -g typescript-axios -o ./src/api"
   },
   "directories": {
     "test": "test"
   },
   "dependencies": {
     "@asyncapi/modelina": "^5.10.1",
+	"@openapitools/openapi-generator-cli": "^2.19.0",
     "@seriousme/openapi-schema-validator": "^2.7.0",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.4",

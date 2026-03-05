@@ -203,9 +203,11 @@ export async function oauthCallback(req, reply) {
 		// Delete temporary OAuth session
 		await redisClient.del(`session:${oauthSessionId}`);
 
+		console.log("Redirecting to:", `${process.env.FRONTEND_URL}/home`);
+
 		// Redirect to frontend with tokens
 		return reply.redirect(
-			`${process.env.FRONTEND_URL}/game`
+			`${process.env.FRONTEND_URL}/home`
 		);
 	} catch (err) {
 		console.error("OAuth callback error:", err);

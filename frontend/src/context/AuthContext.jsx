@@ -23,6 +23,7 @@ export function AuthProvider({ children }) {
 		setCurrentUser(updatedUser);
 	};
 
+	
 	const logout = () => {
 		localStorage.removeItem("token");
 		localStorage.removeItem("user");

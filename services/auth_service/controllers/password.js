@@ -4,18 +4,27 @@ import { MAX_LOGIN_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS, RESET_TOKEN_ETTL } from 
 import { sendResetEmail } from "../mailService.js";
 import crypto from "node:crypto";
 import bcrypt from "bcrypt";
+import ForgotPasswordRequest from "../models/ForgotPasswordRequest.js";
+import ResetPasswordRequest from "../models/ResetPasswordRequest.js";
 
 export async function forgotPassword(req, reply) {
-	const { email } = req.body;
-	console.log("REQ BODY email: ", req.body);
-	if (!email) {
+	let forgotPasswordData;
+
+	try {
+		forgotPasswordData = ForgotPasswordRequest.validate(req.body);
+		console.log("FORGOT PASSWORD DATA: ", forgotPasswordData);
+	} catch (error) {
 		return reply.code(400).send({
+			success: false,
 			code: "INVALID_CREDENTIALS",
-			message: "Invalid request parameters",
+			message: "Invalid fields",
 		});
 	}
 
+	const { email } = forgotPasswordData;
+	console.log("email: ", email);
 	const validation = validateEmail(email);
+	console.log("validation: ", validation);
 	if (!validation) {
 		return reply.code(400).send({
 			code: "INVALID_CREDENTIALS",
@@ -43,7 +52,7 @@ export async function forgotPassword(req, reply) {
 		const username = await redisClient.get(`email:${email}`);
 		if (!username) {
 			return reply.code(202).send({
-				code: "(error)PASSWORD_RESET_EMAIL_SENT_SUCCESS",
+				code: "PASSWORD_RESET_EMAIL_SENT_SUCCESS",
 				message: "If an account exists for this email address, a password reset link has been sent.",
 			});
 		}
@@ -79,6 +88,7 @@ export async function forgotPassword(req, reply) {
 		// Reset rate limite on success
 		await redisClient.del(rlKey);
 
+		console.log("HEREEEEEEEEE");
 		return reply.code(202).send({
 			success: true,
 			code: "PASSWORD_RESET_EMAIL_SENT_SUCCESS",
@@ -93,16 +103,13 @@ export async function forgotPassword(req, reply) {
 }
 
 export async function resetPassword(req, reply) {
-	// const referer = req.headers.referer;
-	const { token, password } = req.body;
+	console.log("RESET");
+	let resetPasswordData;
 
-	// const url = new URL(referer);
-	// const urlToken = url.searchParams.get('token');
-	// console.log("urlToken: ", urlToken);
-	console.log("token: ", token);
-	console.log("password: ", password);
-
-	if (!token) {
+	try {
+		resetPasswordData = ResetPasswordRequest.validate(req.body);
+		console.log("RESET PASSWORD DATA: ", resetPasswordData);
+	} catch (error) {
 		return reply.code(400).send({
 			success: false,
 			code: "INVALID_CREDENTIALS",
@@ -110,14 +117,17 @@ export async function resetPassword(req, reply) {
 		});
 	}
 
-	// COMMENTED OUT TO SIMPLIFY TESTING
-	// const validation = validatePassword(password);
-	// if (!validation) {
-	// 	return reply.code(400).send({
-	// 		code: "INVALID_CREDENTIALS",
-	// 		message: "Invalid fields",
-	// 	});
-	// }
+	const { token, password } = resetPasswordData;
+	console.log("token: ", token);
+	console.log("password: ", password);
+
+	const validationPassword = validatePassword(password);
+	if (!validationPassword) {
+		return reply.code(400).send({
+			code: "INVALID_CREDENTIALS",
+			message: "Invalid fields",
+		});
+	}
 
 	try {
 		// Hash received token
