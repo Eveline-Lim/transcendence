@@ -4,8 +4,7 @@ import { forgotPassword, resetPassword } from "../controllers/password.js";
 import { disable2FA, enableTwoFA, verifyTwoFA } from "../controllers/twofa.js";
 import { initiateOauth, oauthCallback } from "../controllers/oauth.js";
 import { verifyToken } from "../controllers/token.js";
-import { listSessions } from "../controllers/session.js";
-import { revokeSession } from "../controllers/session.js";
+import { listSessions, revokeSession, revokeAllSessions } from "../controllers/session.js";
 
 export default async function authRoutes(fastify) {
 	// Auth
@@ -27,7 +26,8 @@ export default async function authRoutes(fastify) {
 
 	// Session
 	fastify.get("/sessions", { preHandler: authenticate }, listSessions);
-	// fastify.delete("/sessions/:sessionId", { preHandler: authenticate }, revokeSession);
+	fastify.delete("/sessions/:sessionId", { preHandler: authenticate }, revokeSession);
+	fastify.post("/sessions/revoke-all", { preHandler: authenticate }, revokeAllSessions);
 
 	// OAuth
 	fastify.get("/oauth/:provider", initiateOauth);

@@ -153,6 +153,7 @@ export async function signup(req, reply) {
 			requires2FA: "false",
 		});
 
+		console.log("CREATING SESSION:", sessionId);
 		return reply.code(201).send(response);
 	} catch (error) {
 		console.error("SIGNUP ERROR: ", error);
