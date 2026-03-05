@@ -8,7 +8,6 @@ RUN npm ci
 COPY game-service/src ./src
 COPY game-service/tsconfig.json ./
 
-RUN npm install typescript
 RUN npx tsc
 
 FROM node:20-alpine
