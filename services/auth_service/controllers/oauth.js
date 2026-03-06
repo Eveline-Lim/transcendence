@@ -44,6 +44,7 @@ export async function initiateOauth(req, reply) {
 				response_type: "code",
 				state
 			});
+		console.log("state: ", state);
 		console.log("authUrl: \n", authUrl);
 
 		// Redirect the user to authorization page
@@ -83,7 +84,7 @@ export async function oauthCallback(req, reply) {
 
 		// Validate session in Redis
 		const storedSession = await redisClient.hGetAll(`session:${oauthSessionId}`);
-
+		console.log("SESSION IN REDIS:", storedSession);
 		if (!storedSession || Object.keys(storedSession).length === 0 ||
 			storedSession.isOAuth !== "true") {
 				return reply.code(400).send({
@@ -111,6 +112,7 @@ export async function oauthCallback(req, reply) {
 
 		const tokenData = await tokenResponse.json();
 		const accessToken42 = tokenData.access_token;
+		console.log("ACCESS TOKEN 42: ", accessToken42);
 
 		// Fetch 42 user profile
 		const userResponse = await fetch("https://api.intra.42.fr/v2/me", {
@@ -203,14 +205,12 @@ export async function oauthCallback(req, reply) {
 		// Delete temporary OAuth session
 		await redisClient.del(`session:${oauthSessionId}`);
 
-		console.log("Redirecting to:", `${process.env.FRONTEND_URL}/home`);
-
-		// Redirect to frontend with tokens
+		// Redirect to frontend
 		return reply.redirect(
 			`${process.env.FRONTEND_URL}/home`
 		);
-	} catch (err) {
-		console.error("OAuth callback error:", err);
+	} catch (error) {
+		console.error("OAuth callback error:", error);
 		return reply.code(500).send({
 			code: "OAUTH_FAILED",
 			message: "OAuth authentication failed"

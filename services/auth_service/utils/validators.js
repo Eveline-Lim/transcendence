@@ -2,9 +2,7 @@
 - Length between 3 and 20 characters
 - Uppercase letters
 - Lowercase letters
-- Space
-- Hyphen
-- Apostrophe
+- Underscore
 */
 export function validateUsername(username) {
 	const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;

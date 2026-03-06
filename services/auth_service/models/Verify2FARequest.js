@@ -14,7 +14,7 @@ class Verify2FARequest {
 	 * @param {Object} data
 	 * @returns {Verify2FARequest}
 	 */
-	static from(data) {
+	static fromObject(data) {
 		return new Verify2FARequest(data);
 	}
 

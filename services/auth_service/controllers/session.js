@@ -63,7 +63,7 @@ export async function listSessions(req, reply) {
 			(a, b) => b.lastActiveAt - a.lastActiveAt
 		);
 
-		const response = ListSessionsResponse.from({ sessions });
+		const response = ListSessionsResponse.fromObject({ sessions });
 		console.log("LIST SESSIONS RESPONSE: ", response);
 
 		return reply.code(200).send(response.toJSON());

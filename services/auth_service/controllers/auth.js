@@ -345,7 +345,6 @@ export async function logout(req, reply) {
 			"1", // to modify ?
 			{ EX: ACCESS_TOKEN_TTL}
 		);
-
 		reply.code(204).send();
 	} catch (error) {
 		return reply.code(500).send({

@@ -6,6 +6,7 @@ import NavBar from "../components/NavBar";
 import FormButton from "../components/FormButton";
 import InputField from "../components/InputField";
 import { sendData } from "../sendData";
+import { validatePassword } from "../utils/validators.js";
 
 export default function Profile() {
 	const { currentUser, updateUser, logout } = useContext(AuthContext);
@@ -19,6 +20,8 @@ export default function Profile() {
 	const displayNameRef = useRef(null);
 	const emailRef = useRef(null);
 	const avatarRef = useRef(null);
+	const currentPasswordRef = useRef(null);
+	const newPasswordRef = useRef(null);
 
 	const token = localStorage.getItem("token");
 	console.log("token: ", token);
@@ -69,22 +72,56 @@ export default function Profile() {
 		const body = {};
 		const dn = displayNameRef.current?.value.trim();
 		const em = emailRef.current?.value.trim();
+		const currentPassword = currentPasswordRef.current?.value.trim();
+		const newPassword = newPasswordRef.current?.value.trim();
+		console.log("currentPassword: \n", currentPassword);
+		console.log("newPassword: \n", newPassword);
+
 		if (dn) body.displayName = dn;
 		if (em) body.email = em;
-		const res = await api("/api/v1/players/me", {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(body),
-		});
-		if (res.success) {
-			const { success, ...data } = res;
-			setProfile(data);
-			updateUser({ ...currentUser, displayName: data.displayName, email: data.email });
-			setEditing(false);
-			setMsg("Profile updated");
-		} else {
-			setError(res.message);
+
+		/* ---------- PASSWORD CHANGE ---------- */
+		if (currentPassword || newPassword) {
+			if (!currentPassword || !newPassword) {
+				setError("Both current and new password are required");
+			}
+			if (!validatePassword(currentPassword) || !validatePassword(newPassword)) {
+				setError("New password is not valid");
+			}
+
+			const passwordResponse = await sendData("/api/v1/auth/password/change", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({ currentPassword, newPassword })
+			});
+			console.log("CHANGE PASSWORD RES: ", passwordResponse);
+
+			if (passwordResponse.success) {
+				setMsg("Password changed successfully");
+			} else {
+				setError(passwordResponse?.message || "Failed to change password");
+			}
 		}
+		/* ---------- PROFILE UPDATE ---------- */
+		if (Object.keys(body).length > 0) {
+			const res = await api("/api/v1/players/me", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			});
+			if (res.success) {
+				const { success, ...data } = res;
+				setProfile(data);
+				updateUser({ ...currentUser, displayName: data.displayName, email: data.email });
+				setMsg("Profile updated");
+			} else {
+				setError(res.message);
+			}
+		}
+		setEditing(false);
 	};
 
 	const handleAvatarUpload = async () => {
@@ -181,8 +218,8 @@ export default function Profile() {
 			<div className="max-w-lg mx-auto p-6 mt-6">
 				<h1 className="text-xl font-bold mb-4">Profile</h1>
 
-				{msg && <p className="msg-success mb-3">{msg}</p>}
-				{error && <p className="msg-error mb-3">{error}</p>}
+				{msg && <p className="msg-success mb-3 text-green-500">{msg}</p>}
+				{error && <p className="msg-error mb-3 text-red-500">{error}</p>}
 
 				{/* Avatar */}
 				<div className="flex items-center gap-4 mb-6">
@@ -223,6 +260,10 @@ export default function Profile() {
 							<InputField label="Display Name" inputRef={displayNameRef} placeholder={profile?.displayName} />
 							<div className="mt-3"></div>
 							<InputField label="Email" type="email" inputRef={emailRef} placeholder={profile?.email} />
+							<div className="mt-3"></div>
+							<InputField label="Current password" type="password" inputRef={currentPasswordRef} placeholder="current password" />
+							<div className="mt-3"></div>
+							<InputField label="New password" type="password" inputRef={newPasswordRef} placeholder="new password" />
 							<div className="flex gap-2 mt-4">
 								<FormButton onClick={handleSave}>Save</FormButton>
 								<FormButton variant="secondary" onClick={() => setEditing(false)}>Cancel</FormButton>

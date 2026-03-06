@@ -17,7 +17,7 @@ class ListSessionsResponse {
 	 * @param {Object} data
 	 * @returns {ListSessionsResponse}
 	 */
-	static from(data) {
+	static fromObject(data) {
 		return new ListSessionsResponse(data);
 	}
 

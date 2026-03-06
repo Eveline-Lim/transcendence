@@ -16,7 +16,7 @@ class TwoFactorSetup {
 	 * @param {Object} data
 	 * @returns {TwoFactorSetup}
 	 */
-	static from(data) {
+	static fromObject(data) {
 		return new TwoFactorSetup(data);
 	}
 

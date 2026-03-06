@@ -26,7 +26,7 @@ class Session {
 	 * @param {Object} data
 	 * @returns {Session}
 	 */
-	static from(data) {
+	static fromObject(data) {
 		return new Session(data);
 	}
 

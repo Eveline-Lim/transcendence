@@ -14,7 +14,7 @@ class ForgotPasswordRequest {
 	 * @param {Object} data
 	 * @returns {ForgotPasswordRequest}
 	 */
-	static from(data) {
+	static fromObject(data) {
 		return new ForgotPasswordRequest(data);
 	}
 

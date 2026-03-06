@@ -14,7 +14,7 @@ class RevokeAllSessionsResponse {
 	 * @param {Object} data
 	 * @returns {RevokeAllSessionsResponse}
 	 */
-	static from(data) {
+	static fromObject(data) {
 		return new RevokeAllSessionsResponse(data);
 	}
 
