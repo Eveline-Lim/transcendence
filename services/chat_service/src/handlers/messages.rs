@@ -36,10 +36,13 @@ pub async fn get_messages(
 /// POST /chat/messages — send a message to a friend.
 pub async fn send_message(
     State(state): State<Arc<AppState>>,
+    header: HeaderMap,
     Json(body): Json<SendMessageRequest>,
 ) -> impl IntoResponse {
-    // TODO: extract caller identity from X-User-Id header
-    let sender_id = Uuid::nil(); // placeholder
+    let Some(sender_id) = extract_caller_id(&header) else {
+        return (StatusCode::UNAUTHORIZED, Json(Vec::<ChatMessage>::new())).into_response();
+    };
+    //TODO: check if they are friend
     let msg = ChatMessage {
         message_id: Uuid::new_v4(),
         sender_id,
@@ -52,7 +55,7 @@ pub async fn send_message(
     state.messages.entry(key).or_default().push(msg.clone());
     let _ = state.tx.send(msg.clone());
 
-    (StatusCode::OK, Json(msg))
+    (StatusCode::OK, Json(msg)).into_response()
 }
 
 #[cfg(test)]
@@ -131,7 +134,11 @@ mod tests {
             content: "Hello!".to_string(),
             sent_at: "2026-03-02T00:00:00Z".to_string(),
         };
-        state.messages.entry(key).or_default().push(expected_msg.clone());
+        state
+            .messages
+            .entry(key)
+            .or_default()
+            .push(expected_msg.clone());
 
         let app = build_app(state);
 
