@@ -27,7 +27,6 @@ pub async fn ws_handler(
     Query(params): Query<TicketQuery>,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
-    // Consume the ticket atomically: remove returns Some only if it existed.
     let entry = state.tickets.remove(&params.ticket);
 
     let user_id = match entry {

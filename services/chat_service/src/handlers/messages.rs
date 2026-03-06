@@ -11,6 +11,7 @@ use uuid::Uuid;
 use crate::{
     handlers::extract_caller_id,
     models::SendMessageRequest,
+    player_client,
     state::{AppState, ChatMessage},
     utils::now_timestamp,
 };
@@ -42,7 +43,22 @@ pub async fn send_message(
     let Some(sender_id) = extract_caller_id(&header) else {
         return (StatusCode::UNAUTHORIZED, Json(Vec::<ChatMessage>::new())).into_response();
     };
-    //TODO: check if they are friend
+
+    if !player_client::are_friends(
+        &state.http_client,
+        &state.player_service_url,
+        sender_id,
+        body.recipient_id,
+    )
+    .await
+    {
+        return (
+            StatusCode::FORBIDDEN,
+            "You can only send messages to friends",
+        )
+            .into_response();
+    }
+
     let msg = ChatMessage {
         message_id: Uuid::new_v4(),
         sender_id,
@@ -61,15 +77,53 @@ pub async fn send_message(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{Router, body::Body, http::Request, routing::get};
+    use axum::{
+        Router,
+        body::Body,
+        http::Request,
+        routing::{get, post},
+    };
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
     fn build_app(state: Arc<AppState>) -> Router {
         Router::new()
             .route("/chat/messages/{user_id}", get(get_messages))
+            .route("/chat/messages", post(send_message))
             .with_state(state)
     }
+
+    // ── Mock player service ───────────────────────────────────────────────────
+
+    /// Spins up a minimal axum server that responds to
+    /// `GET /players/:user_id/friends/:other_id` → `{ "areFriends": bool }`
+    /// mirroring the Player Service `checkFriendship` endpoint.
+    /// `friend_ids` is the set of UUIDs considered friends of any caller.
+    async fn start_mock_player_service(friend_ids: Vec<Uuid>) -> String {
+        use axum::{extract::Path as AxumPath, routing::get as axum_get};
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        let app =
+            axum::Router::new().route(
+                "/players/{user_id}/friends/{other_id}",
+                axum_get(move |AxumPath((_, other_id)): AxumPath<(Uuid, Uuid)>| {
+                    let ids = friend_ids.clone();
+                    async move {
+                        axum::Json(serde_json::json!({ "areFriends": ids.contains(&other_id) }))
+                    }
+                }),
+            );
+
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+
+        format!("http://{}", addr)
+    }
+
+    // ── GET /chat/messages/:user_id tests ─────────────────────────────────────
 
     /// 401 when the X-User-Id header is absent.
     #[tokio::test]
@@ -161,5 +215,110 @@ mod tests {
         assert_eq!(msgs[0].message_id, expected_msg.message_id);
         assert_eq!(msgs[0].sender_id, caller_id);
         assert_eq!(msgs[0].content, "Hello!");
+    }
+
+    // ── POST /chat/messages tests ─────────────────────────────────────────────
+
+    /// 401 when the X-User-Id header is absent.
+    #[tokio::test]
+    async fn test_send_message_missing_header_returns_unauthorized() {
+        let mock_url = start_mock_player_service(vec![]).await;
+        let state = Arc::new(AppState::new_with_player_service_url(mock_url));
+        let app = build_app(state);
+
+        let recipient_id = Uuid::new_v4();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/chat/messages")
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "recipient_id": recipient_id,
+                            "content": "Hi"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    /// 403 when the recipient is not in the caller's friends list.
+    #[tokio::test]
+    async fn test_send_message_to_non_friend_returns_forbidden() {
+        let mock_url = start_mock_player_service(vec![]).await; // empty friends list
+        let state = Arc::new(AppState::new_with_player_service_url(mock_url));
+        let app = build_app(state);
+
+        let sender_id = Uuid::new_v4();
+        let recipient_id = Uuid::new_v4();
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/chat/messages")
+                    .header("Content-Type", "application/json")
+                    .header("X-User-Id", sender_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "recipient_id": recipient_id,
+                            "content": "Hi"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    /// 200 when the recipient is a friend; message is persisted and returned.
+    #[tokio::test]
+    async fn test_send_message_to_friend_returns_ok_and_persists() {
+        let sender_id = Uuid::new_v4();
+        let recipient_id = Uuid::new_v4();
+
+        let mock_url = start_mock_player_service(vec![recipient_id]).await;
+        let state = Arc::new(AppState::new_with_player_service_url(mock_url));
+        let app = build_app(Arc::clone(&state));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/chat/messages")
+                    .header("Content-Type", "application/json")
+                    .header("X-User-Id", sender_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "recipient_id": recipient_id,
+                            "content": "Hello friend!"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let msg: ChatMessage = serde_json::from_slice(&body).unwrap();
+        assert_eq!(msg.sender_id, sender_id);
+        assert_eq!(msg.recipient_id, recipient_id);
+        assert_eq!(msg.content, "Hello friend!");
+
+        // Message must be persisted in the in-memory store.
+        let key = AppState::conv_key(sender_id, recipient_id);
+        assert_eq!(state.messages.get(&key).unwrap().len(), 1);
     }
 }

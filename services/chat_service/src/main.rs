@@ -7,6 +7,7 @@ use axum::{
 
 mod handlers;
 mod models;
+mod player_client;
 mod state;
 mod utils;
 
