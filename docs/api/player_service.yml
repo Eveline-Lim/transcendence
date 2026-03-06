@@ -416,6 +416,48 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /players/{userId}/friends/{otherId}:
+    get:
+      tags:
+        - Friends
+      summary: Check friendship status
+      description: Check whether two players are friends with each other
+      operationId: checkFriendship
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the first player
+          schema:
+            type: string
+            format: uuid
+        - name: otherId
+          in: path
+          required: true
+          description: ID of the second player
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Friendship status returned
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - areFriends
+                properties:
+                  areFriends:
+                    type: boolean
+                    description: Whether the two players are friends
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /players/me/blocked:
     get:
       tags:
