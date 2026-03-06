@@ -39,6 +39,38 @@ pub async fn ws_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, state, user_id))
 }
 
+async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, user_id: Uuid) {
+    // Create a personal inbox channel for this user and register it so that
+    // `send_message` can deliver messages directly to this socket.
+    let (tx, mut rx) = mpsc::channel::<ChatMessage>(32);
+    state.ws_senders.insert(user_id, tx);
+
+    loop {
+        tokio::select! {
+            // A message was routed to this user — forward it to the WS client.
+            Some(msg) = rx.recv() => {
+                let text = serde_json::to_string(&msg).unwrap_or_default();
+                if socket.send(Message::Text(text.into())).await.is_err() {
+                    break;
+                }
+            }
+            // Handle any frame from the client.
+            // `None`        — client closed the connection cleanly.
+            // `Some(Err(_))`— connection dropped / network error.
+            // `Some(Ok(Message::Close(_)))` — explicit WS close frame.
+            result = socket.recv() => {
+                match result {
+                    Some(Ok(Message::Close(_))) | None | Some(Err(_)) => break,
+                    _ => {} // ping / pong / text from client — ignore for now
+                }
+            }
+        }
+    }
+
+    // Always clean up so stale senders don't linger after the socket closes.
+    state.ws_senders.remove(&user_id);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -226,36 +258,4 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
     }
-}
-
-async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, user_id: Uuid) {
-    // Create a personal inbox channel for this user and register it so that
-    // `send_message` can deliver messages directly to this socket.
-    let (tx, mut rx) = mpsc::channel::<ChatMessage>(32);
-    state.ws_senders.insert(user_id, tx);
-
-    loop {
-        tokio::select! {
-            // A message was routed to this user — forward it to the WS client.
-            Some(msg) = rx.recv() => {
-                let text = serde_json::to_string(&msg).unwrap_or_default();
-                if socket.send(Message::Text(text.into())).await.is_err() {
-                    break;
-                }
-            }
-            // Handle any frame from the client.
-            // `None`        — client closed the connection cleanly.
-            // `Some(Err(_))`— connection dropped / network error.
-            // `Some(Ok(Message::Close(_)))` — explicit WS close frame.
-            result = socket.recv() => {
-                match result {
-                    Some(Ok(Message::Close(_))) | None | Some(Err(_)) => break,
-                    _ => {} // ping / pong / text from client — ignore for now
-                }
-            }
-        }
-    }
-
-    // Always clean up so stale senders don't linger after the socket closes.
-    state.ws_senders.remove(&user_id);
 }
