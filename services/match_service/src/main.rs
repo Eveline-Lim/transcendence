@@ -35,6 +35,8 @@ mod tests {
     use futures_util::{SinkExt, StreamExt};
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message;
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    use uuid::Uuid;
 
     use match_service::messages::*;
 
@@ -56,7 +58,17 @@ mod tests {
         addr: &str,
     ) -> tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>
     {
-        let (ws, _) = connect_async(format!("ws://{}", addr)).await.unwrap();
+        let user_id = Uuid::new_v4();
+        let mut req = format!("ws://{}", addr).into_client_request().unwrap();
+        req.headers_mut()
+            .insert("X-User-Id", user_id.to_string().parse().unwrap());
+        req.headers_mut().insert(
+            "X-Username",
+            format!("test-{}", &user_id.to_string()[..8])
+                .parse()
+                .unwrap(),
+        );
+        let (ws, _) = connect_async(req).await.unwrap();
         ws
     }
 

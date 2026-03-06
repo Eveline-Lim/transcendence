@@ -13,19 +13,16 @@ use crate::waiting_player::{PlayerInfo, PlayerInfoFactory, WaitingPlayer};
 
 /// Extract player information from API Gateway headers.
 ///
-/// **Production Pattern**: API Gateway validates JWT and passes claims via headers:
-/// - `X-User-Id`: Player UUID (validated by gateway)
-/// - `X-Username`: Player username
-/// - `X-Avatar-Url`: Player avatar URL (optional)
+/// **Security model**: the API Gateway validates the JWT and injects identity
+/// headers before forwarding the WebSocket upgrade to this service:
+/// - `X-User-Id`   – player UUID (mandatory; connection rejected with `401` if absent)
+/// - `X-Username`  – display name (optional)
+/// - `X-Avatar-Url`– avatar URL (optional)
 ///
-/// **Why this approach?**
-/// - Centralized auth at API Gateway (single point of validation)
-/// - Backend services are simpler and don't need JWT secrets
-/// - Gateway can enforce consistent auth policies across all services
-/// - Services behind gateway are not exposed to public internet
-///
-/// **Development Mode**: When no headers are present (direct connection),
-/// generates test users automatically.
+/// Because the match service is not exposed to the public internet (only the
+/// gateway can reach it), these headers can be trusted as-is.
+/// Connections that arrive without `X-User-Id` — e.g. attempts to bypass the
+/// gateway — are rejected during the HTTP upgrade handshake.
 pub async fn extract_player_from_handshake(
     stream: TcpStream,
 ) -> Result<(tokio_tungstenite::WebSocketStream<TcpStream>, PlayerInfo), String> {
@@ -261,6 +258,9 @@ mod tests {
         assert_eq!(info.avatar_url, None);
     }
 
+    /// Connection without `X-User-Id` must be rejected during the WS upgrade
+    /// (the handshake callback returns HTTP 401 and `extract_player_from_handshake`
+    /// propagates the error).
     #[tokio::test]
     async fn extract_player_with_no_headers() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -284,18 +284,23 @@ mod tests {
         client.write_all(handshake.as_bytes()).await.unwrap();
 
         let mut buf = vec![0u8; 1024];
-        let _ = client.read(&mut buf).await.unwrap();
+        let n = client.read(&mut buf).await.unwrap();
+
+        // Server must reply with 401, not 101
+        let response = String::from_utf8_lossy(&buf[..n]);
+        assert!(
+            response.contains("401"),
+            "expected 401 Unauthorized, got: {response}"
+        );
 
         let result = server.await.unwrap();
-        assert!(result.is_ok());
-
-        let (_, info) = result.unwrap();
-
-        assert!(Uuid::parse_str(&info.id.to_string()).is_ok());
-        assert!(info.username.starts_with("Player-"));
-        assert_eq!(info.avatar_url, None);
+        assert!(
+            result.is_err(),
+            "expected Err when X-User-Id is absent, got Ok"
+        );
     }
 
+    /// A malformed (non-UUID) `X-User-Id` header must also be rejected with 401.
     #[tokio::test]
     async fn extract_player_with_invalid_uuid() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -321,15 +326,19 @@ mod tests {
         client.write_all(handshake.as_bytes()).await.unwrap();
 
         let mut buf = vec![0u8; 1024];
-        let _ = client.read(&mut buf).await.unwrap();
+        let n = client.read(&mut buf).await.unwrap();
+
+        let response = String::from_utf8_lossy(&buf[..n]);
+        assert!(
+            response.contains("401"),
+            "expected 401 Unauthorized, got: {response}"
+        );
 
         let result = server.await.unwrap();
-        assert!(result.is_ok());
-
-        let (_, info) = result.unwrap();
-
-        assert!(Uuid::parse_str(&info.id.to_string()).is_ok());
-        assert_eq!(info.username, "charlie");
+        assert!(
+            result.is_err(),
+            "expected Err for invalid UUID in X-User-Id, got Ok"
+        );
     }
 
     #[tokio::test]
@@ -346,7 +355,7 @@ mod tests {
 
         let mut client = tokio::net::TcpStream::connect(addr).await.unwrap();
 
-        let test_uuid = "772e9622-g40d-63f6-c938-668877662222";
+        let test_uuid = "772fa622-a40d-43f6-a938-668877662222";
         let handshake = format!(
             "GET / HTTP/1.1\r\n\
              Host: localhost\r\n\
