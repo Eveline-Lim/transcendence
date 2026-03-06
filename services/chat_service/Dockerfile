@@ -10,7 +10,7 @@ RUN apt-get update && \
 
 # Cache dependency compilation: copy manifests first, create a dummy main,
 # build once, then replace with the real source.
-COPY Cargo.toml Cargo.lock* ./
+COPY Cargo.toml Cargo.lock ./
 RUN mkdir src && \
     echo 'fn main() {}' > src/main.rs && \
     cargo build --release && \
