@@ -47,3 +47,92 @@ pub async fn are_friends(
         _ => false,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{Json, Router, extract::Path, routing::get};
+
+    /// Spin up a mock player service that returns `areFriends: true` for specified pairs.
+    async fn start_mock_service(friend_pairs: Vec<(Uuid, Uuid)>) -> String {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        let app = Router::new().route(
+            "/players/{user_id}/friends/{other_id}",
+            get(move |Path((user_id, other_id)): Path<(Uuid, Uuid)>| {
+                let pairs = friend_pairs.clone();
+                async move {
+                    let are_friends = pairs.contains(&(user_id, other_id));
+                    Json(serde_json::json!({ "areFriends": are_friends }))
+                }
+            }),
+        );
+
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+
+        format!("http://{}", addr)
+    }
+
+    #[tokio::test]
+    async fn test_are_friends_returns_true_when_friends() {
+        let user_a = Uuid::new_v4();
+        let user_b = Uuid::new_v4();
+        let url = start_mock_service(vec![(user_a, user_b)]).await;
+
+        let client = reqwest::Client::new();
+        let result = are_friends(&client, &url, user_a, user_b).await;
+
+        assert!(result);
+    }
+
+    #[tokio::test]
+    async fn test_are_friends_returns_false_when_not_friends() {
+        let user_a = Uuid::new_v4();
+        let user_b = Uuid::new_v4();
+        let url = start_mock_service(vec![]).await; // empty list = no friends
+
+        let client = reqwest::Client::new();
+        let result = are_friends(&client, &url, user_a, user_b).await;
+
+        assert!(!result);
+    }
+
+    #[tokio::test]
+    async fn test_are_friends_returns_false_on_unreachable_service() {
+        let client = reqwest::Client::new();
+        // Use a port that's not listening
+        let result = are_friends(
+            &client,
+            "http://127.0.0.1:1",
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+        )
+        .await;
+
+        assert!(!result);
+    }
+
+    #[tokio::test]
+    async fn test_are_friends_returns_false_on_malformed_response() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        let app = Router::new().route(
+            "/players/{user_id}/friends/{other_id}",
+            get(|| async { "not json" }),
+        );
+
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+
+        let url = format!("http://{}", addr);
+        let client = reqwest::Client::new();
+        let result = are_friends(&client, &url, Uuid::new_v4(), Uuid::new_v4()).await;
+
+        assert!(!result);
+    }
+}

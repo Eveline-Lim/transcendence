@@ -31,6 +31,12 @@ pub struct AppState {
     pub player_service_url: String,
 }
 
+impl Default for AppState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AppState {
     pub fn new() -> Self {
         let player_service_url = std::env::var("PLAYER_SERVICE_URL")
@@ -45,6 +51,7 @@ impl AppState {
     }
 
     /// Builds state pointing at a custom player-service URL — useful in tests.
+    #[cfg(test)]
     pub fn new_with_player_service_url(player_service_url: String) -> Self {
         Self {
             messages: DashMap::new(),
@@ -58,5 +65,44 @@ impl AppState {
     /// Canonical key so (a, b) and (b, a) map to the same conversation.
     pub fn conv_key(a: Uuid, b: Uuid) -> (Uuid, Uuid) {
         if a < b { (a, b) } else { (b, a) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_conv_key_order_independent() {
+        let a = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+        let b = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
+
+        assert_eq!(AppState::conv_key(a, b), AppState::conv_key(b, a));
+    }
+
+    #[test]
+    fn test_conv_key_returns_smaller_first() {
+        let smaller = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+        let larger = Uuid::parse_str("ffffffff-ffff-ffff-ffff-ffffffffffff").unwrap();
+
+        let (first, second) = AppState::conv_key(larger, smaller);
+        assert_eq!(first, smaller);
+        assert_eq!(second, larger);
+    }
+
+    #[test]
+    fn test_conv_key_same_uuid() {
+        let id = Uuid::new_v4();
+        let (first, second) = AppState::conv_key(id, id);
+        assert_eq!(first, id);
+        assert_eq!(second, id);
+    }
+
+    #[test]
+    fn test_default_impl() {
+        let state = AppState::default();
+        assert!(state.messages.is_empty());
+        assert!(state.ws_senders.is_empty());
+        assert!(state.tickets.is_empty());
     }
 }

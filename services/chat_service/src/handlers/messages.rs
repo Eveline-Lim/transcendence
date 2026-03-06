@@ -23,7 +23,11 @@ pub async fn get_messages(
     header: HeaderMap,
 ) -> impl IntoResponse {
     let Some(caller_id) = extract_caller_id(&header) else {
-        return (StatusCode::UNAUTHORIZED, Json(Vec::<ChatMessage>::new())).into_response();
+        return (
+            StatusCode::UNAUTHORIZED,
+            "Missing or invalid X-User-Id header",
+        )
+            .into_response();
     };
     let key = AppState::conv_key(caller_id, other_id);
     let msgs = state
@@ -34,6 +38,8 @@ pub async fn get_messages(
     (StatusCode::OK, Json(msgs)).into_response()
 }
 
+const MAX_MESSAGE_LENGTH: usize = 4096;
+
 /// POST /chat/messages — send a message to a friend.
 pub async fn send_message(
     State(state): State<Arc<AppState>>,
@@ -41,8 +47,25 @@ pub async fn send_message(
     Json(body): Json<SendMessageRequest>,
 ) -> impl IntoResponse {
     let Some(sender_id) = extract_caller_id(&header) else {
-        return (StatusCode::UNAUTHORIZED, Json(Vec::<ChatMessage>::new())).into_response();
+        return (
+            StatusCode::UNAUTHORIZED,
+            "Missing or invalid X-User-Id header",
+        )
+            .into_response();
     };
+
+    // Validate message content
+    let content = body.content.trim();
+    if content.is_empty() {
+        return (StatusCode::BAD_REQUEST, "Message content cannot be empty").into_response();
+    }
+    if content.len() > MAX_MESSAGE_LENGTH {
+        return (
+            StatusCode::BAD_REQUEST,
+            "Message content exceeds maximum length",
+        )
+            .into_response();
+    }
 
     if !player_client::are_friends(
         &state.http_client,
@@ -63,7 +86,7 @@ pub async fn send_message(
         message_id: Uuid::new_v4(),
         sender_id,
         recipient_id: body.recipient_id,
-        content: body.content,
+        content: content.to_string(),
         sent_at: now_timestamp(),
     };
 
@@ -323,6 +346,141 @@ mod tests {
         // Message must be persisted in the in-memory store.
         let key = AppState::conv_key(sender_id, recipient_id);
         assert_eq!(state.messages.get(&key).unwrap().len(), 1);
+    }
+
+    // ── Content validation tests ───────────────────────────────────────────
+
+    /// 400 when the message content is empty.
+    #[tokio::test]
+    async fn test_send_message_empty_content_returns_bad_request() {
+        let sender_id = Uuid::new_v4();
+        let recipient_id = Uuid::new_v4();
+
+        let mock_url = start_mock_player_service(vec![recipient_id]).await;
+        let state = Arc::new(AppState::new_with_player_service_url(mock_url));
+        let app = build_app(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/chat/messages")
+                    .header("Content-Type", "application/json")
+                    .header("X-User-Id", sender_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "recipient_id": recipient_id,
+                            "content": ""
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    /// 400 when the message content is only whitespace.
+    #[tokio::test]
+    async fn test_send_message_whitespace_only_returns_bad_request() {
+        let sender_id = Uuid::new_v4();
+        let recipient_id = Uuid::new_v4();
+
+        let mock_url = start_mock_player_service(vec![recipient_id]).await;
+        let state = Arc::new(AppState::new_with_player_service_url(mock_url));
+        let app = build_app(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/chat/messages")
+                    .header("Content-Type", "application/json")
+                    .header("X-User-Id", sender_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "recipient_id": recipient_id,
+                            "content": "   \n\t  "
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    /// 400 when the message content exceeds max length.
+    #[tokio::test]
+    async fn test_send_message_too_long_returns_bad_request() {
+        let sender_id = Uuid::new_v4();
+        let recipient_id = Uuid::new_v4();
+
+        let mock_url = start_mock_player_service(vec![recipient_id]).await;
+        let state = Arc::new(AppState::new_with_player_service_url(mock_url));
+        let app = build_app(state);
+
+        let too_long = "x".repeat(MAX_MESSAGE_LENGTH + 1);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/chat/messages")
+                    .header("Content-Type", "application/json")
+                    .header("X-User-Id", sender_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "recipient_id": recipient_id,
+                            "content": too_long
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    /// Message content is trimmed before storage.
+    #[tokio::test]
+    async fn test_send_message_trims_whitespace() {
+        let sender_id = Uuid::new_v4();
+        let recipient_id = Uuid::new_v4();
+
+        let mock_url = start_mock_player_service(vec![recipient_id]).await;
+        let state = Arc::new(AppState::new_with_player_service_url(mock_url));
+        let app = build_app(Arc::clone(&state));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/chat/messages")
+                    .header("Content-Type", "application/json")
+                    .header("X-User-Id", sender_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "recipient_id": recipient_id,
+                            "content": "  hello world  "
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let msg: ChatMessage = serde_json::from_slice(&body).unwrap();
+        assert_eq!(msg.content, "hello world");
     }
 
     // ── WS delivery tests ──────────────────────────────────────────────────
