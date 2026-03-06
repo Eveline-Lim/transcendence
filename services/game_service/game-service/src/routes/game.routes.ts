@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { redis } from '../services/RedisInstance'
 import { RedisService } from '../services/RedisService';
 import { IS_TEST } from '../config/env';
+import { extractUserId } from '../middleware/auth.middleware';
 
 /* ------------------------------------------------- */
 
@@ -17,10 +18,11 @@ import { IS_TEST } from '../config/env';
 
 export const	gameRouter = Router();
 
-gameRouter.post('/create-game', async (req, res) => {
+gameRouter.post('/create-game', extractUserId, async (req, res) => {
 	
 	if (!redis) return res.status(503).json({error: 'Redis unavailable'});
 
+	const userId = req.userId as string; // authenticated user from API gateway
 	const { player1_id, player2_id } = req.body;
 
 	if (!player1_id || !player2_id) {

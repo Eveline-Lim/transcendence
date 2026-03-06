@@ -46,9 +46,15 @@ export class WebsocketService {
 	}
 
 	private handleJoinGame(socket: Socket) {
-		socket.on('join-game', async (data: { player_id: string}) => {
+		socket.on('join-game', async () => {
 			try {
-				const {player_id} = data; //ID player who connect
+				// User ID and username injected by the API gateway via X-User-Id / X-Username headers
+				const player_id = socket.handshake.headers['x-user-id'] as string;
+				const username   = socket.handshake.headers['x-username'] as string;
+				if (!player_id) {
+					socket.emit('error', { message: 'Unauthorized: missing X-User-Id header' });
+					return;
+				}
 
 				const gameId = await redis!.getPlayerGame(player_id);
 				if (!gameId) {
@@ -97,9 +103,13 @@ export class WebsocketService {
 	}
 
 	private handlePlayerInput(socket: Socket) {
-		socket.on('paddle-input', async (data: {player_id: string, action: string}) => {
+		socket.on('paddle-input', async (data: { action: string}) => {
 			try {
-				const { player_id, action } = data;
+				// User ID and username injected by the API gateway via X-User-Id / X-Username headers
+				const player_id = socket.handshake.headers['x-user-id'] as string;
+				const username   = socket.handshake.headers['x-username'] as string;
+				if (!player_id) return;
+				const { action } = data;
 
 				const gameId = await redis!.getPlayerGame(player_id);
 				if (!gameId) return;
