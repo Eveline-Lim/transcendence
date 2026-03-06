@@ -9,9 +9,10 @@ use axum::{
     response::IntoResponse,
 };
 use serde::Deserialize;
+use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::state::AppState;
+use crate::state::{AppState, ChatMessage};
 
 #[derive(Deserialize)]
 pub struct TicketQuery {
@@ -152,24 +153,109 @@ mod tests {
         // Ticket is single-use: must be gone from the store.
         assert!(!state.tickets.contains_key(&ticket));
     }
+
+    /// Helper: perform a full WS upgrade and keep the TcpStream alive.
+    /// Returns (stream, user_id) so the caller can close the connection later.
+    async fn connect_ws(addr: std::net::SocketAddr, state: &Arc<AppState>) -> (TcpStream, Uuid) {
+        let user_id = Uuid::new_v4();
+        let ticket = Uuid::new_v4();
+        state
+            .tickets
+            .insert(ticket, (user_id, Instant::now() + Duration::from_secs(10)));
+
+        let mut stream = TcpStream::connect(addr).await.unwrap();
+        let request = format!(
+            "GET /ws/chat?ticket={ticket} HTTP/1.1\r\n\
+             Host: localhost\r\n\
+             Connection: Upgrade\r\n\
+             Upgrade: websocket\r\n\
+             Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
+             Sec-WebSocket-Version: 13\r\n\
+             \r\n"
+        );
+        stream.write_all(request.as_bytes()).await.unwrap();
+        // Consume the 101 response.
+        let mut buf = vec![0u8; 1024];
+        let _ = stream.read(&mut buf).await.unwrap();
+
+        (stream, user_id)
+    }
+
+    /// After a successful upgrade the user's sender is registered in ws_senders.
+    #[tokio::test]
+    async fn test_ws_registers_sender_on_connect() {
+        let state = Arc::new(AppState::new());
+        let addr = start_server(Arc::clone(&state)).await;
+
+        let (_stream, user_id) = connect_ws(addr, &state).await;
+
+        // Give handle_socket a moment to insert into ws_senders.
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        assert!(
+            state.ws_senders.contains_key(&user_id),
+            "ws_senders should contain the user after connect"
+        );
+    }
+
+    /// After the socket closes the sender is removed from ws_senders.
+    #[tokio::test]
+    async fn test_ws_removes_sender_on_disconnect() {
+        let state = Arc::new(AppState::new());
+        let addr = start_server(Arc::clone(&state)).await;
+
+        let (stream, user_id) = connect_ws(addr, &state).await;
+
+        // Wait for registration.
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        assert!(state.ws_senders.contains_key(&user_id));
+
+        // Drop the stream to simulate a client disconnect.
+        drop(stream);
+
+        // Poll until handle_socket detects the close and removes the entry,
+        // giving up after 2 seconds.
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            if !state.ws_senders.contains_key(&user_id) {
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "ws_senders was not cleaned up within 2 s"
+            );
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    }
 }
 
-async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, _user_id: Uuid) {
-    let mut rx = state.tx.subscribe();
+async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, user_id: Uuid) {
+    // Create a personal inbox channel for this user and register it so that
+    // `send_message` can deliver messages directly to this socket.
+    let (tx, mut rx) = mpsc::channel::<ChatMessage>(32);
+    state.ws_senders.insert(user_id, tx);
+
     loop {
         tokio::select! {
-            // Forward incoming broadcast messages to this client
-            Ok(msg) = rx.recv() => {
+            // A message was routed to this user — forward it to the WS client.
+            Some(msg) = rx.recv() => {
                 let text = serde_json::to_string(&msg).unwrap_or_default();
                 if socket.send(Message::Text(text.into())).await.is_err() {
                     break;
                 }
             }
-            // Handle messages from the client (ping/close)
-            Some(Ok(msg)) = socket.recv() => {
-                if let Message::Close(_) = msg { break; }
+            // Handle any frame from the client.
+            // `None`        — client closed the connection cleanly.
+            // `Some(Err(_))`— connection dropped / network error.
+            // `Some(Ok(Message::Close(_)))` — explicit WS close frame.
+            result = socket.recv() => {
+                match result {
+                    Some(Ok(Message::Close(_))) | None | Some(Err(_)) => break,
+                    _ => {} // ping / pong / text from client — ignore for now
+                }
             }
-            else => break,
         }
     }
+
+    // Always clean up so stale senders don't linger after the socket closes.
+    state.ws_senders.remove(&user_id);
 }

@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
-use tokio::sync::broadcast;
+use tokio::sync::mpsc;
 use uuid::Uuid;
 
 /// A chat message stored in memory.
@@ -19,8 +19,9 @@ pub struct ChatMessage {
 pub struct AppState {
     /// In-memory message store: key = sorted pair of user UUIDs, value = messages.
     pub messages: DashMap<(Uuid, Uuid), Vec<ChatMessage>>,
-    /// Broadcast channel: each connected WS client subscribes to receive messages.
-    pub tx: broadcast::Sender<ChatMessage>,
+    /// Per-user WebSocket inbox. Inserted on WS connect, removed on disconnect.
+    /// Sending to an entry delivers a message only to that user's open socket.
+    pub ws_senders: DashMap<Uuid, mpsc::Sender<ChatMessage>>,
     /// Short-lived WS connection tickets: ticket UUID → (user_id, expiry).
     pub tickets: DashMap<Uuid, (Uuid, Instant)>,
     /// Shared HTTP client for outbound service calls (keep-alive, connection pool).
@@ -32,12 +33,11 @@ pub struct AppState {
 
 impl AppState {
     pub fn new() -> Self {
-        let (tx, _) = broadcast::channel(100);
         let player_service_url = std::env::var("PLAYER_SERVICE_URL")
             .unwrap_or_else(|_| "http://player-service:3001/api/v1".to_string());
         Self {
             messages: DashMap::new(),
-            tx,
+            ws_senders: DashMap::new(),
             tickets: DashMap::new(),
             http_client: reqwest::Client::new(),
             player_service_url,
@@ -46,10 +46,9 @@ impl AppState {
 
     /// Builds state pointing at a custom player-service URL — useful in tests.
     pub fn new_with_player_service_url(player_service_url: String) -> Self {
-        let (tx, _) = broadcast::channel(100);
         Self {
             messages: DashMap::new(),
-            tx,
+            ws_senders: DashMap::new(),
             tickets: DashMap::new(),
             http_client: reqwest::Client::new(),
             player_service_url,

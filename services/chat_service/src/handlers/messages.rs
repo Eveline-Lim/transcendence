@@ -69,7 +69,10 @@ pub async fn send_message(
 
     let key = AppState::conv_key(sender_id, msg.recipient_id);
     state.messages.entry(key).or_default().push(msg.clone());
-    let _ = state.tx.send(msg.clone());
+
+    if let Some(tx) = state.ws_senders.get(&msg.recipient_id) {
+        let _ = tx.send(msg.clone()).await;
+    }
 
     (StatusCode::OK, Json(msg)).into_response()
 }
@@ -320,5 +323,133 @@ mod tests {
         // Message must be persisted in the in-memory store.
         let key = AppState::conv_key(sender_id, recipient_id);
         assert_eq!(state.messages.get(&key).unwrap().len(), 1);
+    }
+
+    // ── WS delivery tests ──────────────────────────────────────────────────
+
+    /// POST /chat/messages pushes the message to the recipient's mpsc inbox
+    /// when they have an open WebSocket connection.
+    #[tokio::test]
+    async fn test_send_message_delivers_to_online_recipient() {
+        let sender_id = Uuid::new_v4();
+        let recipient_id = Uuid::new_v4();
+
+        let mock_url = start_mock_player_service(vec![recipient_id]).await;
+        let state = Arc::new(AppState::new_with_player_service_url(mock_url));
+
+        // Simulate a connected recipient by injecting an mpsc sender directly.
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<ChatMessage>(8);
+        state.ws_senders.insert(recipient_id, tx);
+
+        let app = build_app(Arc::clone(&state));
+        app.oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/chat/messages")
+                .header("Content-Type", "application/json")
+                .header("X-User-Id", sender_id.to_string())
+                .body(Body::from(
+                    serde_json::json!({
+                        "recipient_id": recipient_id,
+                        "content": "Hey, you online?"
+                    })
+                    .to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+        // The message must arrive in the recipient's inbox immediately.
+        let delivered = rx
+            .try_recv()
+            .expect("recipient inbox should have received the message");
+        assert_eq!(delivered.sender_id, sender_id);
+        assert_eq!(delivered.recipient_id, recipient_id);
+        assert_eq!(delivered.content, "Hey, you online?");
+    }
+
+    /// When the recipient has no open WebSocket the request still returns 200
+    /// and the message is persisted for later retrieval via GET.
+    #[tokio::test]
+    async fn test_send_message_no_ws_delivery_when_recipient_offline() {
+        let sender_id = Uuid::new_v4();
+        let recipient_id = Uuid::new_v4();
+
+        let mock_url = start_mock_player_service(vec![recipient_id]).await;
+        let state = Arc::new(AppState::new_with_player_service_url(mock_url));
+        // No entry in ws_senders for recipient — they are offline.
+
+        let app = build_app(Arc::clone(&state));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/chat/messages")
+                    .header("Content-Type", "application/json")
+                    .header("X-User-Id", sender_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "recipient_id": recipient_id,
+                            "content": "Are you there?"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        // A missing WS inbox is not an error.
+        assert_eq!(response.status(), StatusCode::OK);
+        // Message must be persisted for later retrieval.
+        let key = AppState::conv_key(sender_id, recipient_id);
+        assert_eq!(state.messages.get(&key).unwrap().len(), 1);
+    }
+
+    /// A message addressed to user A must NOT be delivered to user B's inbox.
+    #[tokio::test]
+    async fn test_send_message_does_not_deliver_to_bystander() {
+        let sender_id = Uuid::new_v4();
+        let recipient_id = Uuid::new_v4();
+        let bystander_id = Uuid::new_v4();
+
+        let mock_url = start_mock_player_service(vec![recipient_id]).await;
+        let state = Arc::new(AppState::new_with_player_service_url(mock_url));
+
+        let (tx_recipient, mut rx_recipient) = tokio::sync::mpsc::channel::<ChatMessage>(8);
+        let (tx_bystander, mut rx_bystander) = tokio::sync::mpsc::channel::<ChatMessage>(8);
+        state.ws_senders.insert(recipient_id, tx_recipient);
+        state.ws_senders.insert(bystander_id, tx_bystander);
+
+        let app = build_app(Arc::clone(&state));
+        app.oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/chat/messages")
+                .header("Content-Type", "application/json")
+                .header("X-User-Id", sender_id.to_string())
+                .body(Body::from(
+                    serde_json::json!({
+                        "recipient_id": recipient_id,
+                        "content": "Private message"
+                    })
+                    .to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+        // Recipient received the message.
+        assert!(
+            rx_recipient.try_recv().is_ok(),
+            "recipient should have received the message"
+        );
+        // Bystander did not.
+        assert!(
+            rx_bystander.try_recv().is_err(),
+            "bystander must not receive a message addressed to someone else"
+        );
     }
 }
