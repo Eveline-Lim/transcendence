@@ -31,6 +31,7 @@ import com.transcendence.player.dto.PublicPlayerResponse;
 import com.transcendence.player.entity.PlayerStatus;
 import com.transcendence.player.security.GatewayAuthenticationFilter;
 import com.transcendence.player.security.SecurityConfig;
+import com.transcendence.player.service.FriendService;
 import com.transcendence.player.service.PlayerService;
 
 @WebMvcTest(PlayerController.class)
@@ -42,6 +43,9 @@ class PlayerControllerTest {
 
     @MockBean
     private PlayerService playerService;
+
+    @MockBean
+    private FriendService friendService;
 
     @MockBean
     private AvatarProperties avatarProperties;

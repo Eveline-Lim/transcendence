@@ -195,6 +195,13 @@ public class FriendService {
                 .build());
     }
 
+    @Transactional(readOnly = true)
+    public boolean areFriends(UUID userId, UUID otherId) {
+        Player user = playerService.findById(userId);
+        Player other = playerService.findById(otherId);
+        return friendshipRepository.existsByPlayerAndFriend(user, other);
+    }
+
     public void unblockPlayer(UUID blockerId, UUID targetId) {
         Player blocker = playerService.findById(blockerId);
         Player blocked = playerService.findById(targetId);
