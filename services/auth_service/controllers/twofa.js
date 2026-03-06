@@ -191,22 +191,6 @@ export async function verifyTwoFA(req, reply) {
 		const storedRefreshToken = await redisClient.get(`refresh:${refreshToken}`);
 		// console.log("storedRefreshToken: ", storedRefreshToken);
 
-		// return reply.code(200).send({
-		// 	success: true,
-		// 	accessToken,
-		// 	refreshToken,
-		// 	tokenType: "Bearer",
-		// 	expiresIn : ACCESS_TOKEN_TTL,
-		// 	user: {
-		// 		id : user.uuid,
-		// 		username: user.username,
-		// 		displayName: user.displayName,
-		// 		email: user.email,
-		// 		avatarUrl: user.avatar,
-		// 		has2FAEnabled: user.has2FAEnabled,
-		// 	},
-		// 	requires2FA: user.requires2FA,
-		// });
 		const userInfo = UserInfo.fromRedis(user);
 
 		const response = new AuthResponse({
@@ -337,22 +321,6 @@ export async function disable2FA(req, reply) {
 			{ EX: REFRESH_TOKEN_TTL }
 		);
 
-		// return reply.code(200).send({
-		// 	success: true,
-		// 	code: "2FA_DISABLED_SUCCESS",
-		// 	message: "2FA successfully disabled",
-		// 	accessToken,
-		// 	refreshToken,
-		// 	user: {
-		// 		id: user.id,
-		// 		username: user.username,
-		// 		displayName: user.displayName,
-		// 		email: user.email,
-		// 		avatarUrl: user.avatarUrl,
-		// 		has2FAEnabled: user.has2FAEnabled
-		// 	},
-		// 	requires2FA: user.requires2FA
-		// });
 		const userInfo = UserInfo.fromRedis(user);
 
 		const response = new AuthResponse({

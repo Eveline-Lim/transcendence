@@ -153,6 +153,7 @@ export async function signup(req, reply) {
 			requires2FA: "false",
 		});
 
+		console.log("CREATING SESSION:", sessionId);
 		return reply.code(201).send(response);
 	} catch (error) {
 		console.error("SIGNUP ERROR: ", error);
@@ -344,7 +345,6 @@ export async function logout(req, reply) {
 			"1", // to modify ?
 			{ EX: ACCESS_TOKEN_TTL}
 		);
-
 		reply.code(204).send();
 	} catch (error) {
 		return reply.code(500).send({

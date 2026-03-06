@@ -24,7 +24,7 @@ class AuthResponse {
 	 * @param {Object} data
 	 * @returns {AuthResponse}
 	 */
-	static from(data) {
+	static fromObject(data) {
 		return new AuthResponse(data);
 	}
 

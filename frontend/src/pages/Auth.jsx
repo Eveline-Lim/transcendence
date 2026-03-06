@@ -1,6 +1,6 @@
 import { useRef, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { validateUsername, validateEmail } from "../utils/validators.js";
+import { validateUsername, validatePassword, validateEmail } from "../utils/validators.js";
 import { sendData } from "../sendData.jsx";
 import { AuthContext } from "../context/AuthContext";
 import InputField from "../components/InputField";
@@ -33,7 +33,7 @@ export default function Auth() {
 		const isEmail = identifier.includes("@");
 		if (isEmail && !validateEmail(identifier)) errs.identifier = "Invalid email";
 		else if (!isEmail && !validateUsername(identifier)) errs.identifier = "Invalid username";
-		if (!password) errs.password = "Password required";
+		if (!password && !validatePassword(password)) errs.password = "Invalid Password";
 		if (Object.keys(errs).length) { setError(errs); return; }
 
 		try {
@@ -65,7 +65,7 @@ export default function Auth() {
 		const errs = {};
 		if (!validateUsername(username)) errs.username = "3-20 chars, alphanumeric or _";
 		if (!displayName) errs.displayName = "Required";
-		if (!password) errs.password = "8-128 chars, mixed case, number, special";
+		if (!password && !validatePassword(password)) errs.password = "8-128 chars, mixed case, number, special";
 		if (!validateEmail(email)) errs.email = "Invalid email";
 		if (Object.keys(errs).length) { setError(errs); return; }
 
