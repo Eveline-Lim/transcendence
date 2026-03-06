@@ -7,7 +7,7 @@ pub struct SendMessageRequest {
     pub content: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct WsTicketResponse {
     pub ticket: Uuid,
     pub expires_in: u32,

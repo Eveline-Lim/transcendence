@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
@@ -19,6 +21,8 @@ pub struct AppState {
     pub messages: DashMap<(Uuid, Uuid), Vec<ChatMessage>>,
     /// Broadcast channel: each connected WS client subscribes to receive messages.
     pub tx: broadcast::Sender<ChatMessage>,
+    /// Short-lived WS connection tickets: ticket UUID → (user_id, expiry).
+    pub tickets: DashMap<Uuid, (Uuid, Instant)>,
 }
 
 impl AppState {
@@ -27,6 +31,7 @@ impl AppState {
         Self {
             messages: DashMap::new(),
             tx,
+            tickets: DashMap::new(),
         }
     }
 
