@@ -40,7 +40,7 @@ impl PlayerInfoFactory {
     ///
     /// Reads API-Gateway-injected headers:
     /// - `X-User-Id`    – **required** UUID; connection is rejected with `401`
-    ///                    if absent or not a valid UUID.
+    ///   if absent or not a valid UUID.
     /// - `X-Username`   – optional display name.
     /// - `X-Avatar-Url` – optional avatar URL.
     ///
@@ -82,10 +82,9 @@ impl PlayerInfoFactory {
                 .headers()
                 .get("X-Username")
                 .and_then(|v| v.to_str().ok())
+                && let Ok(mut g) = username_slot.try_lock()
             {
-                if let Ok(mut g) = username_slot.try_lock() {
-                    *g = Some(name.to_owned());
-                }
+                *g = Some(name.to_owned());
             }
 
             // --- X-Avatar-Url (optional) ---
@@ -93,10 +92,9 @@ impl PlayerInfoFactory {
                 .headers()
                 .get("X-Avatar-Url")
                 .and_then(|v| v.to_str().ok())
+                && let Ok(mut g) = avatar_url_slot.try_lock()
             {
-                if let Ok(mut g) = avatar_url_slot.try_lock() {
-                    *g = Some(url.to_owned());
-                }
+                *g = Some(url.to_owned());
             }
 
             Ok(resp)
