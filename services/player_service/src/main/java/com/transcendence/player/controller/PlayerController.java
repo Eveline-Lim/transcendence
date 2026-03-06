@@ -26,6 +26,7 @@ import com.transcendence.player.dto.PlayerListResponse;
 import com.transcendence.player.dto.PlayerResponse;
 import com.transcendence.player.dto.PublicPlayerResponse;
 import com.transcendence.player.dto.UpdatePlayerRequest;
+import com.transcendence.player.service.FriendService;
 import com.transcendence.player.service.PlayerService;
 
 import jakarta.validation.Valid;
@@ -36,6 +37,7 @@ import lombok.RequiredArgsConstructor;
 public class PlayerController {
 
     private final PlayerService playerService;
+    private final FriendService friendService;
     private final AvatarProperties avatarProperties;
 
     // POST /players - public
@@ -78,6 +80,14 @@ public class PlayerController {
     @GetMapping("/players/{playerId}")
     public ResponseEntity<PublicPlayerResponse> getPlayerById(@PathVariable UUID playerId) {
         return ResponseEntity.ok(playerService.getPlayerById(playerId));
+    }
+
+    // GET /players/{userId}/friends/{otherId}
+    @GetMapping("/players/{userId}/friends/{otherId}")
+    public ResponseEntity<Map<String, Boolean>> checkFriendship(
+            @PathVariable UUID userId,
+            @PathVariable UUID otherId) {
+        return ResponseEntity.ok(Map.of("areFriends", friendService.areFriends(userId, otherId)));
     }
 
     // PUT /players/me/avatar
