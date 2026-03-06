@@ -2,7 +2,6 @@ use axum::http::HeaderMap;
 use uuid::Uuid;
 
 pub mod messages;
-pub mod ticket;
 pub mod ws;
 
 fn extract_caller_id(headers: &HeaderMap) -> Option<Uuid> {

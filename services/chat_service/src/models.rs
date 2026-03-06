@@ -10,15 +10,6 @@ pub struct SendMessageRequest {
     pub content: String,
 }
 
-/// Serialised response for `GET /chat/ticket`.
-/// Wire format uses camelCase (`expiresIn`) to match the OpenAPI spec.
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WsTicketResponse {
-    pub ticket: Uuid,
-    pub expires_in: u32,
-}
-
 /// Query parameters for `GET /chat/messages/:userId`.
 #[derive(Deserialize)]
 pub struct MessageQuery {

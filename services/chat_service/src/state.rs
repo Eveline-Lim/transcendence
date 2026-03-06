@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
@@ -28,8 +26,6 @@ pub struct AppState {
     /// Per-user WebSocket inbox. Inserted on WS connect, removed on disconnect.
     /// Sending to an entry delivers a message only to that user's open socket.
     pub ws_senders: DashMap<Uuid, mpsc::Sender<ChatMessage>>,
-    /// Short-lived WS connection tickets: ticket UUID → (user_id, expiry).
-    pub tickets: DashMap<Uuid, (Uuid, Instant)>,
     /// Shared HTTP client for outbound service calls (keep-alive, connection pool).
     pub http_client: reqwest::Client,
     /// Base URL of the Player Service, e.g. `http://player_service:8080/api/v1`.
@@ -53,7 +49,6 @@ impl AppState {
         Self {
             messages: DashMap::new(),
             ws_senders: DashMap::new(),
-            tickets: DashMap::new(),
             http_client: reqwest::Client::new(),
             player_service_url,
         }
@@ -65,7 +60,6 @@ impl AppState {
         Self {
             messages: DashMap::new(),
             ws_senders: DashMap::new(),
-            tickets: DashMap::new(),
             http_client: reqwest::Client::new(),
             player_service_url,
         }
@@ -112,6 +106,5 @@ mod tests {
         let state = AppState::default();
         assert!(state.messages.is_empty());
         assert!(state.ws_senders.is_empty());
-        assert!(state.tickets.is_empty());
     }
 }
