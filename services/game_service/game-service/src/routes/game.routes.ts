@@ -29,6 +29,11 @@ gameRouter.post('/create-game', extractUserId, async (req, res) => {
 		return res.status(400).json({error: 'Missing player IDs'});
 	}
 
+	// Verify the authenticated user is one of the players
+	if (userId !== player1_id && userId !== player2_id) {
+		return res.status(403).json({error: 'You can only create a game you are part of'});
+	}
+
 	try {
 		const gameId = `game_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 

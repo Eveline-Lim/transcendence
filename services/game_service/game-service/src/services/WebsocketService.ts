@@ -5,6 +5,7 @@
 import { Server, Socket } from 'socket.io';
 import { redis } from './RedisInstance';
 import { GameLoopService } from './GameLoopService';
+import { PlayersInputs } from '../models/GameState';
 
 
   /***********/
@@ -40,8 +41,37 @@ export class WebsocketService {
 	}
 
 	private handleDisconnect(socket: Socket) {
-		socket.on('disconnect', () => {
-			console.log(`WebSocket disconnected: ${socket.id}`);
+		socket.on('disconnect', async () => {
+			try {
+				const player_id = socket.handshake.headers['x-user-id'] as string;
+				if (!player_id) return;
+
+				console.log(`WebSocket disconnected: ${socket.id} (player ${player_id})`);
+
+				const gameId = await redis!.getPlayerGame(player_id);
+				if (!gameId) return;
+
+				const gameState = await redis!.getGameState(gameId);
+				if (!gameState || gameState.status === 'finished') return;
+
+				// Forfeit: the disconnected player loses
+				gameState.status = 'finished';
+				gameState.winner = (player_id === gameState.player1_id)
+					? gameState.player2_id
+					: gameState.player1_id;
+
+				await redis!.updateGameState(gameId, gameState);
+				this.gameLoopService.stopGameLoop(gameId);
+
+				this.io.to(gameId).emit('game-over', {
+					message: `Player ${player_id} disconnected. Game forfeited.`,
+					winner: gameState.winner,
+					game_state: gameState
+				});
+			}
+			catch(error) {
+				console.error('Error handling disconnect:', error);
+			}
 		});
 	}
 
@@ -105,36 +135,38 @@ export class WebsocketService {
 	private handlePlayerInput(socket: Socket) {
 		socket.on('paddle-input', async (data: { action: string}) => {
 			try {
-				// User ID and username injected by the API gateway via X-User-Id / X-Username headers
+				// User ID injected by the API gateway via X-User-Id header
 				const player_id = socket.handshake.headers['x-user-id'] as string;
-				const username   = socket.handshake.headers['x-username'] as string;
 				if (!player_id) return;
 				const { action } = data;
 
 				const gameId = await redis!.getPlayerGame(player_id);
 				if (!gameId) return;
 
-				const gameState = await redis!.getGameState(gameId);
-				if (!gameState) return;
+				// Write directly to the in-memory game loop cache to avoid desync
+				const cachedState = this.gameLoopService.getCachedGameState(gameId);
+				if (!cachedState) return;
 
-				const isPlayerOne = (player_id === gameState.player1_id);
+				const isPlayerOne = (player_id === cachedState.player1_id);
 
 				switch(action) {
 					case 'up-pressed':
-						if (isPlayerOne) gameState.inputs.player1_up = true;
-						else gameState.inputs.player2_up = true;
+						if (isPlayerOne) cachedState.inputs.player1_up = true;
+						else cachedState.inputs.player2_up = true;
+						break;
 					case 'up-released':
-						if (isPlayerOne) gameState.inputs.player1_up = false;
-						else gameState.inputs.player2_up = false;
+						if (isPlayerOne) cachedState.inputs.player1_up = false;
+						else cachedState.inputs.player2_up = false;
+						break;
 					case 'down-pressed':
-						if (isPlayerOne) gameState.inputs.player1_down = true;
-						else gameState.inputs.player2_down = true;
+						if (isPlayerOne) cachedState.inputs.player1_down = true;
+						else cachedState.inputs.player2_down = true;
+						break;
 					case 'down-released':
-						if (isPlayerOne) gameState.inputs.player1_down = false;
-						else gameState.inputs.player2_down = false;
+						if (isPlayerOne) cachedState.inputs.player1_down = false;
+						else cachedState.inputs.player2_down = false;
+						break;
 				}
-
-				await redis!.updateGameState(gameId, gameState);
 			}
 			catch(error) {
 				console.error('Error in Player-input', error);

@@ -194,7 +194,7 @@ describe('GameLoopService - checkCollisionY', () => {
 
       service.testCheckCollisionY(gameState, 1);  // y = 2 + (-5) = -3
 
-      expect(gameState.ball.y).toBe(3);     // Rebond : -(-3) = 3
+      expect(gameState.ball.y).toBe(5);     // Rebond off wall at BALL_RADIUS(1): 2*1 - (-3) = 5
       expect(gameState.ball.vy).toBe(5);    // Direction inversée
     });
 
@@ -205,7 +205,7 @@ describe('GameLoopService - checkCollisionY', () => {
 
       service.testCheckCollisionY(gameState, 1);  // y = 0 + (-1) = -1
 
-      expect(gameState.ball.y).toBe(1);
+      expect(gameState.ball.y).toBe(3);     // Rebond off wall at BALL_RADIUS(1): 2*1 - (-1) = 3
       expect(gameState.ball.vy).toBe(1);
     });
 
@@ -216,7 +216,7 @@ describe('GameLoopService - checkCollisionY', () => {
 
       service.testCheckCollisionY(gameState, 0.8);  // y = 5 + (-10 * 0.8) = -3
 
-      expect(gameState.ball.y).toBe(3);
+      expect(gameState.ball.y).toBe(5);     // Rebond off wall at BALL_RADIUS(1): 2*1 - (-3) = 5
       expect(gameState.ball.vy).toBe(10);
     });
   });
@@ -229,7 +229,7 @@ describe('GameLoopService - checkCollisionY', () => {
 
       service.testCheckCollisionY(gameState, 1);  // y = 98 + 5 = 103
 
-      expect(gameState.ball.y).toBe(97);    // Rebond : 100 - (103 - 100) = 97
+      expect(gameState.ball.y).toBe(95);    // Rebond off wall at 100-BALL_RADIUS(99): 2*99 - 103 = 95
       expect(gameState.ball.vy).toBe(-5);   // Direction inversée
     });
 
@@ -240,7 +240,7 @@ describe('GameLoopService - checkCollisionY', () => {
 
       service.testCheckCollisionY(gameState, 1);  // y = 100 + 1 = 101
 
-      expect(gameState.ball.y).toBe(99);
+      expect(gameState.ball.y).toBe(97);    // Rebond off wall at 100-BALL_RADIUS(99): 2*99 - 101 = 97
       expect(gameState.ball.vy).toBe(-1);
     });
 
@@ -251,7 +251,7 @@ describe('GameLoopService - checkCollisionY', () => {
 
       service.testCheckCollisionY(gameState, 0.6);  // y = 95 + (10 * 0.6) = 101
 
-      expect(gameState.ball.y).toBe(99);
+      expect(gameState.ball.y).toBe(97);    // Rebond off wall at 100-BALL_RADIUS(99): 2*99 - 101 = 97
       expect(gameState.ball.vy).toBe(-10);
     });
   });
