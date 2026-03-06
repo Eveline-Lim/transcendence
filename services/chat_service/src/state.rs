@@ -6,7 +6,13 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 
 /// A chat message stored in memory.
+///
+/// Wire format uses camelCase (`messageId`, `senderId`, ...) to match the
+/// OpenAPI/AsyncAPI specs. The in-memory Vec has no size cap — a busy chat
+/// can grow unbounded. Bound this with a ring-buffer or external store
+/// before enabling the service in production.
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatMessage {
     pub message_id: Uuid,
     pub sender_id: Uuid,
@@ -26,8 +32,8 @@ pub struct AppState {
     pub tickets: DashMap<Uuid, (Uuid, Instant)>,
     /// Shared HTTP client for outbound service calls (keep-alive, connection pool).
     pub http_client: reqwest::Client,
-    /// Base URL of the Player Service, e.g. `http://player-service:3001/api/v1`.
-    /// Read from the `PLAYER_SERVICE_URL` environment variable.
+    /// Base URL of the Player Service, e.g. `http://player_service:8080/api/v1`.
+    /// Override with the `PLAYER_SERVICE_URL` environment variable.
     pub player_service_url: String,
 }
 
@@ -39,8 +45,11 @@ impl Default for AppState {
 
 impl AppState {
     pub fn new() -> Self {
+        // Default matches the Compose service name and port used by nginx.
+        // Set PLAYER_SERVICE_URL explicitly if the service is reachable at a
+        // different address (e.g. in integration tests).
         let player_service_url = std::env::var("PLAYER_SERVICE_URL")
-            .unwrap_or_else(|_| "http://player-service:3001/api/v1".to_string());
+            .unwrap_or_else(|_| "http://player_service:8080/api/v1".to_string());
         Self {
             messages: DashMap::new(),
             ws_senders: DashMap::new(),

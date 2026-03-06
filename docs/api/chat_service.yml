@@ -40,7 +40,10 @@ paths:
         1. Client calls `GET /chat/ticket` with the `Authorization: Bearer <JWT>` header.
         2. Server returns a single-use `ticket`.
         3. Client opens the WebSocket: `wss://host/ws/chat?ticket=<ticket>`.
-        4. The API Gateway validates the ticket and drops the connection if invalid or expired.
+        4. The Chat Service validates the ticket (single-use, 10 s TTL) and closes
+           the connection immediately if the ticket is unknown or has expired.
+           The API Gateway forwards the WebSocket connection transparently without
+           performing ticket validation.
       operationId: getChatTicket
       security:
         - BearerAuth: []

@@ -13,7 +13,10 @@ info:
     1. Client calls `GET /api/v1/chat/ticket` (REST, with `Authorization: Bearer <JWT>`).
     2. Server returns a single-use ticket valid for 10 seconds.
     3. Client opens the WebSocket: `wss://host/ws/chat?ticket=<ticket>`.
-    4. The API Gateway validates the ticket and rejects the connection if invalid or expired.
+    4. The Chat Service validates the ticket (single-use, 10 s TTL) and closes the
+       connection immediately if the ticket is unknown or has expired.
+       The API Gateway forwards the WebSocket connection transparently without
+       performing ticket validation.
     The Chat Service trusts the forwarded identity (`X-User-Id`, `X-Username`) and does not
     re-validate the ticket.
   contact:
@@ -71,7 +74,9 @@ components:
         Short-lived, single-use ticket obtained via `GET /api/v1/chat/ticket`
         (which itself requires a JWT Bearer token).
         Passed as a query parameter during the WebSocket handshake:
-        `wss://host/ws/chat?ticket=<ticket>`
+        `wss://host/ws/chat?ticket=<ticket>`.
+        Validated by the Chat Service (not the gateway): a missing, expired, or
+        already-consumed ticket closes the connection with HTTP 401.
 
   messages:
     ChatMessage:

@@ -1,7 +1,9 @@
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use axum::{
     Router,
+    http::StatusCode,
     routing::{get, post},
 };
 
@@ -18,7 +20,22 @@ use state::AppState;
 async fn main() {
     let state = Arc::new(AppState::new());
 
+    // Background task: purge expired WS tickets every 30 seconds to prevent
+    // unbounded growth from clients that requested tickets but never connected.
+    {
+        let state = Arc::clone(&state);
+        tokio::spawn(async move {
+            let interval = Duration::from_secs(30);
+            loop {
+                tokio::time::sleep(interval).await;
+                let now = Instant::now();
+                state.tickets.retain(|_, (_, expiry)| *expiry > now);
+            }
+        });
+    }
+
     let app = Router::new()
+        .route("/health", get(|| async { (StatusCode::OK, "OK") }))
         .route("/chat/ticket", get(ticket::get_ticket))
         .route("/chat/messages/{user_id}", get(messages::get_messages))
         .route("/chat/messages", post(messages::send_message))

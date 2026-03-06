@@ -24,7 +24,7 @@ RUN cargo build --release
 FROM debian:bookworm-slim
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates libssl3 && \
+    apt-get install -y --no-install-recommends ca-certificates libssl3 curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Non-root user for security.
@@ -34,5 +34,8 @@ USER app
 COPY --from=builder /app/target/release/chat_service /usr/local/bin/chat_service
 
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -fsS http://localhost:3000/health || exit 1
 
 ENTRYPOINT ["chat_service"]
