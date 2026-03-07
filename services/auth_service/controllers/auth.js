@@ -134,12 +134,12 @@ export async function signup(req, reply) {
 
 		// Refresh Token
 		const refreshToken = crypto.randomBytes(64).toString("hex");
-		const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+		const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
 
-		// Store hashed refresh token in Redis
+		// Store refresh token in Redis (key = sha256 hash, value = userId:sessionId)
 		await redisClient.set(
-			`refresh:${user.id}:${sessionId}`,
-			hashedRefreshToken,
+			`refresh:${refreshTokenHash}`,
+			`${user.id}:${sessionId}`,
 			{ EX: REFRESH_TOKEN_TTL }
 		);
 
@@ -282,12 +282,12 @@ export async function login(req, reply) {
 		// Refresh Token
 		const refreshToken = crypto.randomBytes(64).toString("hex");
 		console.log("REFRESH_TOKEN: ", refreshToken);
-		const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+		const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
 
-		// Store refresh token in Redis
+		// Store refresh token in Redis (key = sha256 hash, value = userId:sessionId)
 		await redisClient.set(
-			`refresh:${user.id}:${sessionId}`,
-			hashedRefreshToken,
+			`refresh:${refreshTokenHash}`,
+			`${user.id}:${sessionId}`,
 			{ EX: REFRESH_TOKEN_TTL }
 		);
 
