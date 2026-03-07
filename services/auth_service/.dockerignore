@@ -10,5 +10,11 @@ Dockerfile
 .dockerignore
 
 test
+unitTests
+coverage
+model
 
 .env
+*.md
+openapitools.json
+auth_service.yml
