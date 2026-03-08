@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::{
     handlers::extract_caller_id,
-    models::{MAX_CONTENT_LEN, MessageHistory, MessageQuery, SendMessageRequest},
+    models::{MessageHistory, MessageQuery, SendMessageRequest},
     player_client::{self, FriendshipCheckError},
     state::{AppState, ChatMessage},
     utils::now_timestamp,
@@ -176,7 +176,7 @@ pub async fn send_message(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::MessageHistory;
+    use crate::models::{MAX_CONTENT_LEN, MessageHistory};
     use axum::{
         Router,
         body::Body,
@@ -500,7 +500,7 @@ mod tests {
         let state = Arc::new(AppState::new_with_player_service_url(mock_url));
         let app = build_app(state);
 
-        let too_long = "x".repeat(MAX_CONTENT_LEN + 1);
+        let too_long = "x".repeat(MAX_CONTENT_LEN as usize + 1);
         let response = app
             .oneshot(
                 Request::builder()
