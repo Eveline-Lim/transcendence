@@ -52,6 +52,9 @@ pub async fn are_friends(
 
     let resp = client
         .get(&url)
+        // Tomcat rejects underscores in the Host header (RFC non-compliance).
+        // Override Host so Tomcat does not see "player_service:8080".
+        .header(reqwest::header::HOST, "player-service")
         .header("X-User-Id", caller_id.to_string())
         .send()
         .await

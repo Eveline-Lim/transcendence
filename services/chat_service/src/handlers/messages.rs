@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     Json,
-    extract::{Path, Query, State},
+    extract::{Path, Query, State, rejection::JsonRejection},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
 };
@@ -11,11 +11,12 @@ use uuid::Uuid;
 
 use crate::{
     handlers::extract_caller_id,
-    models::{MessageHistory, MessageQuery, SendMessageRequest},
+    models::{MAX_CONTENT_LEN, MessageHistory, MessageQuery, SendMessageRequest},
     player_client::{self, FriendshipCheckError},
     state::{AppState, ChatMessage},
     utils::now_timestamp,
 };
+use validator::Validate;
 
 /// GET /chat/messages/:user_id — returns paginated conversation history.
 ///
@@ -51,15 +52,25 @@ pub async fn get_messages(
     (StatusCode::OK, Json(MessageHistory { messages, total })).into_response()
 }
 
-/// Maximum message length (characters). Must match `maxLength` in chat_service.yml.
-const MAX_MESSAGE_LENGTH: usize = 1000;
-
 /// POST /chat/messages — send a message to a friend.
 pub async fn send_message(
     State(state): State<Arc<AppState>>,
     header: HeaderMap,
-    Json(body): Json<SendMessageRequest>,
+    payload: Result<Json<SendMessageRequest>, JsonRejection>,
 ) -> impl IntoResponse {
+    let Json(body) = match payload {
+        Ok(json) => json,
+        Err(rejection) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({
+                    "code": "INVALID_PAYLOAD",
+                    "message": rejection.body_text()
+                })),
+            )
+                .into_response();
+        }
+    };
     let Some(sender_id) = extract_caller_id(&header) else {
         return (
             StatusCode::UNAUTHORIZED,
@@ -68,21 +79,26 @@ pub async fn send_message(
             .into_response();
     };
 
-    // Validate message content
-    let content = body.content.trim();
-    if content.is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(json!({"code": "INVALID_PAYLOAD", "message": "Message content cannot be empty"})),
-        )
-            .into_response();
-    }
-    if content.len() > MAX_MESSAGE_LENGTH {
+    // Trim whitespace then validate via schema rules declared on SendMessageRequest.
+    let content = body.content.trim().to_string();
+    let body = SendMessageRequest {
+        content: content.clone(),
+        ..body
+    };
+    if let Err(errors) = body.validate() {
+        let messages: Vec<String> = errors
+            .field_errors()
+            .values()
+            .flat_map(|errs| {
+                errs.iter()
+                    .map(|e| e.message.as_deref().unwrap_or("invalid").to_string())
+            })
+            .collect();
         return (
             StatusCode::BAD_REQUEST,
             Json(json!({
                 "code": "INVALID_PAYLOAD",
-                "message": format!("Message content exceeds maximum length of {} characters", MAX_MESSAGE_LENGTH)
+                "message": messages.join("; ")
             })),
         )
             .into_response();
@@ -106,12 +122,22 @@ pub async fn send_message(
             )
                 .into_response();
         }
-        Err(_) => {
+        Err(FriendshipCheckError::UpstreamError(status)) => {
             return (
                 StatusCode::BAD_GATEWAY,
                 Json(json!({
                     "code": "BAD_GATEWAY",
-                    "message": "Received an unexpected response from the player service"
+                    "message": format!("Player service returned an unexpected status: {}", status)
+                })),
+            )
+                .into_response();
+        }
+        Err(FriendshipCheckError::ParseError(e)) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({
+                    "code": "BAD_GATEWAY",
+                    "message": format!("Player service returned an unreadable response: {}", e)
                 })),
             )
                 .into_response();
@@ -133,7 +159,7 @@ pub async fn send_message(
         message_id: Uuid::new_v4(),
         sender_id,
         recipient_id: body.recipient_id,
-        content: content.to_string(),
+        content,
         sent_at: now_timestamp(),
     };
 
@@ -474,7 +500,7 @@ mod tests {
         let state = Arc::new(AppState::new_with_player_service_url(mock_url));
         let app = build_app(state);
 
-        let too_long = "x".repeat(MAX_MESSAGE_LENGTH + 1);
+        let too_long = "x".repeat(MAX_CONTENT_LEN + 1);
         let response = app
             .oneshot(
                 Request::builder()

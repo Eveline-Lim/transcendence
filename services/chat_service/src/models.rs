@@ -1,12 +1,22 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use validator::Validate;
+
+/// Maximum message content length. Must match `maxLength` in chat_service.yml.
+pub const MAX_CONTENT_LEN: usize = 1000;
 
 /// Deserialised from `POST /chat/messages` request body.
 /// Wire format uses camelCase (`recipientId`) to match the OpenAPI spec.
-#[derive(Deserialize)]
+/// `content` is validated: 1–1000 characters (non-empty, max matches chat_service.yml).
+#[derive(Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct SendMessageRequest {
     pub recipient_id: Uuid,
+    #[validate(length(
+        min = 1,
+        max = 1000,
+        message = "content must be between 1 and 1000 characters"
+    ))]
     pub content: String,
 }
 
