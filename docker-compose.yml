@@ -149,8 +149,11 @@ services:
     container_name: transcendence_match
     environment:
       PLAYER_SERVICE_URL: http://player_service:8080
+      GAME_SERVICE_URL: http://game_service:3001
     depends_on:
       player_service:
+        condition: service_healthy
+      game_service:
         condition: service_healthy
     networks:
       - transcendence_network

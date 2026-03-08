@@ -265,6 +265,13 @@ export default function Game() {
 			connectToGame();
 		});
 
+		ms.on("matchmaking_error", ({ message }) => {
+			setError(message);
+			updatePhase("idle");
+			ms.disconnect();
+			matchSockRef.current = null;
+		});
+
 		ms.on("close", () => {
 			if (phaseRef.current === "matchmaking") {
 				setError("Connection to match service lost. Please try again.");

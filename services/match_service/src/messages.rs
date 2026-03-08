@@ -35,6 +35,8 @@ pub enum ServerMessage {
     QueueUpdate { data: QueueUpdateData },
     #[serde(rename = "match_found")]
     MatchFound { data: MatchFoundData },
+    #[serde(rename = "matchmaking_error")]
+    MatchmakingError { data: MatchmakingErrorData },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -58,6 +60,12 @@ pub struct OpponentInfo {
     pub username: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchmakingErrorData {
+    pub message: String,
 }
 
 #[cfg(test)]

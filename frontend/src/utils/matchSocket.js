@@ -10,9 +10,10 @@
  *   { event: "leave_queue" }
  *
  * Server → Client frames:
- *   { event: "queue_update", data: { playersWaiting: number, estimatedWaitTime: number } }
- *   { event: "match_found",  data: { matchId: string, gameEngineUrl: string,
- *                                     opponent: { username: string, avatarUrl?: string } } }
+ *   { event: "queue_update",     data: { playersWaiting: number, estimatedWaitTime: number } }
+ *   { event: "match_found",      data: { matchId: string, gameEngineUrl: string,
+ *                                         opponent: { username: string, avatarUrl?: string } } }
+ *   { event: "matchmaking_error", data: { message: string } }
  */
 
 const WS_PATH = "/ws/match";

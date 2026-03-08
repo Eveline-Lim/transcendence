@@ -104,7 +104,7 @@ pub async fn handle_connection(stream: TcpStream, state: Arc<AppState>) {
                 };
 
                 if let Some((p1, p2)) = matched {
-                    send_match_found(p1, p2);
+                    send_match_found(p1, p2, state.game_client.as_ref()).await;
                 } else {
                     current_mode = Some(mode);
                 }
@@ -138,10 +138,41 @@ async fn remove_from_queue(state: &AppState, player_id: Uuid, mode: GameMode) {
     }
 }
 
-fn send_match_found(p1: WaitingPlayer, p2: WaitingPlayer) {
+async fn send_match_found(
+    p1: WaitingPlayer,
+    p2: WaitingPlayer,
+    game_client: &dyn crate::game_client::GameSessionCreator,
+) {
     let match_id = Uuid::new_v4();
-    // TODO: ici utiliser le service game
-    let game_url = format!("ws://localhost:9090/game/{}", match_id);
+
+    // Ask the game service to create a session for both players and get
+    // back the public Socket.IO URL they should connect to.
+    let game_url = match game_client.create_game(p1.info.id, p2.info.id).await {
+        Ok(created) => {
+            info!(
+                "[match {}] game session {} created for {} vs {}",
+                match_id, created.game_id, p1.info.id, p2.info.id
+            );
+            created.engine_url
+        }
+        Err(e) => {
+            error!("[match {}] failed to create game session: {}", match_id, e);
+            // Notify both players that matchmaking failed so they are not
+            // left waiting indefinitely.
+            let _ = p1.sender.send(ServerMessage::MatchmakingError {
+                data: crate::messages::MatchmakingErrorData {
+                    message: "Failed to start game session. Please try again.".into(),
+                },
+            });
+            let _ = p2.sender.send(ServerMessage::MatchmakingError {
+                data: crate::messages::MatchmakingErrorData {
+                    message: "Failed to start game session. Please try again.".into(),
+                },
+            });
+            return;
+        }
+    };
+
     let msg_for_p1 = ServerMessage::MatchFound {
         data: MatchFoundData {
             match_id,

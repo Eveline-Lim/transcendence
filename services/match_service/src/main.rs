@@ -43,7 +43,11 @@ mod tests {
     async fn start_server() -> (String, Arc<AppState>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap().to_string();
-        let state = Arc::new(AppState::new());
+
+        // Use FakeGameClient so tests do not require a live game service.
+        let state = Arc::new(AppState::with_game_client(Arc::new(
+            match_service::game_client::FakeGameClient,
+        )));
         let s = Arc::clone(&state);
         tokio::spawn(async move {
             while let Ok((stream, _)) = listener.accept().await {
