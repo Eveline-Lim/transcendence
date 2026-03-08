@@ -98,7 +98,7 @@ pub async fn handle_connection(stream: TcpStream, state: Arc<AppState>) {
                 let matched = match mode {
                     GameMode::Casual => state.casual.lock().await.enqueue(player),
                     GameMode::Ranked => {
-                        let mmr = info.get_rank().await;
+                        let mmr = state.player_client.fetch_elo(info.id).await;
                         state.ranked.lock().await.enqueue(player, mmr)
                     }
                 };

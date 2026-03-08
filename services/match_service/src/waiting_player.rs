@@ -146,11 +146,6 @@ impl PlayerInfo {
             avatar_url,
         }
     }
-
-    pub async fn get_rank(&self) -> u32 {
-        //TODO: à finir (doit attendre le service profile)
-        1000
-    }
 }
 
 /// A player handle stored in a queue.

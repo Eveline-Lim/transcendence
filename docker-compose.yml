@@ -147,6 +147,11 @@ services:
   match_service:
     build: ./services/match_service
     container_name: transcendence_match
+    environment:
+      PLAYER_SERVICE_URL: http://player_service:8080
+    depends_on:
+      player_service:
+        condition: service_healthy
     networks:
       - transcendence_network
     restart: unless-stopped
