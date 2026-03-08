@@ -16,9 +16,12 @@ export default function Profile() {
 	const [error, setError] = useState(null);
 	const [prefs, setPrefs] = useState(null);
 	const [sessions, setSessions] = useState(null);
+	const [changingPassword, setChangingPassword] = useState(false);
 	const displayNameRef = useRef(null);
 	const emailRef = useRef(null);
 	const avatarRef = useRef(null);
+	const currentPwRef = useRef(null);
+	const newPwRef = useRef(null);
 
 	const token = localStorage.getItem("token");
 	console.log("token: ", token);
@@ -135,32 +138,59 @@ export default function Profile() {
 		if (res.success) fetchPrefs();
 	};
 
-	// const handleRevokeSession = async (sessionId) => {
-	// 	const res = await sendData(`/api/v1/auth/sessions/${sessionId}`, {
-	// 		method: "DELETE",
-	// 		headers: {
-	// 			Authorization: `Bearer ${token}`,
-	// 		}
-	// 	});
-	// 	console.log("REVOKE SESSION ID RES: ", res);
-	// 	if (res.success) {
-	// 		setMsg("Session revoked");
-	// 		fetchSessions();
-	// 	} else {
-	// 		setError(res.message);
-	// 	}
-	// };
+	const handleRevokeSession = async (sessionId) => {
+		const res = await sendData(`/api/v1/auth/sessions/${sessionId}`, {
+			method: "DELETE",
+			headers: {
+				Authorization: `Bearer ${token}`,
+			}
+		});
+		if (res.success !== false) {
+			setMsg("Session revoked");
+			fetchSessions();
+		} else {
+			setError(res.message);
+		}
+	};
 
-	// const handleRevokeAllSessions = async () => {
-	// 	if (!confirm("Sign out from all other sessions?")) return;
-	// 	const res = await api("/sessions/revoke-all", { method: "POST" });
-	// 	if (res.success) {
-	// 		setMsg("All other sessions revoked");
-	// 		fetchSessions();
-	// 	} else {
-	// 		setError(res.message);
-	// 	}
-	// };
+	const handleRevokeAllSessions = async () => {
+		if (!confirm("Sign out from all other sessions?")) return;
+		const res = await sendData("/api/v1/auth/sessions/revoke-all", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+			}
+		});
+		if (res.success !== false) {
+			setMsg(`All other sessions revoked`);
+			fetchSessions();
+		} else {
+			setError(res.message);
+		}
+	};
+
+	const handleChangePassword = async () => {
+		setError(null);
+		setMsg(null);
+		const currentPassword = currentPwRef.current?.value;
+		const newPassword = newPwRef.current?.value;
+		if (!currentPassword || !newPassword) { setError("Both fields are required"); return; }
+		if (newPassword.length < 8) { setError("New password must be at least 8 characters"); return; }
+		const res = await sendData("/api/v1/auth/password/change", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({ currentPassword, newPassword }),
+		});
+		if (res.success !== false) {
+			setMsg("Password changed successfully");
+			setChangingPassword(false);
+		} else {
+			setError(res.message || "Failed to change password");
+		}
+	};
 
 	if (!currentUser) return null;
 
@@ -235,15 +265,33 @@ export default function Profile() {
 					)}
 				</div>
 
+				{/* Change Password */}
+				<div className="card mb-4">
+					<h2 className="font-bold text-sm mb-2">Change Password</h2>
+					{!changingPassword ? (
+						<FormButton variant="secondary" onClick={() => setChangingPassword(true)}>Change Password</FormButton>
+					) : (
+						<>
+							<InputField label="Current Password" type="password" inputRef={currentPwRef} />
+							<div className="mt-3"></div>
+							<InputField label="New Password" type="password" inputRef={newPwRef} />
+							<div className="flex gap-2 mt-4">
+								<FormButton onClick={handleChangePassword}>Save Password</FormButton>
+								<FormButton variant="secondary" onClick={() => setChangingPassword(false)}>Cancel</FormButton>
+							</div>
+						</>
+					)}
+				</div>
+
 				{/* Active Sessions */}
 				<div className="card mb-4">
 					<div className="flex items-center justify-between mb-3">
 						<h2 className="font-bold text-sm">Active Sessions</h2>
-						{/* {sessions && sessions.length > 1 && (
+						{sessions && sessions.length > 1 && (
 							<button onClick={handleRevokeAllSessions} className="link text-xs text-red-400">
 								Revoke all others
 							</button>
-						)} */}
+						)}
 					</div>
 					{!sessions ? (
 						<p className="text-sm text-slate-400">Loading sessions…</p>
@@ -253,7 +301,7 @@ export default function Profile() {
 						<div className="flex flex-col gap-2">
 							{sessions.map((session) => {
 								const isCurrentSession = session.isCurrent ?? session.current ?? false;
-								const lastSeenAt = session.lastSeenAt ?? session.lastUsedAt ?? session.updatedAt;
+								const lastSeenAt = session.lastActiveAt ?? session.lastSeenAt ?? session.lastUsedAt ?? session.updatedAt;
 								const lastSeen = lastSeenAt ? new Date(lastSeenAt).toLocaleString() : null;
 								const createdAt = session.createdAt ? new Date(session.createdAt).toLocaleString() : null;
 								return (
@@ -264,7 +312,7 @@ export default function Profile() {
 										<div className="flex flex-col gap-0.5 text-xs text-slate-300 min-w-0">
 											<div className="flex items-center gap-2">
 												<span className="font-medium truncate">
-													{session.userAgent ?? session.device ?? session.clientInfo ?? "Unknown device"}
+													{session.deviceInfo ?? session.userAgent ?? session.device ?? session.clientInfo ?? "Unknown device"}
 												</span>
 												{isCurrentSession && (
 													<span className="badge badge-green shrink-0">Current</span>

@@ -46,6 +46,9 @@ export function validate2FACode(code) {
 }
 
 export function validateInputs(fields, isLogin = false) {
+	// During login we only check identifier format, NOT password format.
+	// Validating the password format on login would lock out users whose
+	// passwords were created under a different policy.
 	const data = {};
 	for (const key in fields) {
 		let value = fields[key];
@@ -53,32 +56,30 @@ export function validateInputs(fields, isLogin = false) {
 			value = '';
 		}
 		data[key] = value.trim();
-		console.log("key ", key);
-		console.log("data: ", data);
 	}
 
 	if (isLogin) {
 		if (data.identifier.includes("@")) {
 			data.email = data.identifier;
-			// console.log("data email: ", data.email);
 		} else {
 			data.username = data.identifier;
-			// console.log("data username: ", data.username);
 		}
-	}
-	if (data.username !== undefined) {
-		if (!validateUsername(data.username)) {
+		// Login: only validate identifier format, skip password format check
+		if (data.username !== undefined && !validateUsername(data.username)) {
 			return { success: false };
 		}
-	}
-	if (data.password !== undefined) {
-		if (!validatePassword(data.password)) {
-
+		if (data.email !== undefined && !validateEmail(data.email)) {
 			return { success: false };
 		}
-	}
-	if (data.email !== undefined) {
-		if (!validateEmail(data.email)) {
+	} else {
+		// Register / change-password: validate all fields strictly
+		if (data.username !== undefined && !validateUsername(data.username)) {
+			return { success: false };
+		}
+		if (data.password !== undefined && !validatePassword(data.password)) {
+			return { success: false };
+		}
+		if (data.email !== undefined && !validateEmail(data.email)) {
 			return { success: false };
 		}
 	}

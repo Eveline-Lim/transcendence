@@ -44,6 +44,10 @@ export default function Home() {
 						<div className="text-xl mb-1">👥</div>
 						<p className="text-sm font-bold">Friends</p>
 					</div>
+					<div className="menu-card" onClick={() => navigate("/chat")}>
+						<div className="text-xl mb-1">💬</div>
+						<p className="text-sm font-bold">Chat</p>
+					</div>
 					<div className="menu-card" onClick={() => navigate("/stats")}>
 						<div className="text-xl mb-1">📊</div>
 						<p className="text-sm font-bold">Statistics</p>
