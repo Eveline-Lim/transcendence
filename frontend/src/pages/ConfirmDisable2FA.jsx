@@ -7,7 +7,7 @@ import BackButton from "../components/BackButton.jsx";
 import InputField from "../components/InputField.jsx";
 
 export default function ConfirmDisable2FA() {
-	const { currentUser, updateUser } = useContext(AuthContext);
+	const { currentUser, authLoading, updateUser } = useContext(AuthContext);
 	const [error, setError] = useState(null);
 	const [msg, setMsg] = useState(null);
 	const [code, setCode] = useState("");
@@ -39,7 +39,7 @@ export default function ConfirmDisable2FA() {
 		}
 	};
 
-	if (!currentUser) return null;
+	if (authLoading || !currentUser) return null;
 
 	return (
 		<div className="min-h-screen flex items-center justify-center p-4">

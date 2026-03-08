@@ -7,7 +7,7 @@ import NavBar from "../components/NavBar";
 import FormButton from "../components/FormButton";
 
 export default function Chat() {
-	const { currentUser } = useContext(AuthContext);
+	const { currentUser, authLoading } = useContext(AuthContext);
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 
@@ -24,8 +24,8 @@ export default function Chat() {
 
 	// ──────────── Auth guard ────────────
 	useEffect(() => {
-		if (!currentUser) navigate("/", { replace: true });
-	}, [currentUser]);
+		if (!authLoading && !currentUser) navigate("/", { replace: true });
+	}, [currentUser, authLoading]);
 
 	// ──────────── Load friend list ────────────
 	useEffect(() => {
@@ -120,7 +120,7 @@ export default function Chat() {
 
 	const activeFriend = friends.find((f) => f.player?.id === friendId);
 
-	if (!currentUser) return null;
+	if (authLoading || !currentUser) return null;
 
 	return (
 		<div className="min-h-screen flex flex-col">

@@ -4,14 +4,14 @@ import { AuthContext } from "../context/AuthContext";
 import NavBar from "../components/NavBar";
 
 export default function Home() {
-	const { currentUser } = useContext(AuthContext);
+	const { currentUser, authLoading } = useContext(AuthContext);
 	const navigate = useNavigate();
 
 	useEffect(() => {
-		if (!currentUser) navigate("/", { replace: true });
-	}, [currentUser]);
+		if (!authLoading && !currentUser) navigate("/", { replace: true });
+	}, [currentUser, authLoading]);
 
-	if (!currentUser) return null;
+	if (authLoading || !currentUser) return null;
 
 	const modes = [
 		{ icon: "⚔️", title: "Play Ranked", desc: "Competitive 1v1 with ELO rating", action: () => navigate("/play/ranked") },

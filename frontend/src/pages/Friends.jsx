@@ -6,7 +6,7 @@ import NavBar from "../components/NavBar";
 import FormButton from "../components/FormButton";
 
 export default function Friends() {
-	const { currentUser } = useContext(AuthContext);
+	const { currentUser, authLoading } = useContext(AuthContext);
 	const navigate = useNavigate();
 	const [tab, setTab] = useState("friends");
 	const [friends, setFriends] = useState([]);
@@ -18,11 +18,9 @@ export default function Friends() {
 	const searchRef = useRef(null);
 
 	useEffect(() => {
-		if (!currentUser) { navigate("/", { replace: true }); return; }
-		loadFriends();
-		loadRequests();
-		loadBlocked();
-	}, [currentUser]);
+		if (!authLoading && !currentUser) { navigate("/", { replace: true }); return; }
+		if (currentUser) { loadFriends(); loadRequests(); loadBlocked(); }
+	}, [currentUser, authLoading]);
 
 	const loadFriends = async () => {
 		const res = await api("/api/v1/players/me/friends");
@@ -102,7 +100,7 @@ export default function Friends() {
 
 	const tabs = ["friends", "requests", "search", "blocked"];
 
-	if (!currentUser) return null;
+	if (authLoading || !currentUser) return null;
 
 	const incoming = requests.filter(r => r.status === "pending" && r.toPlayer?.id === currentUser.id);
 	const outgoing = requests.filter(r => r.status === "pending" && r.fromPlayer?.id === currentUser.id);

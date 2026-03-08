@@ -8,7 +8,7 @@ import InputField from "../components/InputField";
 import { sendData } from "../sendData";
 
 export default function Profile() {
-	const { currentUser, updateUser, logout } = useContext(AuthContext);
+	const { currentUser, authLoading, updateUser, logout } = useContext(AuthContext);
 	const navigate = useNavigate();
 	const [profile, setProfile] = useState(null);
 	const [editing, setEditing] = useState(false);
@@ -27,11 +27,9 @@ export default function Profile() {
 	console.log("token: ", token);
 
 	useEffect(() => {
-		if (!currentUser) { navigate("/", { replace: true }); return; }
-		fetchProfile();
-		fetchPrefs();
-		fetchSessions();
-	}, [currentUser]);
+		if (!authLoading && !currentUser) { navigate("/", { replace: true }); return; }
+		if (currentUser) { fetchProfile(); fetchPrefs(); fetchSessions(); }
+	}, [currentUser, authLoading]);
 
 	const fetchProfile = async () => {
 		const res = await api("/api/v1/players/me");
@@ -192,7 +190,7 @@ export default function Profile() {
 		}
 	};
 
-	if (!currentUser) return null;
+	if (authLoading || !currentUser) return null;
 
 	return (
 		<div className="min-h-screen">
