@@ -315,7 +315,7 @@ export class GameLoopService {
 			loserId,
 			winnerScore,
 			loserScore,
-			gameMode: 'casual',
+			gameMode: gameState.game_mode,
 			duration: durationSec,
 		});
 	}

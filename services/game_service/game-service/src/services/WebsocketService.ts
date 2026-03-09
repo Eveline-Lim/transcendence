@@ -75,7 +75,7 @@ export class WebsocketService {
 				PlayerServiceClient.reportMatchResult({
 					winnerId, loserId,
 					winnerScore, loserScore,
-					gameMode: 'casual',
+					gameMode: gameState.game_mode,
 					duration: durationSec,
 				});
 

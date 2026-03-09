@@ -13,6 +13,8 @@ use reqwest::Client;
 use serde::Serialize;
 use uuid::Uuid;
 
+use crate::messages::GameMode;
+
 /// A successfully created game session.
 pub struct CreatedGame {
     /// Opaque identifier used by the game service to store state.
@@ -30,6 +32,7 @@ pub trait GameSessionCreator: Send + Sync {
         &'a self,
         player1_id: Uuid,
         player2_id: Uuid,
+        game_mode: GameMode,
     ) -> Pin<Box<dyn Future<Output = Result<CreatedGame, String>> + Send + 'a>>;
 }
 
@@ -39,6 +42,7 @@ pub trait GameSessionCreator: Send + Sync {
 struct CreateGameRequest<'a> {
     player1_id: &'a str,
     player2_id: &'a str,
+    game_mode: &'a str,
 }
 
 #[derive(serde::Deserialize)]
@@ -88,11 +92,16 @@ impl GameSessionCreator for GameServiceClient {
         &'a self,
         player1_id: Uuid,
         player2_id: Uuid,
+        game_mode: GameMode,
     ) -> Pin<Box<dyn Future<Output = Result<CreatedGame, String>> + Send + 'a>> {
         Box::pin(async move {
             let url = format!("{}/api/create-game", self.internal_url);
             let p1 = player1_id.to_string();
             let p2 = player2_id.to_string();
+            let mode_str = match game_mode {
+                GameMode::Casual => "casual",
+                GameMode::Ranked => "ranked",
+            };
 
             let resp = self
                 .http
@@ -102,6 +111,7 @@ impl GameSessionCreator for GameServiceClient {
                 .json(&CreateGameRequest {
                     player1_id: &p1,
                     player2_id: &p2,
+                    game_mode: mode_str,
                 })
                 .send()
                 .await
@@ -147,6 +157,7 @@ impl GameSessionCreator for FakeGameClient {
         &'a self,
         player1_id: Uuid,
         player2_id: Uuid,
+        _game_mode: GameMode,
     ) -> Pin<Box<dyn Future<Output = Result<CreatedGame, String>> + Send + 'a>> {
         Box::pin(async move {
             Ok(CreatedGame {

@@ -23,7 +23,8 @@ gameRouter.post('/create-game', extractUserIdOnly, async (req, res) => {
 	if (!redis) return res.status(503).json({error: 'Redis unavailable'});
 
 	const userId = req.userId as string; // authenticated user from API gateway
-	const { player1_id, player2_id } = req.body;
+	const { player1_id, player2_id, game_mode } = req.body;
+	const resolvedMode: 'casual' | 'ranked' = game_mode === 'ranked' ? 'ranked' : 'casual';
 
 	if (!player1_id || !player2_id) {
 		return res.status(400).json({error: 'Missing player IDs'});
@@ -37,7 +38,7 @@ gameRouter.post('/create-game', extractUserIdOnly, async (req, res) => {
 	try {
 		const gameId = `game_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
-		await redis.createGame(gameId, player1_id, player2_id);
+		await redis.createGame(gameId, player1_id, player2_id, resolvedMode);
 
 		await redis.setPlayerGame(player1_id, gameId);
 		await redis.setPlayerGame(player2_id, gameId);

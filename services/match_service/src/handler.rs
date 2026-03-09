@@ -104,7 +104,7 @@ pub async fn handle_connection(stream: TcpStream, state: Arc<AppState>) {
                 };
 
                 if let Some((p1, p2)) = matched {
-                    send_match_found(p1, p2, state.game_client.as_ref()).await;
+                    send_match_found(p1, p2, state.game_client.as_ref(), mode).await;
                 } else {
                     current_mode = Some(mode);
                 }
@@ -142,12 +142,13 @@ async fn send_match_found(
     p1: WaitingPlayer,
     p2: WaitingPlayer,
     game_client: &dyn crate::game_client::GameSessionCreator,
+    mode: GameMode,
 ) {
     let match_id = Uuid::new_v4();
 
     // Ask the game service to create a session for both players and get
     // back the public Socket.IO URL they should connect to.
-    let game_url = match game_client.create_game(p1.info.id, p2.info.id).await {
+    let game_url = match game_client.create_game(p1.info.id, p2.info.id, mode).await {
         Ok(created) => {
             info!(
                 "[match {}] game session {} created for {} vs {}",
