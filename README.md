@@ -1,3 +1,22 @@
+## Quick Start
+
+> No clone needed. Requires `docker`, `docker compose`, and `openssl`.
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Eveline-Lim/transcendence/refs/heads/dev/install.sh)
+```
+
+The script will:
+1. Run `setup-secrets.sh` to create all required secrets (including a self-signed SSL cert)
+2. Download `docker-compose.yml` and `docker-compose.ghcr.yml` locally
+3. Pull and start all services using pre-built GHCR images
+
+Once up:
+- **HTTP** → http://localhost:8080 (redirects to HTTPS)
+- **HTTPS** → https://localhost:8443
+
+---
+
 ## Modules
 
 ### Minors

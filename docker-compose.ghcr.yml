@@ -31,3 +31,5 @@ services:
   nginx:
     build: null
     image: ghcr.io/eveline-lim/transcendence-nginx:dev
+    volumes:
+      - avatar_data:/app/uploads/avatars:ro
