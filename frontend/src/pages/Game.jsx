@@ -4,6 +4,7 @@ import { AuthContext } from "../context/AuthContext";
 import NavBar from "../components/NavBar";
 import { MatchSocket } from "../utils/matchSocket";
 import { GameSocket } from "../utils/gameSocket";
+import { LocalGameEngine, SimpleAI } from "../utils/localGameEngine";
 
 // ─── Canvas rendering constants ──────────────────────────────────────────────
 const CANVAS_W = 800;
@@ -104,13 +105,16 @@ export default function Game() {
 	const [error,     setError]     = useState(null);
 
 	// ── Refs (mutations here must not trigger re-renders) ─────────────────────
-	const canvasRef     = useRef(null);
-	const matchSockRef  = useRef(null);
-	const gameSockRef   = useRef(null);
-	const gameStateRef  = useRef(null); // always-current snapshot for the RAF loop
-	const keysRef       = useRef({ up: false, down: false });
-	const rafRef        = useRef(null);
-	const phaseRef      = useRef("idle");
+	const canvasRef      = useRef(null);
+	const matchSockRef   = useRef(null);
+	const gameSockRef    = useRef(null);
+	const gameStateRef   = useRef(null); // always-current snapshot for the RAF loop
+	const keysRef        = useRef({ up: false, down: false });
+	const rafRef         = useRef(null);
+	const phaseRef       = useRef("idle");
+	const localEngineRef = useRef(null);
+
+	const isLocal = mode === "offline" || mode === "ai";
 
 	const updatePhase = (next) => {
 		phaseRef.current = next;
@@ -127,6 +131,7 @@ export default function Game() {
 		return () => {
 			matchSockRef.current?.disconnect();
 			gameSockRef.current?.disconnect();
+			localEngineRef.current?.stop();
 			if (rafRef.current) cancelAnimationFrame(rafRef.current);
 		};
 	}, []);
@@ -151,27 +156,56 @@ export default function Game() {
 	// ── Keyboard input → paddle-input events ─────────────────────────────────
 	useEffect(() => {
 		if (phase !== "playing") return;
-		const gs = gameSockRef.current;
-		if (!gs) return;
 
 		const onDown = (e) => {
-			if ((e.key === "ArrowUp" || e.key === "w" || e.key === "W") && !keysRef.current.up) {
-				keysRef.current.up = true;
-				gs.sendPaddleInput("up-pressed");
-			}
-			if ((e.key === "ArrowDown" || e.key === "s" || e.key === "S") && !keysRef.current.down) {
-				keysRef.current.down = true;
-				gs.sendPaddleInput("down-pressed");
+			if (isLocal) {
+				const engine = localEngineRef.current;
+				if (!engine) return;
+				if (e.key === "w" || e.key === "W") engine.setInput("player1_up", true);
+				if (e.key === "s" || e.key === "S") engine.setInput("player1_down", true);
+				if (mode === "offline") {
+					if (e.key === "ArrowUp")   { e.preventDefault(); engine.setInput("player2_up", true); }
+					if (e.key === "ArrowDown") { e.preventDefault(); engine.setInput("player2_down", true); }
+				} else {
+					if (e.key === "ArrowUp")   { e.preventDefault(); engine.setInput("player1_up", true); }
+					if (e.key === "ArrowDown") { e.preventDefault(); engine.setInput("player1_down", true); }
+				}
+			} else {
+				const gs = gameSockRef.current;
+				if (!gs) return;
+				if ((e.key === "ArrowUp" || e.key === "w" || e.key === "W") && !keysRef.current.up) {
+					keysRef.current.up = true;
+					gs.sendPaddleInput("up-pressed");
+				}
+				if ((e.key === "ArrowDown" || e.key === "s" || e.key === "S") && !keysRef.current.down) {
+					keysRef.current.down = true;
+					gs.sendPaddleInput("down-pressed");
+				}
 			}
 		};
+
 		const onUp = (e) => {
-			if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
-				keysRef.current.up = false;
-				gs.sendPaddleInput("up-released");
-			}
-			if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
-				keysRef.current.down = false;
-				gs.sendPaddleInput("down-released");
+			if (isLocal) {
+				const engine = localEngineRef.current;
+				if (!engine) return;
+				if (e.key === "w" || e.key === "W") engine.setInput("player1_up", false);
+				if (e.key === "s" || e.key === "S") engine.setInput("player1_down", false);
+				if (mode === "offline") {
+					if (e.key === "ArrowUp")   engine.setInput("player2_up", false);
+					if (e.key === "ArrowDown") engine.setInput("player2_down", false);
+				} else {
+					if (e.key === "ArrowUp")   engine.setInput("player1_up", false);
+					if (e.key === "ArrowDown") engine.setInput("player1_down", false);
+				}
+			} else {
+				if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
+					keysRef.current.up = false;
+					gameSockRef.current?.sendPaddleInput("up-released");
+				}
+				if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
+					keysRef.current.down = false;
+					gameSockRef.current?.sendPaddleInput("down-released");
+				}
 			}
 		};
 
@@ -181,7 +215,30 @@ export default function Game() {
 			window.removeEventListener("keydown", onDown);
 			window.removeEventListener("keyup",   onUp);
 		};
-	}, [phase]);
+	}, [phase, isLocal, mode]);
+
+	// ── Local game (offline / AI) ─────────────────────────────────────────────
+	const startLocalGame = useCallback(() => {
+		setError(null);
+		const ai = mode === "ai" ? new SimpleAI(0.7) : null;
+		const engine = new LocalGameEngine(
+			(state) => {
+				gameStateRef.current = state;
+			},
+			(state) => {
+				gameStateRef.current = state;
+				setGameState({ ...state });
+				updatePhase("finished");
+			},
+			ai,
+		);
+		localEngineRef.current = engine;
+		const initial = engine.getState();
+		gameStateRef.current = initial;
+		setGameState({ ...initial });
+		engine.start();
+		updatePhase("playing");
+	}, [mode]);
 
 	// ── Game service connection ───────────────────────────────────────────────
 	const connectToGame = useCallback(() => {
@@ -301,6 +358,8 @@ export default function Game() {
 	};
 
 	const playAgain = () => {
+		localEngineRef.current?.stop();
+		localEngineRef.current = null;
 		gameSockRef.current?.disconnect();
 		gameSockRef.current = null;
 		setGameState(null);
@@ -315,6 +374,10 @@ export default function Game() {
 	// ── Winner label ──────────────────────────────────────────────────────────
 	const winnerLabel = () => {
 		if (!gameState?.winner) return "Draw";
+		if (isLocal) {
+			if (mode === "ai") return gameState.winner === "player1" ? "You win! 🎉" : "AI wins!";
+			return gameState.winner === "player1" ? "Player 1 wins! 🎉" : "Player 2 wins! 🎉";
+		}
 		const uid = String(currentUser?.id ?? currentUser?.userId ?? "");
 		if (uid && gameState.winner === uid) return "You win! 🎉";
 		return `${matchInfo?.opponent?.username ?? "Opponent"} wins`;
@@ -324,23 +387,7 @@ export default function Game() {
 
 	if (authLoading) return null;
 
-	// AI / Offline – not yet backed by these services
-	if (mode === "ai" || mode === "offline") {
-		return (
-			<>
-				<NavBar />
-				<div className="min-h-screen flex items-center justify-center p-4">
-					<div className="card text-center max-w-sm">
-						<h1 className="text-xl font-bold mb-2">{MODE_LABEL[mode] ?? mode}</h1>
-						<p className="msg-info">This game mode is coming soon…</p>
-						<button className="btn mt-4" onClick={() => navigate("/home")}>
-							Back to Home
-						</button>
-					</div>
-				</div>
-			</>
-		);
-	}
+
 
 	return (
 		<>
@@ -353,10 +400,12 @@ export default function Game() {
 						<h1 className="text-2xl font-bold mb-1">
 							{MODE_LABEL[mode] ?? mode} Mode
 						</h1>
-						<p className="msg-info mb-6">Find an opponent and play Pong!</p>
+						<p className="msg-info mb-6">
+								{isLocal ? "Press Start to play Pong!" : "Find an opponent and play Pong!"}
+							</p>
 						{error && <p className="msg-error mb-4">{error}</p>}
-						<button className="btn w-full" onClick={startMatchmaking}>
-							Find Match
+						<button className="btn w-full" onClick={isLocal ? startLocalGame : startMatchmaking}>
+							{isLocal ? "Start Game" : "Find Match"}
 						</button>
 						<button
 							className="btn btn-secondary mt-2 w-full"
@@ -420,12 +469,16 @@ export default function Game() {
 							style={{ maxWidth: CANVAS_W }}
 						>
 							<span>
-								{myId === "player1"
+							{isLocal
+								? (mode === "ai" ? "▶ You" : "▶ Player 1 (W / S)")
+								: myId === "player1"
 									? `▶ You (${currentUser?.username ?? ""})`
 									: (matchInfo?.opponent?.username ?? "Player 1")}
-							</span>
-							<span>
-								{myId === "player2"
+						</span>
+						<span>
+							{isLocal
+								? (mode === "ai" ? "AI ◀" : "Player 2 (↑ / ↓) ◀")
+								: myId === "player2"
 									? `You (${currentUser?.username ?? ""}) ◀`
 									: (matchInfo?.opponent?.username ?? "Player 2")}
 							</span>
@@ -443,7 +496,9 @@ export default function Game() {
 						{/* Controls hint */}
 						{phase === "playing" && (
 							<p className="text-xs text-gray-500">
-								↑ / W &nbsp;–&nbsp; Up &nbsp;&nbsp; ↓ / S &nbsp;–&nbsp; Down
+								{mode === "offline"
+									? "P1: W / S  ·  P2: ↑ / ↓"
+									: "↑ / W – Up    ↓ / S – Down"}
 							</p>
 						)}
 

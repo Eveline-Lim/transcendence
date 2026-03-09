@@ -32,3 +32,21 @@ export function extractUserId(req: Request, res: Response, next: NextFunction): 
 	req.username = username;
 	next();
 }
+
+/**
+ * Lighter variant for internal service-to-service calls that only provide
+ * `X-User-Id` (e.g. match_service → create-game). `X-Username` is optional.
+ */
+export function extractUserIdOnly(req: Request, res: Response, next: NextFunction): void {
+	const userId = req.headers['x-user-id'];
+
+	if (!userId || Array.isArray(userId)) {
+		res.status(401).json({ error: 'Unauthorized: missing or invalid X-User-Id header' });
+		return;
+	}
+
+	req.userId = userId;
+	const username = req.headers['x-username'];
+	req.username = (username && !Array.isArray(username)) ? username : 'system';
+	next();
+}
