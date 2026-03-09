@@ -1,10 +1,6 @@
 import { redisClient } from "../redisClient.js";
 import jwt from "jsonwebtoken";
 
-import Session from "../models/Session.js";
-import ListSessionsResponse from "../models/ListSessions200Response.js";
-import RevokeAllSessionsResponse from "../models/RevokeAllSessions200Response.js";
-
 export async function listSessions(req, reply) {
 	console.log("SESSIONS");
 	try {
@@ -43,7 +39,7 @@ export async function listSessions(req, reply) {
 					return null;
 				}
 
-				return Session.validate({
+				return {
 					id,
 					deviceInfo: data.deviceInfo,
 					ipAddress: data.ipAddress,
@@ -51,7 +47,7 @@ export async function listSessions(req, reply) {
 					createdAt: data.createdAt,
 					lastActiveAt: data.lastActiveAt,
 					isCurrent: id === currentSessionId,
-				});
+				};
 			})
 		);
 
@@ -60,13 +56,12 @@ export async function listSessions(req, reply) {
 
 		// Sort by lastActiveAt descending
 		sessions.sort(
-			(a, b) => b.lastActiveAt - a.lastActiveAt
+			(a, b) =>
+				new Date(b.lastActiveAt).getTime() -
+				new Date(a.lastActiveAt).getTime()
 		);
 
-		const response = ListSessionsResponse.fromObject({ sessions });
-		console.log("LIST SESSIONS RESPONSE: ", response);
-
-		return reply.code(200).send(response.toJSON());
+		return reply.code(200).send({ sessions });
 	} catch (error) {
 		return reply.code(500).send({
 			code: "INTERNAL_ERROR",
@@ -129,7 +124,7 @@ export async function revokeSession(req, reply) {
 			.sRem(userSessionsKey, sessionId)
 			.exec();
 
-		return reply.code(204).send();
+		return reply.code(200).send({success: true});
 	} catch (error) {
 		return reply.code(500).send({
 			code: "INTERNAL_ERROR",
@@ -183,125 +178,6 @@ export async function revokeAllSessions(req, reply) {
 		});
 	} catch (error) {
 		return reply.code(500).send({
-			code: "INTERNAL_ERROR",
-			message: "Unable to revoke sessions",
-		});
-	}
-}
-
-		let decoded;
-		try {
-			decoded = jwt.verify(token, process.env.JWT_SECRET);
-		} catch {
-			return reply.code(401).send({
-				success: false,
-				code: "INVALID_TOKEN",
-				message: "Invalid or expired token",
-			});
-		}
-
-		const { userId, username, sessionId: currentSessionId } = decoded;
-
-		// Session requested from frontend
-		const targetSessionId = req.params.sessionId || currentSessionId;
-
-		console.log("Requested session:", targetSessionId);
-		console.log("Current session:", currentSessionId);
-
-		const sessionKey = `session:${targetSessionId}`;
-		console.log("sessionKey: ", sessionKey);
-		const userSessionsKey = `user:sessions:${username}`;
-		console.log("userSessionsKey: ", userSessionsKey);
-		const refreshKey = `refresh:${userId}:${targetSessionId}`;
-
-		const exists = await redisClient.exists(sessionKey);
-		if (!exists) {
-			return reply.code(404).send({
-				success: false,
-				code: "SESSION_NOT_FOUND",
-				message: "Session not found",
-			});
-		}
-
-		// Check the session belongs to the user
-		const belongs = await redisClient.sIsMember(userSessionsKey, targetSessionId);
-		if (!belongs) {
-			return reply.code(403).send({
-				success: false,
-				code: "FORBIDDEN",
-				message: "Session does not belong to user",
-			});
-		}
-
-		await redisClient
-			.multi()
-			.del(sessionKey)
-			.del(refreshKey)
-			.sRem(userSessionsKey, targetSessionId)
-			.exec();
-
-		console.log("SESSION REVOKED:", targetSessionId);
-
-		return reply.code(204).send();
-	} catch (error) {
-		return reply.code(500).send({
-			success: false,
-			code: "INTERNAL_ERROR",
-			message: "Internal server error",
-		});
-	}
-}
-
-export async function revokeAllSessions(req, reply) {
-	console.log("REVOKE ALL SESSIONS");
-	try {
-		const token = req.headers.authorization?.split(" ")[1];
-		if (!token) {
-			return reply.code(401).send({
-				success: false,
-				code: "AUTH_REQUIRED",
-				message: "Authentication required",
-			});
-		}
-
-		let decoded;
-		try {
-			decoded = jwt.verify(token, process.env.JWT_SECRET);
-		} catch {
-			return reply.code(401).send({
-				success: false,
-				code: "INVALID_TOKEN",
-				message: "Invalid or expired token",
-			});
-		}
-
-		const { username, sessionId: currentSessionId } = decoded;
-
-		// Retrieve all sessions for the current user
-		const sessionIds = await redisClient.sMembers(`user:sessions:${username}`);
-		console.log("sessioNIds: ", sessionIds);
-
-		// Filter the current session
-		const sessionsToRevoke = sessionIds.filter(id => id !== currentSessionId);
-		console.log("sessionsToRevoke: ", sessionsToRevoke);
-
-		// Delete all the other sessions
-		const multi = redisClient.multi();
-		sessionsToRevoke.forEach(id => {
-			multi.del(`session:${id}`);
-			multi.sRem(`user:sessions:${username}`, id);
-		});
-		await multi.exec();
-
-		const response = RevokeAllSessionsResponse.validate({
-			revokedCount: sessionsToRevoke.length
-		});
-
-		// Return the number of revoked sessions
-		return reply.code(200).send(response.toJSON());
-	} catch (error) {
-		return reply.code(500).send({
-			success: false,
 			code: "INTERNAL_ERROR",
 			message: "Unable to revoke sessions",
 		});
