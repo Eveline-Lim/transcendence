@@ -33,7 +33,7 @@ export default function Auth() {
 		const isEmail = identifier.includes("@");
 		if (isEmail && !validateEmail(identifier)) errs.identifier = "Invalid email";
 		else if (!isEmail && !validateUsername(identifier)) errs.identifier = "Invalid username";
-		if (!password && !validatePassword(password)) errs.password = "Invalid Password";
+		if (!password || !validatePassword(password)) errs.password = "Invalid password";
 		if (Object.keys(errs).length) { setError(errs); return; }
 
 		try {
@@ -67,7 +67,7 @@ export default function Auth() {
 		const errs = {};
 		if (!validateUsername(username)) errs.username = "3-20 chars, alphanumeric or _";
 		if (!displayName) errs.displayName = "Required";
-		if (!password && !validatePassword(password)) errs.password = "8-128 chars, mixed case, number, special";
+		if (!password || !validatePassword(password)) errs.password = "8-128 chars, mixed case, number, special";
 		if (!validateEmail(email)) errs.email = "Invalid email";
 		if (Object.keys(errs).length) { setError(errs); return; }
 

@@ -71,8 +71,8 @@ export default function Profile() {
 		const body = {};
 		const dn = displayNameRef.current?.value.trim();
 		const em = emailRef.current?.value.trim();
-		const currentPassword = currentPasswordRef.current?.value.trim();
-		const newPassword = newPasswordRef.current?.value.trim();
+		const currentPassword = currentPwRef.current?.value.trim();
+		const newPassword = newPwRef.current?.value.trim();
 		console.log("currentPassword: \n", currentPassword);
 		console.log("newPassword: \n", newPassword);
 
