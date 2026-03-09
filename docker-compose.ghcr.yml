@@ -1,0 +1,33 @@
+# GHCR image overrides - use with:
+#   docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up
+# Or via Makefile:
+#   make up-ghcr
+
+services:
+  auth_service:
+    build: null
+    image: ghcr.io/eveline-lim/transcendence-auth_service:dev
+
+  player_service:
+    build: null
+    image: ghcr.io/eveline-lim/transcendence-player_service:dev
+
+  game_service:
+    build: null
+    image: ghcr.io/eveline-lim/transcendence-game_service:dev
+
+  match_service:
+    build: null
+    image: ghcr.io/eveline-lim/transcendence-match_service:dev
+
+  chat_service:
+    build: null
+    image: ghcr.io/eveline-lim/transcendence-chat_service:dev
+
+  frontend:
+    build: null
+    image: ghcr.io/eveline-lim/transcendence-frontend:dev
+
+  nginx:
+    build: null
+    image: ghcr.io/eveline-lim/transcendence-nginx:dev

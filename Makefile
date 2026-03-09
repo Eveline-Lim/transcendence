@@ -1,7 +1,8 @@
 # Variables
 
-COMPOSE := docker compose
+COMPOSE      := docker compose
 COMPOSE_FILE := docker-compose.yml
+COMPOSE_GHCR := docker-compose.ghcr.yml
 
 help: ## Display help
 	@echo "Available commands:"
@@ -10,18 +11,30 @@ help: ## Display help
 setup: ## Setup an example of secret directory
 	@scripts/setup-secrets.sh
 
-build: ## Build all the containers
+# ------------------------------------------------------------------ Local build (default)
+build: ## Build all containers from local source
 	$(COMPOSE) -f $(COMPOSE_FILE) build --no-cache
 
-up: ## Start all services
+up: ## Build and start all services from local source
 	$(COMPOSE) -f $(COMPOSE_FILE) up -d
-
-dev: setup build up ## Quick start for developement
 
 down: ## Stop all services
 	$(COMPOSE) -f $(COMPOSE_FILE) down
 
-restart: down up ## Restart all services
+dev: setup build up ## Quick start for local development
+
+# ------------------------------------------------------------------ GHCR pre-built images
+up-ghcr: ## Pull and start all services using pre-built GHCR images
+	$(COMPOSE) -f $(COMPOSE_FILE) -f $(COMPOSE_GHCR) pull
+	$(COMPOSE) -f $(COMPOSE_FILE) -f $(COMPOSE_GHCR) up -d
+
+down-ghcr: ## Stop all services (GHCR)
+	$(COMPOSE) -f $(COMPOSE_FILE) -f $(COMPOSE_GHCR) down
+
+restart-ghcr: down-ghcr up-ghcr ## Restart all services (GHCR)
+
+# ------------------------------------------------------------------ Shared
+restart: down up ## Restart all services (local)
 
 logs: ## Display logs for all services
 	$(COMPOSE) -f $(COMPOSE_FILE) logs -f
@@ -40,4 +53,4 @@ fclean: ## Clean all (including images)
 ps: ## Show services status
 	@$(COMPOSE) -f $(COMPOSE_FILE) ps
 
-.PHONY: help build up down restart logs clean dev setup ps
+.PHONY: help build up down dev up-ghcr down-ghcr restart restart-ghcr logs clean fclean setup ps
