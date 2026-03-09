@@ -1,6 +1,6 @@
 # Variables
 
-COMPOSE := docker-compose
+COMPOSE := docker compose
 COMPOSE_FILE := docker-compose.yml
 
 help: ## Display help
@@ -11,7 +11,7 @@ setup: ## Setup an example of secret directory
 	@scripts/setup-secrets.sh
 
 build: ## Build all the containers
-	$(COMPOSE) -f $(COMPOSE_FILE) build
+	$(COMPOSE) -f $(COMPOSE_FILE) build --no-cache
 
 up: ## Start all services
 	$(COMPOSE) -f $(COMPOSE_FILE) up -d
@@ -28,7 +28,8 @@ logs: ## Display logs for all services
 
 clean: ## Clean containers and volumes
 	$(COMPOSE) -f $(COMPOSE_FILE) down -v
-	@docker system prune -f
+	@docker builder prune -af
+	@docker system prune -af
 	@rm -rf secrets/
 
 fclean: ## Clean all (including images)

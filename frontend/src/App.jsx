@@ -12,6 +12,7 @@ import ResetPassword from "./pages/ResetPassword";
 import TwoFAQRCode from "./pages/TwoFAQRCode";
 import TwoFACode from "./pages/TwoFACode";
 import ConfirmDisable2FA from "./pages/ConfirmDisable2FA";
+import Chat from "./pages/Chat";
 import PageNotFound from "./pages/PageNotFound";
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
 					<Route path="/home" element={<Home />} />
 					<Route path="/profile" element={<Profile />} />
 					<Route path="/friends" element={<Friends />} />
+					<Route path="/chat" element={<Chat />} />
 					<Route path="/stats" element={<Stats />} />
 					<Route path="/leaderboard" element={<Leaderboard />} />
 

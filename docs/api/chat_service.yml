@@ -1,0 +1,293 @@
+openapi: 3.1.0
+info:
+  title: Chat Service API
+  description: |
+    Chat Service for the Transcendence Pong application.
+    Handles direct messaging between friends. Messages are stored in-memory (not in a database)
+    and are lost on service restart. For WebSocket events, refer to `chat_service_async.yml`.
+
+    **Authentication**: JWT validation is performed by the API Gateway before the request
+    reaches this service. The Chat Service trusts the forwarded identity headers
+    (`X-User-Id`, `X-Username`) injected by the gateway after successful validation.
+  version: 1.0.0
+  contact:
+    name: Transcendence Team
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: /api/v1
+    description: API Gateway endpoint
+
+tags:
+  - name: Messages
+    description: Send messages between friends
+  - name: WebSocket
+    description: WebSocket connection helpers
+
+paths:
+  /chat/ticket:
+    get:
+      tags:
+        - WebSocket
+      summary: Get a short-lived WebSocket connection ticket
+      description: |
+        Issues a one-time, short-lived ticket (TTL: 10 seconds) to authenticate
+        the upcoming WebSocket connection without exposing the JWT in the URL.
+
+        **Flow**:
+        1. Client calls `GET /chat/ticket` with the `Authorization: Bearer <JWT>` header.
+        2. Server returns a single-use `ticket`.
+        3. Client opens the WebSocket: `wss://host/ws/chat?ticket=<ticket>`.
+        4. The Chat Service validates the ticket (single-use, 10 s TTL) and closes
+           the connection immediately if the ticket is unknown or has expired.
+           The API Gateway forwards the WebSocket connection transparently without
+           performing ticket validation.
+      operationId: getChatTicket
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Ticket issued successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WsTicketResponse'
+              example:
+                ticket: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                expiresIn: 10
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /chat/messages/{userId}:
+    get:
+      tags:
+        - Messages
+      summary: Get message history with a friend
+      description: |
+        Returns the in-memory message history of the conversation between the
+        authenticated user and the specified friend. Messages are stored in a
+        server-side in-memory collection and are lost if the service restarts.
+      operationId: getMessageHistory
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: UUID of the friend to retrieve the conversation with
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of messages to return (default 50)
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          description: Number of messages to skip from the most recent (default 0)
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Message history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageHistory'
+              example:
+                messages:
+                  - messageId: "b3d9f1e2-4c5a-4b6d-9f7e-112233445566"
+                    senderId: "550e8400-e29b-41d4-a716-446655440000"
+                    recipientId: "aabbccdd-0011-2233-4455-667788990011"
+                    content: "Hey, want to play a game?"
+                    sentAt: "2026-02-27T14:32:00Z"
+                total: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /chat/messages:
+    post:
+      tags:
+        - Messages
+      summary: Send a message to a friend
+      description: |
+        Send a direct message to a friend. Both users must be friends
+        (verified via Player Service). The message is delivered in real-time
+        via WebSocket and stored in the server's in-memory collection.
+      operationId: sendMessage
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+            example:
+              recipientId: "550e8400-e29b-41d4-a716-446655440000"
+              content: "Hey, want to play a game?"
+      responses:
+        '200':
+          description: Message delivered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT access token issued by the Auth Service.
+        Validation is handled by the API Gateway — the Chat Service itself does not
+        re-validate the token. After validation, the gateway forwards the user identity
+        via `X-User-Id` and `X-Username` headers.
+
+  schemas:
+    WsTicketResponse:
+      type: object
+      required:
+        - ticket
+        - expiresIn
+      properties:
+        ticket:
+          type: string
+          format: uuid
+          description: Single-use token to authenticate the WebSocket connection
+        expiresIn:
+          type: integer
+          description: Ticket validity in seconds (TTL)
+          example: 10
+
+    MessageHistory:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageResponse'
+        total:
+          type: integer
+          description: Total number of messages currently held in memory for this conversation
+
+    SendMessageRequest:
+      type: object
+      required:
+        - recipientId
+        - content
+      properties:
+        recipientId:
+          type: string
+          format: uuid
+          description: UUID of the recipient (must be a friend)
+        content:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Message content
+
+    MessageResponse:
+      type: object
+      properties:
+        messageId:
+          type: string
+          format: uuid
+          description: Unique identifier for the message
+        senderId:
+          type: string
+          format: uuid
+        recipientId:
+          type: string
+          format: uuid
+        content:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+        delivered:
+          type: boolean
+          description: Whether the recipient was online and received the message
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code for client handling
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Action not allowed (e.g. users are not friends)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

@@ -4,14 +4,14 @@ import { AuthContext } from "../context/AuthContext";
 import NavBar from "../components/NavBar";
 
 export default function Home() {
-	const { currentUser } = useContext(AuthContext);
+	const { currentUser, authLoading } = useContext(AuthContext);
 	const navigate = useNavigate();
 
 	useEffect(() => {
-		if (!currentUser) navigate("/", { replace: true });
-	}, [currentUser]);
+		if (!authLoading && !currentUser) navigate("/", { replace: true });
+	}, [currentUser, authLoading]);
 
-	if (!currentUser) return null;
+	if (authLoading || !currentUser) return null;
 
 	const modes = [
 		{ icon: "⚔️", title: "Play Ranked", desc: "Competitive 1v1 with ELO rating", action: () => navigate("/play/ranked") },
@@ -43,6 +43,10 @@ export default function Home() {
 					<div className="menu-card" onClick={() => navigate("/friends")}>
 						<div className="text-xl mb-1">👥</div>
 						<p className="text-sm font-bold">Friends</p>
+					</div>
+					<div className="menu-card" onClick={() => navigate("/chat")}>
+						<div className="text-xl mb-1">💬</div>
+						<p className="text-sm font-bold">Chat</p>
 					</div>
 					<div className="menu-card" onClick={() => navigate("/stats")}>
 						<div className="text-xl mb-1">📊</div>

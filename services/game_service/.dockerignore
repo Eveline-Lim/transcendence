@@ -1,0 +1,9 @@
+node_modules
+dist
+*.md
+.git
+.gitignore
+test-client.html
+game-service/node_modules
+game-service/dist
+game-service/src/__test__

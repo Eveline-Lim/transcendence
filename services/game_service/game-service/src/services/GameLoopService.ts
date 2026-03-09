@@ -22,7 +22,7 @@ export class GameLoopService {
 	private io: Server;
 	// ID loop
 	private activeLoops: Map<string, NodeJS.Timeout> = new Map();
-	// Cache in RAM
+	// Cache in RAM – also written to directly by WebsocketService for player inputs
 	private gameStatesCache: Map<string, GameState> = new Map();
 
 	constructor(io: Server) {
@@ -51,6 +51,14 @@ export class GameLoopService {
 		}, 16);
 
 		this.activeLoops.set(gameId, interval);
+	}
+
+	/**
+	 * Returns the cached game state so other services (e.g. WebsocketService)
+	 * can write inputs directly into it without a Redis round-trip.
+	 */
+	getCachedGameState(gameId: string): GameState | undefined {
+		return this.gameStatesCache.get(gameId);
 	}
 
 	async stopGameLoop(gameId: string) {
@@ -228,8 +236,8 @@ export class GameLoopService {
 			}
 			else if (ball.y < 0 + BALL_RADIUS) {
 				const limit = BALL_RADIUS;
-				const diff = ball.y + limit;
-				ball.y = limit - diff;
+				const diff = limit - ball.y;
+				ball.y = limit + diff;
 				ball.vy = -ball.vy;
 			}
 		}
@@ -264,11 +272,11 @@ export class GameLoopService {
 
 	protected checkScore(gameState: GameState): boolean {
 		
-		if (gameState.score.player1 == WINNING_SCORE) {
+		if (gameState.score.player1 === WINNING_SCORE) {
 			gameState.winner = gameState.player1_id;
 			return true;
 		}
-		else if (gameState.score.player2 == WINNING_SCORE) {
+		else if (gameState.score.player2 === WINNING_SCORE) {
 			gameState.winner = gameState.player2_id;
 			return true;
 		}

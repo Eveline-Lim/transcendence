@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { redis } from '../services/RedisInstance'
 import { RedisService } from '../services/RedisService';
 import { IS_TEST } from '../config/env';
+import { extractUserId } from '../middleware/auth.middleware';
 
 /* ------------------------------------------------- */
 
@@ -17,14 +18,20 @@ import { IS_TEST } from '../config/env';
 
 export const	gameRouter = Router();
 
-gameRouter.post('/create-game', async (req, res) => {
+gameRouter.post('/create-game', extractUserId, async (req, res) => {
 	
 	if (!redis) return res.status(503).json({error: 'Redis unavailable'});
 
+	const userId = req.userId as string; // authenticated user from API gateway
 	const { player1_id, player2_id } = req.body;
 
 	if (!player1_id || !player2_id) {
 		return res.status(400).json({error: 'Missing player IDs'});
+	}
+
+	// Verify the authenticated user is one of the players
+	if (userId !== player1_id && userId !== player2_id) {
+		return res.status(403).json({error: 'You can only create a game you are part of'});
 	}
 
 	try {

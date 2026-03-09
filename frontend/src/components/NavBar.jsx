@@ -42,6 +42,7 @@ export default function NavBar() {
 				<div className="flex items-center gap-4">
 					{navLink("/home", "Home")}
 					{navLink("/friends", "Friends")}
+					{navLink("/chat", "Chat")}
 					{navLink("/stats", "Stats")}
 					{navLink("/leaderboard", "Leaderboard")}
 					{navLink("/profile", "Profile")}

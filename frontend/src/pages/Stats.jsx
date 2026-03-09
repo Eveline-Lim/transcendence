@@ -5,7 +5,7 @@ import { api } from "../utils/api";
 import NavBar from "../components/NavBar";
 
 export default function Stats() {
-	const { currentUser } = useContext(AuthContext);
+	const { currentUser, authLoading } = useContext(AuthContext);
 	const navigate = useNavigate();
 	const [stats, setStats] = useState(null);
 	const [matches, setMatches] = useState([]);
@@ -13,10 +13,9 @@ export default function Stats() {
 	const [filters, setFilters] = useState({ result: "", gameMode: "" });
 
 	useEffect(() => {
-		if (!currentUser) { navigate("/", { replace: true }); return; }
-		loadStats();
-		loadHistory();
-	}, [currentUser]);
+		if (!authLoading && !currentUser) { navigate("/", { replace: true }); return; }
+		if (currentUser) { loadStats(); loadHistory(); }
+	}, [currentUser, authLoading]);
 
 	useEffect(() => { loadHistory(); }, [filters]);
 
@@ -53,7 +52,7 @@ export default function Stats() {
 		return `${m}:${String(sec).padStart(2, "0")}`;
 	};
 
-	if (!currentUser) return null;
+	if (authLoading || !currentUser) return null;
 
 	return (
 		<div className="min-h-screen">

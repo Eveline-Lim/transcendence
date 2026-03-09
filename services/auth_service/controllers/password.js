@@ -85,7 +85,12 @@ export async function forgotPassword(req, reply) {
 		console.log("resetLink: ", resetLink);
 
 		// Send email
-		await sendResetEmail(email, resetLink);
+		try {
+			await sendResetEmail(email, resetLink);
+		} catch (emailErr) {
+			console.warn("Failed to send reset email:", emailErr.message);
+			// Don't fail the request if email sending fails — the token is stored
+		}
 
 		// Reset rate limite on success
 		await redisClient.del(rlKey);

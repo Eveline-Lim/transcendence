@@ -35,13 +35,19 @@ mod tests {
     use futures_util::{SinkExt, StreamExt};
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message;
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    use uuid::Uuid;
 
     use match_service::messages::*;
 
     async fn start_server() -> (String, Arc<AppState>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap().to_string();
-        let state = Arc::new(AppState::new());
+
+        // Use FakeGameClient so tests do not require a live game service.
+        let state = Arc::new(AppState::with_game_client(Arc::new(
+            match_service::game_client::FakeGameClient,
+        )));
         let s = Arc::clone(&state);
         tokio::spawn(async move {
             while let Ok((stream, _)) = listener.accept().await {
@@ -56,7 +62,17 @@ mod tests {
         addr: &str,
     ) -> tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>
     {
-        let (ws, _) = connect_async(format!("ws://{}", addr)).await.unwrap();
+        let user_id = Uuid::new_v4();
+        let mut req = format!("ws://{}", addr).into_client_request().unwrap();
+        req.headers_mut()
+            .insert("X-User-Id", user_id.to_string().parse().unwrap());
+        req.headers_mut().insert(
+            "X-Username",
+            format!("test-{}", &user_id.to_string()[..8])
+                .parse()
+                .unwrap(),
+        );
+        let (ws, _) = connect_async(req).await.unwrap();
         ws
     }
 

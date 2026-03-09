@@ -1,6 +1,8 @@
 import { signup, login, logout } from "../controllers/auth.js";
 import { authenticate } from "../middleware/auth.js";
-import { forgotPassword, resetPassword, changePassword } from "../controllers/password.js";
+import { forgotPassword, resetPassword } from "../controllers/password.js";
+import { changePassword } from "../controllers/changePassword.js";
+import { refreshToken } from "../controllers/refresh.js";
 import { disable2FA, enableTwoFA, verifyTwoFA } from "../controllers/twofa.js";
 import { initiateOauth, oauthCallback } from "../controllers/oauth.js";
 import { verifyToken } from "../controllers/token.js";
@@ -8,12 +10,13 @@ import { listSessions, revokeSession, revokeAllSessions } from "../controllers/s
 
 export default async function authRoutes(fastify) {
 	// Auth
-	fastify.post("/signup", signup);
+	fastify.post("/register", signup);
 	fastify.post("/login", login);
 	fastify.post("/logout", { preHandler: authenticate }, logout);
 
 	// Token
 	fastify.get("/verify", { preHandler: authenticate }, verifyToken);
+	fastify.post("/refresh", refreshToken);
 
 	// Password
 	fastify.post("/password/forgot", forgotPassword);

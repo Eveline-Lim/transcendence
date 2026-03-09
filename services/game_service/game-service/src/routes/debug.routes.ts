@@ -4,11 +4,20 @@
 
 import{ Router } from 'express';
 import { redis } from '../services/RedisInstance'
+import { IS_PROD } from '../config/env';
 import path from 'path';
 
 /* ------------------------------------------------- */
 
 export const	debugRouter = Router();
+
+// Block all debug routes in production
+debugRouter.use((_req, res, next) => {
+	if (IS_PROD) {
+		return res.status(404).json({ error: 'Not found' });
+	}
+	next();
+});
 
   /***********************/
  /*	Route http simple	*/

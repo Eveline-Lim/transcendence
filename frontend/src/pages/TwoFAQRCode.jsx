@@ -6,7 +6,7 @@ import FormButton from "../components/FormButton.jsx";
 import BackButton from "../components/BackButton.jsx";
 
 export default function TwoFAQRCode() {
-	const { currentUser } = useContext(AuthContext);
+	const { currentUser, authLoading } = useContext(AuthContext);
 	const [qrData, setQrData] = useState(null);
 	const [error, setError] = useState(null);
 	const navigate = useNavigate();
@@ -26,7 +26,7 @@ export default function TwoFAQRCode() {
 		}
 	};
 
-	if (!currentUser) return null;
+	if (authLoading || !currentUser) return null;
 
 	return (
 		<div className="min-h-screen flex items-center justify-center p-4">

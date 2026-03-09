@@ -4,3 +4,6 @@
 secrets/
 **/secrets/
 /**/target
+__pycache__/
+*.pyc
+test_client.py/

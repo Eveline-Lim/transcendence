@@ -9,7 +9,7 @@ import { sendData } from "../sendData";
 import { validatePassword } from "../utils/validators.js";
 
 export default function Profile() {
-	const { currentUser, updateUser, logout } = useContext(AuthContext);
+	const { currentUser, authLoading, updateUser, logout } = useContext(AuthContext);
 	const navigate = useNavigate();
 	const [profile, setProfile] = useState(null);
 	const [editing, setEditing] = useState(false);
@@ -17,21 +17,20 @@ export default function Profile() {
 	const [error, setError] = useState(null);
 	const [prefs, setPrefs] = useState(null);
 	const [sessions, setSessions] = useState(null);
+	const [changingPassword, setChangingPassword] = useState(false);
 	const displayNameRef = useRef(null);
 	const emailRef = useRef(null);
 	const avatarRef = useRef(null);
-	const currentPasswordRef = useRef(null);
-	const newPasswordRef = useRef(null);
+	const currentPwRef = useRef(null);
+	const newPwRef = useRef(null);
 
 	const token = localStorage.getItem("token");
 	console.log("token: ", token);
 
 	useEffect(() => {
-		if (!currentUser) { navigate("/", { replace: true }); return; }
-		fetchProfile();
-		fetchPrefs();
-		fetchSessions();
-	}, [currentUser]);
+		if (!authLoading && !currentUser) { navigate("/", { replace: true }); return; }
+		if (currentUser) { fetchProfile(); fetchPrefs(); fetchSessions(); }
+	}, [currentUser, authLoading]);
 
 	const fetchProfile = async () => {
 		const res = await api("/api/v1/players/me");
@@ -183,34 +182,56 @@ export default function Profile() {
 			method: "DELETE",
 			headers: {
 				Authorization: `Bearer ${token}`,
-			},
+			}
 		});
-		console.log("REVOKE SESSION ID RES: ", res);
-		if (res === null) {
+		if (res.success !== false) {
 			setMsg("Session revoked");
 			fetchSessions();
 		} else {
-			setError(res?.message || "Failed to revoke session");
+			setError(res.message);
 		}
 	};
 
 	const handleRevokeAllSessions = async () => {
+		if (!confirm("Sign out from all other sessions?")) return;
 		const res = await sendData("/api/v1/auth/sessions/revoke-all", {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,
 			}
 		});
-		console.log("REVOKE ALL SESSIONS RES: ", res);
-		if (res?.revokedCount !== undefined) {
-			setMsg(`Revoked ${res.revokedCount} session(s)`);
+		if (res.success !== false) {
+			setMsg(`All other sessions revoked`);
 			fetchSessions();
 		} else {
-			setError(res?.message || "Failed to revoke sessions");
+			setError(res.message);
 		}
 	};
 
-	if (!currentUser) return null;
+	const handleChangePassword = async () => {
+		setError(null);
+		setMsg(null);
+		const currentPassword = currentPwRef.current?.value;
+		const newPassword = newPwRef.current?.value;
+		if (!currentPassword || !newPassword) { setError("Both fields are required"); return; }
+		if (newPassword.length < 8) { setError("New password must be at least 8 characters"); return; }
+		const res = await sendData("/api/v1/auth/password/change", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({ currentPassword, newPassword }),
+		});
+		if (res.success !== false) {
+			setMsg("Password changed successfully");
+			setChangingPassword(false);
+		} else {
+			setError(res.message || "Failed to change password");
+		}
+	};
+
+	if (authLoading || !currentUser) return null;
 
 	return (
 		<div className="min-h-screen">
@@ -287,16 +308,33 @@ export default function Profile() {
 					)}
 				</div>
 
+				{/* Change Password */}
+				<div className="card mb-4">
+					<h2 className="font-bold text-sm mb-2">Change Password</h2>
+					{!changingPassword ? (
+						<FormButton variant="secondary" onClick={() => setChangingPassword(true)}>Change Password</FormButton>
+					) : (
+						<>
+							<InputField label="Current Password" type="password" inputRef={currentPwRef} />
+							<div className="mt-3"></div>
+							<InputField label="New Password" type="password" inputRef={newPwRef} />
+							<div className="flex gap-2 mt-4">
+								<FormButton onClick={handleChangePassword}>Save Password</FormButton>
+								<FormButton variant="secondary" onClick={() => setChangingPassword(false)}>Cancel</FormButton>
+							</div>
+						</>
+					)}
+				</div>
+
 				{/* Active Sessions */}
 				<div className="card mb-4">
 					<div className="flex items-center justify-between mb-3">
 						<h2 className="font-bold text-sm">Active Sessions</h2>
-						<button
-							onClick={handleRevokeAllSessions}
-							className="link text-xs text-red-400"
-						>
-							Revoke all sessions
-						</button>
+						{sessions && sessions.length > 1 && (
+							<button onClick={handleRevokeAllSessions} className="link text-xs text-red-400">
+								Revoke all others
+							</button>
+						)}
 					</div>
 
 					{!sessions ? (
@@ -306,16 +344,10 @@ export default function Profile() {
 					) : (
 						<div className="flex flex-col gap-2">
 							{sessions.map((session) => {
-								const isCurrentSession = session.isCurrent ?? false;
-
-								const lastSeen = session.lastActiveAt
-									? new Date(session.lastActiveAt).toLocaleString()
-									: null;
-
-								const createdAt = session.createdAt
-									? new Date(session.createdAt).toLocaleString()
-									: null;
-
+								const isCurrentSession = session.isCurrent ?? session.current ?? false;
+								const lastSeenAt = session.lastActiveAt ?? session.lastSeenAt ?? session.lastUsedAt ?? session.updatedAt;
+								const lastSeen = lastSeenAt ? new Date(lastSeenAt).toLocaleString() : null;
+								const createdAt = session.createdAt ? new Date(session.createdAt).toLocaleString() : null;
 								return (
 									<div
 										key={session.id}
@@ -324,7 +356,7 @@ export default function Profile() {
 										<div className="flex flex-col gap-0.5 text-xs text-slate-300 min-w-0">
 											<div className="flex items-center gap-2">
 												<span className="font-medium truncate">
-													{session.deviceInfo ?? "Unknown device"}
+													{session.deviceInfo ?? session.userAgent ?? session.device ?? session.clientInfo ?? "Unknown device"}
 												</span>
 
 												{isCurrentSession && (

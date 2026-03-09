@@ -5,7 +5,7 @@ import { api } from "../utils/api";
 import NavBar from "../components/NavBar";
 
 export default function Leaderboard() {
-	const { currentUser } = useContext(AuthContext);
+	const { currentUser, authLoading } = useContext(AuthContext);
 	const navigate = useNavigate();
 	const [entries, setEntries] = useState([]);
 	const [myRank, setMyRank] = useState(null);
@@ -13,10 +13,9 @@ export default function Leaderboard() {
 	const [category, setCategory] = useState("elo");
 
 	useEffect(() => {
-		if (!currentUser) { navigate("/", { replace: true }); return; }
-		loadLeaderboard();
-		loadMyRank();
-	}, [currentUser, period, category]);
+		if (!authLoading && !currentUser) { navigate("/", { replace: true }); return; }
+		if (currentUser) { loadLeaderboard(); loadMyRank(); }
+	}, [currentUser, authLoading, period, category]);
 
 	const loadLeaderboard = async () => {
 		const params = new URLSearchParams({ period, category, limit: "50" });
@@ -35,7 +34,7 @@ export default function Leaderboard() {
 		}
 	};
 
-	if (!currentUser) return null;
+	if (authLoading || !currentUser) return null;
 
 	return (
 		<div className="min-h-screen">

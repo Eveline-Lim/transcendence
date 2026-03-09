@@ -43,14 +43,16 @@ export default function Auth() {
 				body: JSON.stringify({ identifier, password }),
 			});
 			console.log("LOGIN RES: ", res);
-			if (res.requires2FA === "true" || res.requires2FA === true) {
-				login(res.user, res.accessToken);
+			if (res.success === false) {
+				setError({ form: res.message || "Invalid credentials" });
+			} else if (res.requires2FA === "true" || res.requires2FA === true) {
+				login(res.user, res.accessToken, res.refreshToken);
 				navigate("/twofaCode", { replace: true });
-			} else if (res) {
-				login(res.user, res.accessToken);
+			} else if (res.accessToken) {
+				login(res.user, res.accessToken, res.refreshToken);
 				navigate("/home", { replace: true });
 			} else {
-				setError({ form: res.message || "Invalid credentials" });
+				setError({ form: "Unexpected response from server" });
 			}
 		} catch {
 			setError({ form: "Connection error" });
@@ -70,17 +72,19 @@ export default function Auth() {
 		if (Object.keys(errs).length) { setError(errs); return; }
 
 		try {
-			const res = await sendData("/api/v1/auth/signup", {
+			const res = await sendData("/api/v1/auth/register", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ username, displayName, password, email }),
 			});
-			console.log("SIGNUP RES: ", res);
-			if (res) {
-				login(res.user, res.accessToken);
+			console.log("REGISTER RES: ", res);
+			if (res.success === false) {
+				setError({ form: res.message || "Registration failed" });
+			} else if (res.accessToken) {
+				login(res.user, res.accessToken, res.refreshToken);
 				navigate("/home", { replace: true });
 			} else {
-				setError({ form: res.message || "Signup failed" });
+				setError({ form: "Unexpected response from server" });
 			}
 		} catch {
 			setError({ form: "Connection error" });
