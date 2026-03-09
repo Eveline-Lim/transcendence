@@ -1,5 +1,6 @@
 package com.transcendence.player.service;
 
+import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -14,6 +15,7 @@ import com.transcendence.player.dto.LeaderboardResponse;
 import com.transcendence.player.dto.MatchHistoryResponse;
 import com.transcendence.player.dto.PlayerRankingResponse;
 import com.transcendence.player.dto.PlayerStatisticsResponse;
+import com.transcendence.player.dto.RecordMatchRequest;
 import com.transcendence.player.dto.RankingsResponse;
 import com.transcendence.player.entity.GameMode;
 import com.transcendence.player.entity.MatchRecord;
@@ -27,7 +29,9 @@ import com.transcendence.player.repository.PlayerStatisticsRepository;
 import com.transcendence.player.util.PaginationUtils;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -37,6 +41,76 @@ public class StatisticsService {
     private final MatchRecordRepository matchRecordRepository;
     private final PlayerService playerService;
     private final PlayerMapper mapper;
+
+    // ── K-factor for ELO calculation ──────────────────────────────────────────
+    private static final int ELO_K = 32;
+
+    /**
+     * Record a completed match: creates MatchRecord rows for both players and
+     * updates their PlayerStatistics (wins, losses, ELO, streaks, etc.).
+     */
+    @Transactional
+    public void recordMatch(RecordMatchRequest req) {
+        GameMode mode = GameMode.valueOf(req.getGameMode());
+        Player winner = playerService.findById(req.getWinnerId());
+        Player loser  = playerService.findById(req.getLoserId());
+        Instant now   = Instant.now();
+
+        // ── Match records (one per player perspective) ────────────────────────
+        matchRecordRepository.save(MatchRecord.builder()
+                .player(winner).opponent(loser)
+                .playerScore(req.getWinnerScore()).opponentScore(req.getLoserScore())
+                .result(MatchResult.win).gameMode(mode)
+                .duration(req.getDuration()).playedAt(now)
+                .build());
+
+        matchRecordRepository.save(MatchRecord.builder()
+                .player(loser).opponent(winner)
+                .playerScore(req.getLoserScore()).opponentScore(req.getWinnerScore())
+                .result(MatchResult.loss).gameMode(mode)
+                .duration(req.getDuration()).playedAt(now)
+                .build());
+
+        // ── Player statistics ─────────────────────────────────────────────────
+        PlayerStatistics winnerStats = statisticsRepository.findByPlayer(winner)
+                .orElseThrow(() -> new ResourceNotFoundException("Winner statistics not found"));
+        PlayerStatistics loserStats = statisticsRepository.findByPlayer(loser)
+                .orElseThrow(() -> new ResourceNotFoundException("Loser statistics not found"));
+
+        // ELO
+        int newWinnerElo = computeElo(winnerStats.getEloRating(), loserStats.getEloRating(), true);
+        int newLoserElo  = computeElo(loserStats.getEloRating(), winnerStats.getEloRating(), false);
+
+        winnerStats.setGamesPlayed(winnerStats.getGamesPlayed() + 1);
+        winnerStats.setWins(winnerStats.getWins() + 1);
+        winnerStats.setTotalPointsScored(winnerStats.getTotalPointsScored() + req.getWinnerScore());
+        winnerStats.setTotalPointsConceded(winnerStats.getTotalPointsConceded() + req.getLoserScore());
+        winnerStats.setCurrentWinStreak(winnerStats.getCurrentWinStreak() + 1);
+        winnerStats.setLongestWinStreak(
+                Math.max(winnerStats.getLongestWinStreak(), winnerStats.getCurrentWinStreak()));
+        winnerStats.setEloRating(newWinnerElo);
+        statisticsRepository.save(winnerStats);
+
+        loserStats.setGamesPlayed(loserStats.getGamesPlayed() + 1);
+        loserStats.setLosses(loserStats.getLosses() + 1);
+        loserStats.setTotalPointsScored(loserStats.getTotalPointsScored() + req.getLoserScore());
+        loserStats.setTotalPointsConceded(loserStats.getTotalPointsConceded() + req.getWinnerScore());
+        loserStats.setCurrentWinStreak(0);
+        loserStats.setEloRating(newLoserElo);
+        statisticsRepository.save(loserStats);
+
+        log.info("Recorded match: {} beat {} ({}-{}) mode={} elo {}→{} / {}→{}",
+                winner.getUsername(), loser.getUsername(),
+                req.getWinnerScore(), req.getLoserScore(), mode,
+                winnerStats.getEloRating() - (newWinnerElo - winnerStats.getEloRating()), newWinnerElo,
+                loserStats.getEloRating() - (newLoserElo - loserStats.getEloRating()), newLoserElo);
+    }
+
+    private int computeElo(int playerRating, int opponentRating, boolean won) {
+        double expected = 1.0 / (1.0 + Math.pow(10, (opponentRating - playerRating) / 400.0));
+        double score = won ? 1.0 : 0.0;
+        return (int) Math.round(playerRating + ELO_K * (score - expected));
+    }
 
     public PlayerStatisticsResponse getPlayerStats(UUID playerId) {
         Player player = playerService.findById(playerId);

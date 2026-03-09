@@ -5,6 +5,7 @@
 import { Server } from 'socket.io';
 import { redis } from './RedisInstance';
 import { GameState } from '../models/GameState';
+import { PlayerServiceClient } from './PlayerServiceClient';
 import {
 	BALL_RADIUS,
 	PADDLE_SPEED,
@@ -97,6 +98,16 @@ export class GameLoopService {
 			if (gameFinished) {
 				gameState.status = 'finished';
 				await redis!.updateGameState(gameId, gameState);
+
+				// Report match result to player service
+				this.reportMatchResult(gameState);
+
+				// Emit game-over event
+				this.io.to(gameId).emit('game-over', {
+					message: 'Game finished!',
+					winner: gameState.winner,
+					game_state: gameState
+				});
 			}
 
 			this.io.to(gameId).emit('game-update', {
@@ -281,5 +292,31 @@ export class GameLoopService {
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Report the match result to the player service (fire-and-forget).
+	 */
+	private reportMatchResult(gameState: GameState): void {
+		const winnerId = gameState.winner!;
+		const loserId = winnerId === gameState.player1_id
+			? gameState.player2_id
+			: gameState.player1_id;
+		const winnerScore = winnerId === gameState.player1_id
+			? gameState.score.player1
+			: gameState.score.player2;
+		const loserScore = winnerId === gameState.player1_id
+			? gameState.score.player2
+			: gameState.score.player1;
+		const durationSec = Math.round((Date.now() - gameState.created_at) / 1000);
+
+		PlayerServiceClient.reportMatchResult({
+			winnerId,
+			loserId,
+			winnerScore,
+			loserScore,
+			gameMode: 'casual',
+			duration: durationSec,
+		});
 	}
 }

@@ -6,6 +6,7 @@ export const IS_PROD = NODE_ENV === 'production';
 export const PORT = 3001;
 // export const PORT = parseInt(process.env.PORT || '3001', 10); // 10 pour la base
 
+export const PLAYER_SERVICE_URL = process.env.PLAYER_SERVICE_URL || 'http://player_service:8080';
 
 export const BALL_RADIUS = 1;
 export const PADDLE_SPEED = 2;

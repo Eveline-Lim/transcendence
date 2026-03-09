@@ -127,9 +127,12 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/1
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
+      PLAYER_SERVICE_URL: http://player_service:8080
       PORT: 3001
     depends_on:
       redis:
+        condition: service_healthy
+      player_service:
         condition: service_healthy
     networks:
       - transcendence_network

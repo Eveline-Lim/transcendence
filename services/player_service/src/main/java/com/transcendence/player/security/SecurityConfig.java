@@ -27,6 +27,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/players").permitAll()
+                        .requestMatchers("/internal/**").permitAll()
                         .requestMatchers("/leaderboard", "/rankings").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(gatewayFilter, UsernamePasswordAuthenticationFilter.class);
