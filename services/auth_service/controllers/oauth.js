@@ -192,12 +192,12 @@ export async function oauthCallback(req, reply) {
 			process.env.JWT_SECRET,
 			{ expiresIn: ACCESS_TOKEN_TTL }
 		);
-		accessToken = await bcrypt.hash(accessToken, 10);
+		// accessToken = await bcrypt.hash(accessToken, 10);
 
 		// Refresh token
 		let refreshToken = crypto.randomBytes(64).toString("hex");
-		refreshToken = await bcrypt.hash(refreshToken, 10);
-		await redisClient.set(`refresh:${refreshToken}`,
+		const hashedrefreshToken = await bcrypt.hash(refreshToken, 10);
+		await redisClient.set(`refresh:${hashedrefreshToken}`,
 			user.id, {
 				EX: REFRESH_TOKEN_TTL
 		});
@@ -205,9 +205,10 @@ export async function oauthCallback(req, reply) {
 		// Delete temporary OAuth session
 		await redisClient.del(`session:${oauthSessionId}`);
 
+		console.log("REDIRECTION");
 		// Redirect to frontend
 		return reply.redirect(
-			`${process.env.FRONTEND_URL}/home`
+			`${process.env.FRONTEND_URL}/oauth-success#accessToken=${accessToken}&refreshToken=${refreshToken}`
 		);
 	} catch (error) {
 		console.error("OAuth callback error:", error);

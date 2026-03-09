@@ -14,6 +14,7 @@ import TwoFACode from "./pages/TwoFACode";
 import ConfirmDisable2FA from "./pages/ConfirmDisable2FA";
 import Chat from "./pages/Chat";
 import PageNotFound from "./pages/PageNotFound";
+import OauthSuccess from "./pages/OauthSuccess";
 
 export default function App() {
 	return (
@@ -24,10 +25,11 @@ export default function App() {
 					<Route path="/" element={<Auth />} />
 					<Route path="/password/forgot" element={<ForgotPassword />} />
 					<Route path="/password/reset" element={<ResetPassword />} />
+					<Route path="/oauth-success" element={<OauthSuccess />} />
 					<Route path="/twofaCode" element={<TwoFACode />} />
 					<Route path="/twofa/enable" element={<TwoFAQRCode />} />
 					<Route path="/twofa/disable" element={<ConfirmDisable2FA />} />
-					
+
 					{/* Main */}
 					<Route path="/home" element={<Home />} />
 					<Route path="/profile" element={<Profile />} />
