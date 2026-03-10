@@ -26,6 +26,12 @@ export default function Auth() {
 		else await doSignup();
 	};
 
+	const handle42Login = () => {
+		const origin = window.location.origin;
+		console.log("AUTH origin: ", origin);
+		window.location.href = "/api/v1/auth/oauth/fortytwo"
+	};
+
 	const doLogin = async () => {
 		const identifier = loginIdRef.current.value.trim();
 		const password = loginPwRef.current.value.trim();
@@ -121,7 +127,7 @@ export default function Auth() {
 						<>
 							<p className="link text-center" onClick={() => navigate("/password/forgot")}>Forgot password?</p>
 							<hr className="divider" />
-							<FormButton variant="secondary" onClick={() => { window.location.href = "/api/v1/auth/oauth/fortytwo" }}>
+							<FormButton variant="secondary" onClick={handle42Login}>
 								Login with 42
 							</FormButton>
 						</>
