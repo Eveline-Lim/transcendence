@@ -12,7 +12,7 @@ export default async function authRoutes(fastify) {
 	// Auth
 	fastify.post("/register", signup);
 	fastify.post("/login", login);
-	fastify.post("/logout", logout);
+	fastify.post("/logout", { preHandler: authenticate }, logout);
 
 	// Token
 	fastify.get("/verify", { preHandler: authenticate }, verifyToken);
@@ -21,17 +21,17 @@ export default async function authRoutes(fastify) {
 	// Password
 	fastify.post("/password/forgot", forgotPassword);
 	fastify.post("/password/reset", resetPassword);
-	fastify.post("/password/change", changePassword);
+	fastify.post("/password/change", { preHandler: authenticate }, changePassword);
 
 	// 2FA
-	fastify.post("/2fa/enable", enableTwoFA);
-	fastify.post("/2fa/verify", verifyTwoFA);
-	fastify.post("/2fa/disable", disable2FA);
+	fastify.post("/2fa/enable", { preHandler: authenticate }, enableTwoFA);
+	fastify.post("/2fa/verify", { preHandler: authenticate }, verifyTwoFA);
+	fastify.post("/2fa/disable", { preHandler: authenticate }, disable2FA);
 
 	// Session
-	fastify.get("/sessions", listSessions);
-	fastify.delete("/sessions/:sessionId", revokeSession);
-	fastify.post("/sessions/revoke-all", revokeAllSessions);
+	fastify.get("/sessions", { preHandler: authenticate }, listSessions);
+	fastify.delete("/sessions/:sessionId", { preHandler: authenticate }, revokeSession);
+	fastify.post("/sessions/revoke-all", { preHandler: authenticate }, revokeAllSessions);
 
 	// OAuth
 	fastify.get("/oauth/:provider", initiateOauth);
