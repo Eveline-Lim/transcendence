@@ -30,6 +30,10 @@ jobs:
             # Pull all images in parallel
             docker compose -f docker-compose.yml -f docker-compose.ghcr.yml pull --parallel
 
+            # Stop containers and remove postgres + redis volumes
+            docker compose -f docker-compose.yml -f docker-compose.ghcr.yml down
+            docker volume rm transcendence_postgres_data transcendence_redis_data 2>/dev/null || true
+
             # Restart containers with new images
             docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d --remove-orphans
 
