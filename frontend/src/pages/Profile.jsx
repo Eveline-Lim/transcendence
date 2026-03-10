@@ -15,6 +15,10 @@ export default function Profile() {
 	const [editing, setEditing] = useState(false);
 	const [msg, setMsg] = useState(null);
 	const [error, setError] = useState(null);
+	const [profileMsg, setProfileMsg] = useState(null);
+	const [profileError, setProfileError] = useState(null);
+	const [passwordMsg, setPasswordMsg] = useState(null);
+	const [passwordError, setPasswordError] = useState(null);
 	const [prefs, setPrefs] = useState(null);
 	const [sessions, setSessions] = useState(null);
 	const [changingPassword, setChangingPassword] = useState(false);
@@ -66,59 +70,31 @@ export default function Profile() {
 	};
 
 	const handleSave = async () => {
-		setError(null);
-		setMsg(null);
+		setProfileError(null);
+		setProfileMsg(null);
 		const body = {};
 		const dn = displayNameRef.current?.value.trim();
 		const em = emailRef.current?.value.trim();
-		const currentPassword = currentPwRef.current?.value.trim();
-		const newPassword = newPwRef.current?.value.trim();
-		console.log("currentPassword: \n", currentPassword);
-		console.log("newPassword: \n", newPassword);
-
 		if (dn) body.displayName = dn;
 		if (em) body.email = em;
 
-		/* ---------- PASSWORD CHANGE ---------- */
-		if (currentPassword || newPassword) {
-			if (!currentPassword || !newPassword) {
-				setError("Both current and new password are required");
-			}
-			if (!validatePassword(currentPassword) || !validatePassword(newPassword)) {
-				setError("New password is not valid");
-			}
-
-			const passwordResponse = await sendData("/api/v1/auth/password/change", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
-				body: JSON.stringify({ currentPassword, newPassword })
-			});
-			console.log("CHANGE PASSWORD RES: ", passwordResponse);
-
-			if (passwordResponse.success) {
-				setMsg("Password changed successfully");
-			} else {
-				setError(passwordResponse?.message || "Failed to change password");
-			}
+		if (Object.keys(body).length === 0) {
+			setProfileError("No changes to save");
+			return;
 		}
-		/* ---------- PROFILE UPDATE ---------- */
-		if (Object.keys(body).length > 0) {
-			const res = await api("/api/v1/players/me", {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(body),
-			});
-			if (res.success) {
-				const { success, ...data } = res;
-				setProfile(data);
-				updateUser({ ...currentUser, displayName: data.displayName, email: data.email });
-				setMsg("Profile updated");
-			} else {
-				setError(res.message);
-			}
+
+		const res = await api("/api/v1/players/me", {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
+		});
+		if (res.success) {
+			const { success, ...data } = res;
+			setProfile(data);
+			updateUser({ ...currentUser, displayName: data.displayName, email: data.email });
+			setProfileMsg("Profile updated successfully");
+		} else {
+			setProfileError(res.message || "Failed to update profile");
 		}
 		setEditing(false);
 	};
@@ -209,12 +185,21 @@ export default function Profile() {
 	};
 
 	const handleChangePassword = async () => {
-		setError(null);
-		setMsg(null);
-		const currentPassword = currentPwRef.current?.value;
-		const newPassword = newPwRef.current?.value;
-		if (!currentPassword || !newPassword) { setError("Both fields are required"); return; }
-		if (newPassword.length < 8) { setError("New password must be at least 8 characters"); return; }
+		setPasswordError(null);
+		setPasswordMsg(null);
+		const currentPassword = currentPwRef.current?.value.trim();
+		const newPassword = newPwRef.current?.value.trim();
+
+		if (!currentPassword || !newPassword) {
+			setPasswordError("Both fields are required");
+			return;
+		}
+		if (!validatePassword(currentPassword) || !validatePassword(newPassword)) {
+			setPasswordError("New password must be at least 8 characters and include uppercase, lowercase, number and special character");
+			return ;
+		}
+		// if (newPassword.length < 8) { setError("New password must be at least 8 characters"); return; }
+
 		const res = await sendData("/api/v1/auth/password/change", {
 			method: "POST",
 			headers: {
@@ -224,10 +209,10 @@ export default function Profile() {
 			body: JSON.stringify({ currentPassword, newPassword }),
 		});
 		if (res.success !== false) {
-			setMsg("Password changed successfully");
+			setPasswordMsg("Password changed successfully");
 			setChangingPassword(false);
 		} else {
-			setError(res.message || "Failed to change password");
+			setPasswordError(res.message || "Failed to change password");
 		}
 	};
 
@@ -238,9 +223,6 @@ export default function Profile() {
 			<NavBar />
 			<div className="max-w-lg mx-auto p-6 mt-6">
 				<h1 className="text-xl font-bold mb-4">Profile</h1>
-
-				{msg && <p className="msg-success mb-3 text-green-500">{msg}</p>}
-				{error && <p className="msg-error mb-3 text-red-500">{error}</p>}
 
 				{/* Avatar */}
 				<div className="flex items-center gap-4 mb-6">
@@ -282,15 +264,21 @@ export default function Profile() {
 							<div className="mt-3"></div>
 							<InputField label="Email" type="email" inputRef={emailRef} placeholder={profile?.email} />
 							<div className="mt-3"></div>
-							<InputField label="Current password" type="password" inputRef={currentPasswordRef} placeholder="current password" />
-							<div className="mt-3"></div>
-							<InputField label="New password" type="password" inputRef={newPasswordRef} placeholder="new password" />
 							<div className="flex gap-2 mt-4">
 								<FormButton onClick={handleSave}>Save</FormButton>
-								<FormButton variant="secondary" onClick={() => setEditing(false)}>Cancel</FormButton>
+								<FormButton
+									variant="secondary"
+									onClick={() => {
+										setProfileError(null);
+										setProfileMsg(null);
+										setEditing(false)}
+									}
+									>Cancel</FormButton>
 							</div>
 						</>
 					)}
+					{profileMsg && <p className="msg-success mb-3 text-green-500">{profileMsg}</p>}
+					{profileError && <p className="msg-error mb-3 text-red-500">{profileError}</p>}
 				</div>
 
 				{/* 2FA */}
@@ -320,10 +308,19 @@ export default function Profile() {
 							<InputField label="New Password" type="password" inputRef={newPwRef} />
 							<div className="flex gap-2 mt-4">
 								<FormButton onClick={handleChangePassword}>Save Password</FormButton>
-								<FormButton variant="secondary" onClick={() => setChangingPassword(false)}>Cancel</FormButton>
+								<FormButton
+									variant="secondary"
+									onClick={() => {
+										setPasswordError(null);
+										setPasswordMsg(null);
+										setChangingPassword(false)
+									}}
+									>Cancel</FormButton>
 							</div>
 						</>
 					)}
+					{passwordMsg && <p className="msg-success mb-3 text-green-500">{passwordMsg}</p>}
+					{passwordError && <p className="msg-error mb-3 text-red-500">{passwordError}</p>}
 				</div>
 
 				{/* Active Sessions */}
