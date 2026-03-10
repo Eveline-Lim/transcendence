@@ -8,13 +8,10 @@ import jwt from "jsonwebtoken";
 export async function initiateOauth(req, reply) {
 	const { provider } = req.params;
 	console.log("provider: \n", provider);
-	// const protocol = req.protocol;
-	// console.log("protocol: \n", protocol);
-	const host = req.headers.host;
-	console.log("host: \n", host);
-
-	const baseUrl = `https://${host}`;
-	console.log("Backend URL:", baseUrl);
+	// console.log("REQ HEADERS: ", req.headers);
+	const referer = req.headers.referer;
+	console.log("referer: ", referer);
+	console.log("Backend URL:", referer);
 
 	if (provider !== "fortytwo") {
 		return reply.code(400).send({
@@ -38,7 +35,7 @@ export async function initiateOauth(req, reply) {
 			csrfToken,
 			createdAt: now,
 			isOAuth: "true",
-			origin: baseUrl
+			origin: referer
 		});
 
 		const state = oauthSessionId;
@@ -220,7 +217,7 @@ export async function oauthCallback(req, reply) {
 		console.log("REDIRECTION frontendUrl: ", frontendUrl);
 		// Redirect to frontend
 		return reply.redirect(
-			`${frontendUrl}:8443/oauth-success#accessToken=${accessToken}&refreshToken=${refreshToken}`
+			`${frontendUrl}oauth-success#accessToken=${accessToken}&refreshToken=${refreshToken}`
 		);
 	} catch (error) {
 		console.error("OAuth callback error:", error);
