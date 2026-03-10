@@ -24,8 +24,8 @@ jobs:
 
             git pull
 
-            # Pull latest images
-            docker compose -f docker-compose.yml -f docker-compose.ghcr.yml pull
+            # Pull all images in parallel
+            docker compose -f docker-compose.yml -f docker-compose.ghcr.yml pull --parallel
 
             # Restart containers with new images
             docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d --remove-orphans
