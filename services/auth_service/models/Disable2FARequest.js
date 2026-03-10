@@ -16,7 +16,7 @@ class Disable2FARequest {
 	 * @param {Object} data
 	 * @returns {Disable2FARequest}
 	 */
-	static from(data) {
+	static fromObject(data) {
 		return new Disable2FARequest(data);
 	}
 

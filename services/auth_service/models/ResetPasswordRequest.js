@@ -16,7 +16,7 @@ class ResetPasswordRequest {
 	 * @param {Object} data
 	 * @returns {ResetPasswordRequest}
 	 */
-	static from(data) {
+	static fromObject(data) {
 		return new ResetPasswordRequest(data);
 	}
 

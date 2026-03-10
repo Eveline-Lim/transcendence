@@ -22,7 +22,7 @@ class UserInfo {
 	 * @param {Object} data
 	 * @returns {UserInfo}
 	 */
-	static from(data) {
+	static fromObject(data) {
 		return new UserInfo(data);
 	}
 

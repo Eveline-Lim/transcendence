@@ -44,6 +44,7 @@ export async function initiateOauth(req, reply) {
 				response_type: "code",
 				state
 			});
+		console.log("state: ", state);
 		console.log("authUrl: \n", authUrl);
 
 		// Redirect the user to authorization page
@@ -83,7 +84,7 @@ export async function oauthCallback(req, reply) {
 
 		// Validate session in Redis
 		const storedSession = await redisClient.hGetAll(`session:${oauthSessionId}`);
-
+		console.log("SESSION IN REDIS:", storedSession);
 		if (!storedSession || Object.keys(storedSession).length === 0 ||
 			storedSession.isOAuth !== "true") {
 				return reply.code(400).send({
@@ -111,6 +112,7 @@ export async function oauthCallback(req, reply) {
 
 		const tokenData = await tokenResponse.json();
 		const accessToken42 = tokenData.access_token;
+		console.log("ACCESS TOKEN 42: ", accessToken42);
 
 		// Fetch 42 user profile
 		const userResponse = await fetch("https://api.intra.42.fr/v2/me", {
@@ -190,12 +192,12 @@ export async function oauthCallback(req, reply) {
 			process.env.JWT_SECRET,
 			{ expiresIn: ACCESS_TOKEN_TTL }
 		);
-		accessToken = await bcrypt.hash(accessToken, 10);
+		// accessToken = await bcrypt.hash(accessToken, 10);
 
 		// Refresh token
 		let refreshToken = crypto.randomBytes(64).toString("hex");
-		refreshToken = await bcrypt.hash(refreshToken, 10);
-		await redisClient.set(`refresh:${refreshToken}`,
+		const hashedrefreshToken = await bcrypt.hash(refreshToken, 10);
+		await redisClient.set(`refresh:${hashedrefreshToken}`,
 			user.id, {
 				EX: REFRESH_TOKEN_TTL
 		});
@@ -203,14 +205,13 @@ export async function oauthCallback(req, reply) {
 		// Delete temporary OAuth session
 		await redisClient.del(`session:${oauthSessionId}`);
 
-		console.log("Redirecting to:", `${process.env.FRONTEND_URL}/home`);
-
-		// Redirect to frontend with tokens
+		console.log("REDIRECTION");
+		// Redirect to frontend
 		return reply.redirect(
-			`${process.env.FRONTEND_URL}/home`
+			`${process.env.FRONTEND_URL}/oauth-success#accessToken=${accessToken}&refreshToken=${refreshToken}`
 		);
-	} catch (err) {
-		console.error("OAuth callback error:", err);
+	} catch (error) {
+		console.error("OAuth callback error:", error);
 		return reply.code(500).send({
 			code: "OAUTH_FAILED",
 			message: "OAuth authentication failed"

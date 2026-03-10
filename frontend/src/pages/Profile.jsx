@@ -6,6 +6,7 @@ import NavBar from "../components/NavBar";
 import FormButton from "../components/FormButton";
 import InputField from "../components/InputField";
 import { sendData } from "../sendData";
+import { validatePassword } from "../utils/validators.js";
 
 export default function Profile() {
 	const { currentUser, authLoading, updateUser, logout } = useContext(AuthContext);
@@ -70,22 +71,56 @@ export default function Profile() {
 		const body = {};
 		const dn = displayNameRef.current?.value.trim();
 		const em = emailRef.current?.value.trim();
+		const currentPassword = currentPwRef.current?.value.trim();
+		const newPassword = newPwRef.current?.value.trim();
+		console.log("currentPassword: \n", currentPassword);
+		console.log("newPassword: \n", newPassword);
+
 		if (dn) body.displayName = dn;
 		if (em) body.email = em;
-		const res = await api("/api/v1/players/me", {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(body),
-		});
-		if (res.success) {
-			const { success, ...data } = res;
-			setProfile(data);
-			updateUser({ ...currentUser, displayName: data.displayName, email: data.email });
-			setEditing(false);
-			setMsg("Profile updated");
-		} else {
-			setError(res.message);
+
+		/* ---------- PASSWORD CHANGE ---------- */
+		if (currentPassword || newPassword) {
+			if (!currentPassword || !newPassword) {
+				setError("Both current and new password are required");
+			}
+			if (!validatePassword(currentPassword) || !validatePassword(newPassword)) {
+				setError("New password is not valid");
+			}
+
+			const passwordResponse = await sendData("/api/v1/auth/password/change", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({ currentPassword, newPassword })
+			});
+			console.log("CHANGE PASSWORD RES: ", passwordResponse);
+
+			if (passwordResponse.success) {
+				setMsg("Password changed successfully");
+			} else {
+				setError(passwordResponse?.message || "Failed to change password");
+			}
 		}
+		/* ---------- PROFILE UPDATE ---------- */
+		if (Object.keys(body).length > 0) {
+			const res = await api("/api/v1/players/me", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			});
+			if (res.success) {
+				const { success, ...data } = res;
+				setProfile(data);
+				updateUser({ ...currentUser, displayName: data.displayName, email: data.email });
+				setMsg("Profile updated");
+			} else {
+				setError(res.message);
+			}
+		}
+		setEditing(false);
 	};
 
 	const handleAvatarUpload = async () => {
@@ -137,6 +172,12 @@ export default function Profile() {
 	};
 
 	const handleRevokeSession = async (sessionId) => {
+		console.log("sessionId: ", sessionId);
+		if (!sessionId) {
+			setError("Missing session ID");
+			return;
+		}
+
 		const res = await sendData(`/api/v1/auth/sessions/${sessionId}`, {
 			method: "DELETE",
 			headers: {
@@ -198,8 +239,8 @@ export default function Profile() {
 			<div className="max-w-lg mx-auto p-6 mt-6">
 				<h1 className="text-xl font-bold mb-4">Profile</h1>
 
-				{msg && <p className="msg-success mb-3">{msg}</p>}
-				{error && <p className="msg-error mb-3">{error}</p>}
+				{msg && <p className="msg-success mb-3 text-green-500">{msg}</p>}
+				{error && <p className="msg-error mb-3 text-red-500">{error}</p>}
 
 				{/* Avatar */}
 				<div className="flex items-center gap-4 mb-6">
@@ -240,6 +281,10 @@ export default function Profile() {
 							<InputField label="Display Name" inputRef={displayNameRef} placeholder={profile?.displayName} />
 							<div className="mt-3"></div>
 							<InputField label="Email" type="email" inputRef={emailRef} placeholder={profile?.email} />
+							<div className="mt-3"></div>
+							<InputField label="Current password" type="password" inputRef={currentPasswordRef} placeholder="current password" />
+							<div className="mt-3"></div>
+							<InputField label="New password" type="password" inputRef={newPasswordRef} placeholder="new password" />
 							<div className="flex gap-2 mt-4">
 								<FormButton onClick={handleSave}>Save</FormButton>
 								<FormButton variant="secondary" onClick={() => setEditing(false)}>Cancel</FormButton>
@@ -291,6 +336,7 @@ export default function Profile() {
 							</button>
 						)}
 					</div>
+
 					{!sessions ? (
 						<p className="text-sm text-slate-400">Loading sessions…</p>
 					) : sessions.length === 0 ? (
@@ -304,7 +350,7 @@ export default function Profile() {
 								const createdAt = session.createdAt ? new Date(session.createdAt).toLocaleString() : null;
 								return (
 									<div
-										key={session.id ?? session.sessionId}
+										key={session.id}
 										className="flex items-start justify-between gap-3 rounded-lg bg-slate-800 px-3 py-2"
 									>
 										<div className="flex flex-col gap-0.5 text-xs text-slate-300 min-w-0">
@@ -312,23 +358,42 @@ export default function Profile() {
 												<span className="font-medium truncate">
 													{session.deviceInfo ?? session.userAgent ?? session.device ?? session.clientInfo ?? "Unknown device"}
 												</span>
+
 												{isCurrentSession && (
-													<span className="badge badge-green shrink-0">Current</span>
+													<span className="badge badge-green shrink-0">
+														Current
+													</span>
 												)}
 											</div>
+
 											{session.ipAddress && (
-												<span className="text-slate-400">{session.ipAddress}</span>
+												<span className="text-slate-400">
+													IP: {session.ipAddress}
+												</span>
 											)}
+
+											{session.location && (
+												<span className="text-slate-400">
+													{session.location}
+												</span>
+											)}
+
 											{createdAt && (
-												<span className="text-slate-500">Started: {createdAt}</span>
+												<span className="text-slate-500">
+													Started: {createdAt}
+												</span>
 											)}
+
 											{lastSeen && !isCurrentSession && (
-												<span className="text-slate-500">Last active: {lastSeen}</span>
+												<span className="text-slate-500">
+													Last active: {lastSeen}
+												</span>
 											)}
 										</div>
+
 										{!isCurrentSession && (
 											<button
-												onClick={() => handleRevokeSession(session.id ?? session.sessionId)}
+												onClick={() => handleRevokeSession(session.id)}
 												className="link text-xs text-red-400 shrink-0 mt-0.5"
 											>
 												Revoke

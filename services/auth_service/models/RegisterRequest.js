@@ -20,7 +20,7 @@ class RegisterRequest {
 	 * @param {Object} data
 	 * @returns {RegisterRequest}
 	 */
-	static from(data) {
+	static fromObject(data) {
 		return new RegisterRequest(data);
 	}
 

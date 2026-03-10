@@ -12,7 +12,7 @@ export async function sendResetEmail(to, resetLink) {
 	const info = await transporter.sendMail({
 		from: `"Your App" <${process.env.SMTP_USER}>`,
 		to,
-		subject: "Réinitialisation de votre mot de passe",
+		subject: "Password reset",
 		html: `
 			<div style="font-family: Arial, sans-serif; padding: 20px;">
 				<h2>Password Reset</h2>

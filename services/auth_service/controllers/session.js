@@ -124,7 +124,7 @@ export async function revokeSession(req, reply) {
 			.sRem(userSessionsKey, sessionId)
 			.exec();
 
-		return reply.code(204).send();
+		return reply.code(200).send({success: true});
 	} catch (error) {
 		return reply.code(500).send({
 			code: "INTERNAL_ERROR",
@@ -183,4 +183,3 @@ export async function revokeAllSessions(req, reply) {
 		});
 	}
 }
-

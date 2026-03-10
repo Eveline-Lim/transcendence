@@ -16,7 +16,7 @@ class LoginRequest {
 	 * @param {Object} data
 	 * @returns {LoginRequest}
 	 */
-	static from(data) {
+	static fromObject(data) {
 		return new LoginRequest(data);
 	}
 

@@ -2,9 +2,7 @@
 - Length between 3 and 20 characters
 - Uppercase letters
 - Lowercase letters
-- Space
-- Hyphen
-- Apostrophe
+- Underscore
 */
 export function validateUsername(username) {
 	const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
@@ -66,21 +64,36 @@ export function validateInputs(fields, isLogin = false) {
 		}
 		// Login: only validate identifier format, skip password format check
 		if (data.username !== undefined && !validateUsername(data.username)) {
-			return { success: false };
+			return {
+				success: false,
+				message: "Username: 3–20 characters. Use letters, numbers or underscores (_)"
+			};
 		}
 		if (data.email !== undefined && !validateEmail(data.email)) {
-			return { success: false };
+			return {
+				success: false,
+				message: "Invalid email"
+			};
 		}
 	} else {
 		// Register / change-password: validate all fields strictly
 		if (data.username !== undefined && !validateUsername(data.username)) {
-			return { success: false };
+			return {
+				success: false,
+				message: "Username: 3–20 characters. Use letters, numbers, or underscores (_)"
+			};
 		}
 		if (data.password !== undefined && !validatePassword(data.password)) {
-			return { success: false };
+			return {
+				success: false,
+				message: "Password: 8–128 characters with uppercase and lowercase letters, a number and a special character"
+			};
 		}
 		if (data.email !== undefined && !validateEmail(data.email)) {
-			return { success: false };
+			return {
+				success: false,
+				message: "Invalid email"
+			};
 		}
 	}
 	return { success: true };
