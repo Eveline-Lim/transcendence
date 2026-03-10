@@ -161,10 +161,10 @@ export default function Profile() {
 			}
 		});
 		if (res.success !== false) {
-			setMsg("Session revoked");
+			setMsg("The session has been successfully revoked");
 			fetchSessions();
 		} else {
-			setError(res.message);
+			setError(res.message || "Unable to revoke this session");
 		}
 	};
 
@@ -177,10 +177,10 @@ export default function Profile() {
 			}
 		});
 		if (res.success !== false) {
-			setMsg(`All other sessions revoked`);
+			setMsg("All other sessions have been successfully revoked");
 			fetchSessions();
 		} else {
-			setError(res.message);
+			setError(res.message || "Failed to revoke all other sessions");
 		}
 	};
 
@@ -333,6 +333,9 @@ export default function Profile() {
 							</button>
 						)}
 					</div>
+
+					{msg && <p className="text-green-500 text-sm mb-2">{msg}</p>}
+					{error && <p className="text-red-500 text-sm mb-2">{error}</p>}
 
 					{!sessions ? (
 						<p className="text-sm text-slate-400">Loading sessions…</p>
