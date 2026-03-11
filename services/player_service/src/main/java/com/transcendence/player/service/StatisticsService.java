@@ -77,9 +77,10 @@ public class StatisticsService {
         PlayerStatistics loserStats = statisticsRepository.findByPlayer(loser)
                 .orElseThrow(() -> new ResourceNotFoundException("Loser statistics not found"));
 
-        // ELO
-        int newWinnerElo = computeElo(winnerStats.getEloRating(), loserStats.getEloRating(), true);
-        int newLoserElo  = computeElo(loserStats.getEloRating(), winnerStats.getEloRating(), false);
+        // ELO (only updated for ranked games)
+        boolean isRanked = mode == GameMode.ranked;
+        int newWinnerElo = isRanked ? computeElo(winnerStats.getEloRating(), loserStats.getEloRating(), true) : winnerStats.getEloRating();
+        int newLoserElo  = isRanked ? computeElo(loserStats.getEloRating(), winnerStats.getEloRating(), false) : loserStats.getEloRating();
 
         winnerStats.setGamesPlayed(winnerStats.getGamesPlayed() + 1);
         winnerStats.setWins(winnerStats.getWins() + 1);
@@ -88,7 +89,7 @@ public class StatisticsService {
         winnerStats.setCurrentWinStreak(winnerStats.getCurrentWinStreak() + 1);
         winnerStats.setLongestWinStreak(
                 Math.max(winnerStats.getLongestWinStreak(), winnerStats.getCurrentWinStreak()));
-        winnerStats.setEloRating(newWinnerElo);
+        if (isRanked) winnerStats.setEloRating(newWinnerElo);
         statisticsRepository.save(winnerStats);
 
         loserStats.setGamesPlayed(loserStats.getGamesPlayed() + 1);
@@ -96,14 +97,20 @@ public class StatisticsService {
         loserStats.setTotalPointsScored(loserStats.getTotalPointsScored() + req.getLoserScore());
         loserStats.setTotalPointsConceded(loserStats.getTotalPointsConceded() + req.getWinnerScore());
         loserStats.setCurrentWinStreak(0);
-        loserStats.setEloRating(newLoserElo);
+        if (isRanked) loserStats.setEloRating(newLoserElo);
         statisticsRepository.save(loserStats);
 
-        log.info("Recorded match: {} beat {} ({}-{}) mode={} elo {}→{} / {}→{}",
-                winner.getUsername(), loser.getUsername(),
-                req.getWinnerScore(), req.getLoserScore(), mode,
-                winnerStats.getEloRating() - (newWinnerElo - winnerStats.getEloRating()), newWinnerElo,
-                loserStats.getEloRating() - (newLoserElo - loserStats.getEloRating()), newLoserElo);
+        if (isRanked) {
+            log.info("Recorded ranked match: {} beat {} ({}-{}) elo {}→{} / {}→{}",
+                    winner.getUsername(), loser.getUsername(),
+                    req.getWinnerScore(), req.getLoserScore(),
+                    winnerStats.getEloRating() - (newWinnerElo - winnerStats.getEloRating()), newWinnerElo,
+                    loserStats.getEloRating() - (newLoserElo - loserStats.getEloRating()), newLoserElo);
+        } else {
+            log.info("Recorded casual match: {} beat {} ({}-{}) [ELO unchanged]",
+                    winner.getUsername(), loser.getUsername(),
+                    req.getWinnerScore(), req.getLoserScore());
+        }
     }
 
     private int computeElo(int playerRating, int opponentRating, boolean won) {
