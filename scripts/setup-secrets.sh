@@ -38,6 +38,7 @@ create_secret "oauth_42_client_secret" "s-s4t2ud-f2569cb726d709da40d91a00b688e63
 create_secret "oauth_42_client_callback_url" "http://localhost:8080/api/v1/auth/oauth/fortytwo/callback"
 create_secret "smtp_user" "evelinelim03@gmail.com"
 create_secret "smtp_password" "yqmy nncu smvh srmu"
+create_secret "backend_url" "https://f6r2s3:8443"
 
 # Nginx
 create_secret "nginx_port" "80"

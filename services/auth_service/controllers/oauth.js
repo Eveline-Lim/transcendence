@@ -9,6 +9,7 @@ export async function initiateOauth(req, reply) {
 	const { provider } = req.params;
 	console.log("provider: \n", provider);
 	// console.log("REQ HEADERS: ", req.headers);
+	// const referer = req.headers.referer;
 	const referer = req.headers.referer;
 	console.log("referer: ", referer);
 	console.log("Backend URL:", referer);
@@ -31,7 +32,7 @@ export async function initiateOauth(req, reply) {
 
 		const now = new Date().toISOString();
 
-		await redisClient.hSet(`session:${oauthSessionId}`, {
+		await redisClient.hSet(`oauth:${oauthSessionId}`, {
 			csrfToken,
 			createdAt: now,
 			isOAuth: "true",
@@ -89,7 +90,7 @@ export async function oauthCallback(req, reply) {
 
 		// Validate session in Redis
 		console.log("oauthSessionId: \n", oauthSessionId);
-		const storedSession = await redisClient.hGetAll(`session:${oauthSessionId}`);
+		const storedSession = await redisClient.hGetAll(`oauth:${oauthSessionId}`);
 		console.log("SESSION IN REDIS:", storedSession);
 		if (!storedSession || Object.keys(storedSession).length === 0 ||
 			storedSession.isOAuth !== "true") {
@@ -212,7 +213,7 @@ export async function oauthCallback(req, reply) {
 		});
 
 		// Delete temporary OAuth session
-		await redisClient.del(`session:${oauthSessionId}`);
+		await redisClient.del(`oauth:${oauthSessionId}`);
 
 		console.log("REDIRECTION frontendUrl: ", frontendUrl);
 		// Redirect to frontend

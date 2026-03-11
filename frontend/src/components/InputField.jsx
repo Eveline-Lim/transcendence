@@ -3,6 +3,7 @@ export default function InputField({ label, type = "text", placeholder, inputRef
 		<div>
 			{label && <label className="label">{label}</label>}
 			<input
+				name={label}
 				type={type}
 				placeholder={placeholder}
 				ref={inputRef}
