@@ -21,6 +21,7 @@ import com.transcendence.player.dto.MatchHistoryResponse;
 import com.transcendence.player.dto.PlayerRankingResponse;
 import com.transcendence.player.dto.PlayerStatisticsResponse;
 import com.transcendence.player.dto.RankingsResponse;
+import com.transcendence.player.dto.RecordMatchRequest;
 import com.transcendence.player.entity.GameMode;
 import com.transcendence.player.entity.MatchRecord;
 import com.transcendence.player.entity.MatchResult;
@@ -187,5 +188,70 @@ class StatisticsServiceTest extends AbstractIntegrationTest {
         MatchHistoryResponse page2 = statisticsService.getMatchHistory(stats1Id, 2, 1, null, null);
         assertThat(page2.getMatches()).hasSize(1);
         assertThat(page2.getPagination().isHasNext()).isFalse();
+    }
+
+    @Test
+    @Order(10)
+    void recordMatch_casual_doesNotChangeElo() {
+        // Get ELO before casual match
+        PlayerStatisticsResponse before1 = statisticsService.getPlayerStats(stats1Id);
+        PlayerStatisticsResponse before2 = statisticsService.getPlayerStats(stats2Id);
+        int elo1Before = before1.getEloRating();
+        int elo2Before = before2.getEloRating();
+
+        RecordMatchRequest req = new RecordMatchRequest();
+        req.setWinnerId(stats1Id);
+        req.setLoserId(stats2Id);
+        req.setWinnerScore(11);
+        req.setLoserScore(3);
+        req.setGameMode("casual");
+        req.setDuration(200);
+        statisticsService.recordMatch(req);
+
+        PlayerStatisticsResponse after1 = statisticsService.getPlayerStats(stats1Id);
+        PlayerStatisticsResponse after2 = statisticsService.getPlayerStats(stats2Id);
+
+        assertThat(after1.getEloRating()).isEqualTo(elo1Before);
+        assertThat(after2.getEloRating()).isEqualTo(elo2Before);
+        // Stats should still be updated
+        assertThat(after1.getWins()).isEqualTo(before1.getWins() + 1);
+        assertThat(after2.getLosses()).isEqualTo(before2.getLosses() + 1);
+    }
+
+    @Test
+    @Order(11)
+    void recordMatch_ranked_doesChangeElo() {
+        // Equalize ELO so the rounding doesn't suppress the change (800-pt gap rounds to 0)
+        Player p1 = playerRepository.findById(stats1Id).orElseThrow();
+        Player p2 = playerRepository.findById(stats2Id).orElseThrow();
+        PlayerStatistics s1 = statisticsRepository.findByPlayer(p1).orElseThrow();
+        PlayerStatistics s2 = statisticsRepository.findByPlayer(p2).orElseThrow();
+        s1.setEloRating(1200);
+        s2.setEloRating(1200);
+        statisticsRepository.save(s1);
+        statisticsRepository.save(s2);
+
+        PlayerStatisticsResponse before1 = statisticsService.getPlayerStats(stats1Id);
+        PlayerStatisticsResponse before2 = statisticsService.getPlayerStats(stats2Id);
+        int elo1Before = before1.getEloRating();
+        int elo2Before = before2.getEloRating();
+
+        RecordMatchRequest req = new RecordMatchRequest();
+        req.setWinnerId(stats1Id);
+        req.setLoserId(stats2Id);
+        req.setWinnerScore(11);
+        req.setLoserScore(4);
+        req.setGameMode("ranked");
+        req.setDuration(250);
+        statisticsService.recordMatch(req);
+
+        PlayerStatisticsResponse after1 = statisticsService.getPlayerStats(stats1Id);
+        PlayerStatisticsResponse after2 = statisticsService.getPlayerStats(stats2Id);
+
+        assertThat(after1.getEloRating()).isNotEqualTo(elo1Before);
+        assertThat(after2.getEloRating()).isNotEqualTo(elo2Before);
+        // Winner ELO should go up, loser down
+        assertThat(after1.getEloRating()).isGreaterThan(elo1Before);
+        assertThat(after2.getEloRating()).isLessThan(elo2Before);
     }
 }
