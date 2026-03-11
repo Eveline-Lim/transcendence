@@ -8,6 +8,10 @@ import jwt from "jsonwebtoken";
 export async function initiateOauth(req, reply) {
 	const { provider } = req.params;
 	console.log("provider: \n", provider);
+	// console.log("REQ HEADERS: ", req.headers);
+	const referer = req.headers.referer;
+	console.log("referer: ", referer);
+	console.log("Backend URL:", referer);
 
 	if (provider !== "fortytwo") {
 		return reply.code(400).send({
@@ -30,7 +34,8 @@ export async function initiateOauth(req, reply) {
 		await redisClient.hSet(`session:${oauthSessionId}`, {
 			csrfToken,
 			createdAt: now,
-			isOAuth: "true"
+			isOAuth: "true",
+			origin: referer
 		});
 
 		const state = oauthSessionId;
@@ -83,6 +88,7 @@ export async function oauthCallback(req, reply) {
 		const oauthSessionId = state;
 
 		// Validate session in Redis
+		console.log("oauthSessionId: \n", oauthSessionId);
 		const storedSession = await redisClient.hGetAll(`session:${oauthSessionId}`);
 		console.log("SESSION IN REDIS:", storedSession);
 		if (!storedSession || Object.keys(storedSession).length === 0 ||
@@ -92,6 +98,9 @@ export async function oauthCallback(req, reply) {
 					message: "CSRF validation failed"
 				});
 		}
+
+		const frontendUrl = storedSession.origin;
+		console.log("frontendUrl: ", frontendUrl);
 
 		// Exchange code for 42 access token
 		const tokenResponse = await fetch("https://api.intra.42.fr/oauth/token", {
@@ -205,10 +214,10 @@ export async function oauthCallback(req, reply) {
 		// Delete temporary OAuth session
 		await redisClient.del(`session:${oauthSessionId}`);
 
-		console.log("REDIRECTION");
+		console.log("REDIRECTION frontendUrl: ", frontendUrl);
 		// Redirect to frontend
 		return reply.redirect(
-			`${process.env.FRONTEND_URL}/oauth-success#accessToken=${accessToken}&refreshToken=${refreshToken}`
+			`${frontendUrl}oauth-success#accessToken=${accessToken}&refreshToken=${refreshToken}`
 		);
 	} catch (error) {
 		console.error("OAuth callback error:", error);

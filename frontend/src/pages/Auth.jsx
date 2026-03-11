@@ -26,6 +26,12 @@ export default function Auth() {
 		else await doSignup();
 	};
 
+	const handle42Login = () => {
+		const origin = window.location.origin;
+		console.log("AUTH origin: ", origin);
+		window.location.href = "/api/v1/auth/oauth/fortytwo"
+	};
+
 	const doLogin = async () => {
 		const identifier = loginIdRef.current.value.trim();
 		const password = loginPwRef.current.value.trim();
@@ -65,9 +71,9 @@ export default function Auth() {
 		const password = signupPwRef.current.value.trim();
 		const email = signupEmailRef.current.value.trim();
 		const errs = {};
-		if (!validateUsername(username)) errs.username = "3-20 chars, alphanumeric or _";
+		if (!validateUsername(username)) errs.username = "Username must be 3–20 characters and contain only letters, numbers, or _";
 		if (!displayName) errs.displayName = "Required";
-		if (!password || !validatePassword(password)) errs.password = "8-128 chars, mixed case, number, special";
+		if (!password || !validatePassword(password)) errs.password = "Password must be 8–128 characters and include uppercase, lowercase, number and special character";
 		if (!validateEmail(email)) errs.email = "Invalid email";
 		if (Object.keys(errs).length) { setError(errs); return; }
 
@@ -101,7 +107,7 @@ export default function Auth() {
 					{mode === "login" ? "Sign in to your account" : "Create a new account"}
 				</p>
 				<hr className="divider" />
-				<form onSubmit={handleSubmit} className="flex flex-col gap-3">
+				<form key={mode} onSubmit={handleSubmit} className="flex flex-col gap-3">
 					{mode === "login" ? (
 						<>
 							<InputField label="Username or Email" inputRef={loginIdRef} error={error.identifier} autoFocus />
@@ -121,7 +127,7 @@ export default function Auth() {
 						<>
 							<p className="link text-center" onClick={() => navigate("/password/forgot")}>Forgot password?</p>
 							<hr className="divider" />
-							<FormButton variant="secondary" onClick={() => { window.location.href = "/api/v1/auth/oauth/fortytwo" }}>
+							<FormButton variant="secondary" onClick={handle42Login}>
 								Login with 42
 							</FormButton>
 						</>

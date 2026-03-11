@@ -1,6 +1,7 @@
 import { redisClient } from "../redisClient.js";
 import jwt from "jsonwebtoken";
 
+// TODO: check token expiration
 export async function authenticate(req, reply) {
 	try {
 		const authHeader = req.headers.authorization;
