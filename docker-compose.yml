@@ -147,6 +147,25 @@ services:
       start_period: 20s
 
   ##################################################################
+  # AI OPPONENT SERVICE
+  ##################################################################
+  ai_opponent_service:
+    build: ./services/ai_opponent_service
+    container_name: transcendence_ai_opponent
+    environment:
+      GRPC_PORT: "50051"
+      LOG_LEVEL: INFO
+    networks:
+      - transcendence_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.settimeout(2); s.connect(('localhost', 50051)); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  ##################################################################
   # MATCH SERVICE
   ##################################################################
   match_service:
