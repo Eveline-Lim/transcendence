@@ -1,19 +1,19 @@
 class RegisterRequest {
 	/**
 	 * @param {Object} data
-	 * @param {string} data.email - (required)
 	 * @param {string} data.username - (required)
-	 * @param {string} data.password - Must contain at least one uppercase, lowercase, number, and special character (required)
 	 * @param {string} [data.displayName]
+	 * @param {string} data.password - Must contain at least one uppercase, lowercase, number, and special character (required)
+	 * @param {string} data.email - (required)
 	 */
 	constructor(data = {}) {
-		this.email = data.email;
 		this.username = data.username;
-		this.password = data.password;
 		this.displayName = data.displayName ?? undefined;
+		this.email = data.email;
+		this.password = data.password;
 	}
 
-	static RequiredProperties = ['email', 'username', 'password'];
+	static RequiredProperties = ['username', 'password', 'email'];
 
 	/**
 	 * * Create a RegisterRequest from a plain object

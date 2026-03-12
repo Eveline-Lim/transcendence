@@ -16,21 +16,16 @@ export default function OAuthSuccess() {
 
 		const handleOAuth = async () => {
 			const hash = window.location.hash.substring(1);
-			console.log("hash: ", hash);
 			const params = new URLSearchParams(hash);
-			console.log("params: ", params);
 
 			const accessToken = params.get("accessToken");
-			console.log("accessToken: ", accessToken);
 			const refreshToken = params.get("refreshToken");
-			console.log("refreshToken: ", refreshToken);
 			if (!accessToken) {
 				navigate("/");
 				return;
 			}
 
 			login(null, accessToken, refreshToken);
-			//window.history.replaceState({}, document.title, "/oauth-success");
 
 			try {
 				const user = await sendData("/api/v1/players/me", {
@@ -38,17 +33,13 @@ export default function OAuthSuccess() {
 						Authorization: `Bearer ${accessToken}`,
 					},
 				});
-				console.log("user: ", user);
 				if (!user) {
 					navigate("/");
 					return;
 				}
-
 				updateUser(user);
-				console.log("user updated: ", user);
 				navigate("/home", { replace: true });
 			} catch (error) {
-				console.error("Failed to fetch user", error);
 				navigate("/");
 			}
 		};

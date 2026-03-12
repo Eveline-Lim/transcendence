@@ -60,6 +60,7 @@ services:
       - frontend_url
       - smtp_user
       - smtp_password
+      - backend_url
     environment:
       NODE_ENV: production
       REDIS_URL: redis://redis:6379/0
@@ -72,6 +73,7 @@ services:
       FRONTEND_URL_FILE: /run/secrets/frontend_url
       SMTP_USER_FILE: /run/secrets/smtp_user
       SMTP_PASSWORD_FILE: /run/secrets/smtp_password
+      BACKEND_URL_FILE: /run/secrets/backend_url
     depends_on:
       redis:
         condition: service_healthy
@@ -259,3 +261,5 @@ secrets:
     file: ./secrets/smtp_user
   smtp_password:
     file: ./secrets/smtp_password
+  backend_url:
+    file: ./secrets/backend_url

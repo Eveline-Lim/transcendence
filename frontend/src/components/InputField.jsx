@@ -1,9 +1,15 @@
+import { useId } from "react";
+
 export default function InputField({ label, type = "text", placeholder, inputRef, error, autoFocus, value, onChange }) {
+	const id = useId();
 	return (
 		<div>
-			{label && <label className="label">{label}</label>}
+			{label && (<label htmlFor={id} className="label">{label}</label>)}
 			<input
+				id={id}
+				name={label}
 				type={type}
+				autoComplete="off"
 				placeholder={placeholder}
 				ref={inputRef}
 				autoFocus={autoFocus}

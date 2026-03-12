@@ -10,6 +10,7 @@ export async function refreshToken(req, reply) {
 
 	if (!refreshToken) {
 		return reply.code(400).send({
+			success: false,
 			code: "INVALID_REQUEST",
 			message: "Refresh token required",
 		});
@@ -22,6 +23,7 @@ export async function refreshToken(req, reply) {
 
 		if (!storedValue) {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_REFRESH_TOKEN",
 				message: "Invalid or expired refresh token",
 			});
@@ -38,6 +40,7 @@ export async function refreshToken(req, reply) {
 		const username = await redisClient.get(`userid:${userId}`);
 		if (!username) {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_REFRESH_TOKEN",
 				message: "Invalid refresh token",
 			});
@@ -46,6 +49,7 @@ export async function refreshToken(req, reply) {
 		const user = await redisClient.hGetAll(`user:${username}`);
 		if (!user || Object.keys(user).length === 0) {
 			return reply.code(401).send({
+				success: false,
 				code: "USER_NOT_FOUND",
 				message: "User not found",
 			});
@@ -88,7 +92,8 @@ export async function refreshToken(req, reply) {
 	} catch (error) {
 		console.error("REFRESH TOKEN ERROR:", error);
 		return reply.code(500).send({
-			code: "INTERNAL_ERROR",
+			success: false,
+			code: "INTERNAL_SERVER_ERROR",
 			message: "Unable to refresh token",
 		});
 	}

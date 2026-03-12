@@ -15,22 +15,18 @@ export async function signup(req, reply) {
 
 	try {
 		registerData = RegisterRequest.validate(req.body);
-		console.log("REGISTER DATA: ", registerData);
 	} catch (error) {
 		return reply.code(400).send({
 			success: false,
-			code: "INVALID_CREDENTIALS",
-			message: "Invalid fields",
+			code: "INVALID_REQUEST_PARAMETERS",
+			message: error.message,
 		});
 	}
 
 	const { username, displayName, email, password } = registerData;
 	const avatarUrl = "/assets/avatar.jpg";
 
-	console.log("REGISTER DATA: ", registerData);
-
 	const validation = validateInputs(registerData, false);
-	console.log("validation: ", validation);
 	if (!validation.success) {
 		return reply.code(400).send({
 			success: false,
@@ -40,9 +36,7 @@ export async function signup(req, reply) {
 	}
 	try {
 		const userKey = `user:${username}`;
-		console.log("userKey: ", userKey);
 		const emailKey = `email:${email}`;
-		console.log("emailKey: ", emailKey);
 
 		// Check username uniqueness
 		const existingUser = await redisClient.exists(userKey);
@@ -59,7 +53,7 @@ export async function signup(req, reply) {
 		if (existingEmail) {
 			return reply.code(409).send({
 				success: false,
-				code: "EMAIL_ALREADY_EXISTS",
+				code: "USER_ALREADY_EXISTS",
 				message: "Email already exists",
 			});
 		}
@@ -148,15 +142,13 @@ export async function signup(req, reply) {
 		const response = new AuthResponse({
 			accessToken,
 			refreshToken,
+			tokenType: "Bearer",
 			expiresIn: ACCESS_TOKEN_TTL,
 			user: userInfo,
 			requires2FA: "false",
 		});
-
-		console.log("CREATING SESSION:", sessionId);
 		return reply.code(201).send(response);
 	} catch (error) {
-		console.error("SIGNUP ERROR: ", error);
 		return reply.code(500).send({
 			success: false,
 			code: "INTERNAL_ERROR",
@@ -181,22 +173,19 @@ export async function login(req, reply) {
 	const { identifier, password } = loginData;
 
 	const validation = validateInputs(loginData, true);
-	console.log("validation: ", validation);
 	if (!validation.success) {
 		return reply.code(400).send({
 			success: false,
 			code: "INVALID_REQUEST_PARAMETERS",
-			message: "Invalid fields",
+			message: validation.message,
 		});
 	}
 
 	// For rate limiting per IP
 	const ip = req.ip;
-	console.log("IP: ", ip);
 
 	try {
 		let username = identifier;
-		console.log("username: ", username);
 		if (identifier.includes("@")) {
 			username = await redisClient.get(`email:${identifier}`);
 			if (!username) {
@@ -209,7 +198,6 @@ export async function login(req, reply) {
 		}
 
 		const userKey = `user:${username}`;
-		console.log("userKey: ", userKey);
 
 		const existingUser = await redisClient.exists(userKey);
 		if (!existingUser) {
@@ -224,7 +212,6 @@ export async function login(req, reply) {
 
 		// Rate limit check
 		const rlKey = `login:rateLimit:${identifier}:${ip}`;
-		console.log("rlKey: ", rlKey);
 		const attempts = await redisClient.incr(rlKey);
 		if (attempts === 1) {
 			await redisClient.expire(rlKey, RATE_LIMIT_WINDOW_SECONDS);
@@ -251,7 +238,6 @@ export async function login(req, reply) {
 
 		// Create session
 		const sessionId = crypto.randomUUID();
-		console.log("sessionId: ", sessionId);
 		const now = new Date().toISOString();
 
 		await redisClient
@@ -278,11 +264,9 @@ export async function login(req, reply) {
 			process.env.JWT_SECRET,
 			{ expiresIn: ACCESS_TOKEN_TTL }
 		);
-		console.log("ACCESS TOKEN: ", accessToken);
 
 		// Refresh Token
 		const refreshToken = crypto.randomBytes(64).toString("hex");
-		console.log("REFRESH_TOKEN: ", refreshToken);
 		const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
 
 		// Store refresh token in Redis (key = sha256 hash, value = userId:sessionId)
@@ -292,13 +276,12 @@ export async function login(req, reply) {
 			{ EX: REFRESH_TOKEN_TTL }
 		);
 
-		console.log("2FA: ", user.has2FAEnabled, user.requires2FA);
-
 		const userInfo = UserInfo.fromRedis(user);
 
 		const response = new AuthResponse({
 			accessToken,
 			refreshToken,
+			tokenType: "Bearer",
 			expiresIn: ACCESS_TOKEN_TTL,
 			user: userInfo,
 			requires2FA: user.requires2FA === "true",
@@ -309,7 +292,7 @@ export async function login(req, reply) {
 		console.log("LOGIN ERROR: ", error);
 		return reply.code(500).send({
 			success: false,
-			code: "INTERNAL_ERROR",
+			code: "INTERNAL_SERVER_ERROR",
 			message: "Unable to log in user",
 		});
 	}
@@ -318,9 +301,9 @@ export async function login(req, reply) {
 export async function logout(req, reply) {
 	try {
 		const token = req.headers.authorization.split(" ")[1];
-		console.log("LOGOUT TOKEN: ", token);
 		if (!token) {
 			return reply.code(401).send({
+				success: false,
 				code: "AUTH_REQUIRED",
 				message: "Authentication required",
 			});
@@ -331,6 +314,7 @@ export async function logout(req, reply) {
 			decoded = jwt.verify(token, process.env.JWT_SECRET);
 		} catch (error) {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_TOKEN",
 				message: "Invalid or expired token",
 			});
@@ -348,7 +332,8 @@ export async function logout(req, reply) {
 		reply.code(204).send();
 	} catch (error) {
 		return reply.code(500).send({
-			code: "INTERNAL_ERROR",
+			success: false,
+			code: "INTERNAL_SERVER_ERROR",
 			message: "Unable to log out user",
 		});
 	}

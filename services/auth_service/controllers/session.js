@@ -2,11 +2,11 @@ import { redisClient } from "../redisClient.js";
 import jwt from "jsonwebtoken";
 
 export async function listSessions(req, reply) {
-	console.log("SESSIONS");
 	try {
 		const token = req.headers.authorization?.split(" ")[1];
 		if (!token) {
 			return reply.code(401).send({
+				success: false,
 				code: "AUTH_REQUIRED",
 				message: "Authentication required",
 			});
@@ -17,6 +17,7 @@ export async function listSessions(req, reply) {
 			decoded = jwt.verify(token, process.env.JWT_SECRET);
 		} catch {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_TOKEN",
 				message: "Invalid or expired token",
 			});
@@ -64,7 +65,8 @@ export async function listSessions(req, reply) {
 		return reply.code(200).send({ sessions });
 	} catch (error) {
 		return reply.code(500).send({
-			code: "INTERNAL_ERROR",
+			success: false,
+			code: "INTERNAL_SERVER_ERROR",
 			message: "Internal server error",
 		});
 	}
@@ -75,6 +77,7 @@ export async function revokeSession(req, reply) {
 		const token = req.headers.authorization?.split(" ")[1];
 		if (!token) {
 			return reply.code(401).send({
+				success: false,
 				code: "AUTH_REQUIRED",
 				message: "Authentication required",
 			});
@@ -85,6 +88,7 @@ export async function revokeSession(req, reply) {
 			decoded = jwt.verify(token, process.env.JWT_SECRET);
 		} catch {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_TOKEN",
 				message: "Invalid or expired token",
 			});
@@ -94,6 +98,7 @@ export async function revokeSession(req, reply) {
 		const { sessionId } = req.params;
 		if (!sessionId) {
 			return reply.code(400).send({
+				success: false,
 				code: "SESSION_ID_REQUIRED",
 				message: "Session ID is required",
 			});
@@ -106,6 +111,7 @@ export async function revokeSession(req, reply) {
 		const session = await redisClient.hGetAll(sessionKey);
 		if (!session || Object.keys(session).length === 0) {
 			return reply.code(404).send({
+				success: false,
 				code: "SESSION_NOT_FOUND",
 				message: "Resource not found",
 			});
@@ -114,6 +120,7 @@ export async function revokeSession(req, reply) {
 		const belongsToUser = await redisClient.sIsMember(userSessionsKey, sessionId);
 		if (!belongsToUser) {
 			return reply.code(404).send({
+				success: false,
 				code: "SESSION_NOT_FOUND",
 				message: "Resource not found",
 			});
@@ -127,7 +134,8 @@ export async function revokeSession(req, reply) {
 		return reply.code(200).send({success: true});
 	} catch (error) {
 		return reply.code(500).send({
-			code: "INTERNAL_ERROR",
+			success: false,
+			code: "INTERNAL_SERVER_ERROR",
 			message: "Internal server error",
 		});
 	}
@@ -138,6 +146,7 @@ export async function revokeAllSessions(req, reply) {
 		const token = req.headers.authorization?.split(" ")[1];
 		if (!token) {
 			return reply.code(401).send({
+				success: false,
 				code: "AUTH_REQUIRED",
 				message: "Authentication required",
 			});
@@ -148,6 +157,7 @@ export async function revokeAllSessions(req, reply) {
 			decoded = jwt.verify(token, process.env.JWT_SECRET);
 		} catch {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_TOKEN",
 				message: "Invalid or expired token",
 			});
@@ -156,6 +166,7 @@ export async function revokeAllSessions(req, reply) {
 		const { username, sessionId: currentSessionId } = decoded;
 		if (!username) {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_TOKEN",
 				message: "Token invalid",
 			});
@@ -178,7 +189,8 @@ export async function revokeAllSessions(req, reply) {
 		});
 	} catch (error) {
 		return reply.code(500).send({
-			code: "INTERNAL_ERROR",
+			success: false,
+			code: "INTERNAL_SERVER_ERROR",
 			message: "Unable to revoke sessions",
 		});
 	}

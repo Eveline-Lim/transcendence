@@ -8,13 +8,13 @@ import jwt from "jsonwebtoken";
 export async function initiateOauth(req, reply) {
 	const { provider } = req.params;
 	console.log("provider: \n", provider);
-	// console.log("REQ HEADERS: ", req.headers);
 	const referer = req.headers.referer;
 	console.log("referer: ", referer);
 	console.log("Backend URL:", referer);
 
 	if (provider !== "fortytwo") {
 		return reply.code(400).send({
+			success: false,
 			code: "INVALID_PROVIDER",
 			message: "Unknown OAuth provider"
 		});
@@ -23,15 +23,13 @@ export async function initiateOauth(req, reply) {
 	try {
 		// Generate a temporary Oauth session
 		const oauthSessionId = crypto.randomUUID();
-		console.log("oauthSession: \n", oauthSessionId);
 
 		// Generate a CSRF token to protect against cross-site request forgery attacks
 		const csrfToken = crypto.randomUUID();
-		console.log("csrfToken: \n", csrfToken);
 
 		const now = new Date().toISOString();
 
-		await redisClient.hSet(`session:${oauthSessionId}`, {
+		await redisClient.hSet(`oauth:${oauthSessionId}`, {
 			csrfToken,
 			createdAt: now,
 			isOAuth: "true",
@@ -54,11 +52,11 @@ export async function initiateOauth(req, reply) {
 
 		// Redirect the user to authorization page
 		return reply.redirect(authUrl);
-
 	} catch (error) {
 		console.error("OAuth init error:", error);
 		return reply.code(500).send({
-			code: "OAUTH_INIT_FAILED",
+			success: false,
+			code: "INTERNAL_SERVER_ERROR",
 			message: "Failed to initiate OAuth"
 		});
 	}
@@ -67,18 +65,18 @@ export async function initiateOauth(req, reply) {
 export async function oauthCallback(req, reply) {
 	const { provider } = req.params;
 	const { code, state } = req.query;
-	console.log("code: \n", code);
-	console.log("state: \n", state);
 
 	if (!provider || !code || !state) {
 		return reply.code(400).send({
-			code: "MISSING_PARAMS",
+			success: false,
+			code: "INVALID REQUEST PARAMETERS",
 			message: "Missing provider, code, state"
 		});
 	}
 
 	if (provider !== "fortytwo") {
 		return reply.code(400).send({
+			success: false,
 			code: "INVALID_PROVIDER",
 			message: "OAuth provider not implemented"
 		});
@@ -88,12 +86,11 @@ export async function oauthCallback(req, reply) {
 		const oauthSessionId = state;
 
 		// Validate session in Redis
-		console.log("oauthSessionId: \n", oauthSessionId);
-		const storedSession = await redisClient.hGetAll(`session:${oauthSessionId}`);
-		console.log("SESSION IN REDIS:", storedSession);
+		const storedSession = await redisClient.hGetAll(`oauth:${oauthSessionId}`);
 		if (!storedSession || Object.keys(storedSession).length === 0 ||
 			storedSession.isOAuth !== "true") {
 				return reply.code(400).send({
+					success: false,
 					code: "INVALID_STATE",
 					message: "CSRF validation failed"
 				});
@@ -121,7 +118,6 @@ export async function oauthCallback(req, reply) {
 
 		const tokenData = await tokenResponse.json();
 		const accessToken42 = tokenData.access_token;
-		console.log("ACCESS TOKEN 42: ", accessToken42);
 
 		// Fetch 42 user profile
 		const userResponse = await fetch("https://api.intra.42.fr/v2/me", {
@@ -212,7 +208,7 @@ export async function oauthCallback(req, reply) {
 		});
 
 		// Delete temporary OAuth session
-		await redisClient.del(`session:${oauthSessionId}`);
+		await redisClient.del(`oauth:${oauthSessionId}`);
 
 		console.log("REDIRECTION frontendUrl: ", frontendUrl);
 		// Redirect to frontend
@@ -222,7 +218,8 @@ export async function oauthCallback(req, reply) {
 	} catch (error) {
 		console.error("OAuth callback error:", error);
 		return reply.code(500).send({
-			code: "OAUTH_FAILED",
+			success: false,
+			code: "INTERNAL_SERVER_ERROR",
 			message: "OAuth authentication failed"
 		});
 	}
