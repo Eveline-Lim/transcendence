@@ -97,8 +97,9 @@ export class LocalGameEngine {
 		if (gs.inputs.player2_up)   gs.paddles.player2 -= PADDLE_SPEED;
 		if (gs.inputs.player2_down) gs.paddles.player2 += PADDLE_SPEED;
 
-		gs.paddles.player1 = Math.max(0, Math.min(100, gs.paddles.player1));
-		gs.paddles.player2 = Math.max(0, Math.min(100, gs.paddles.player2));
+		const limits = PADDLE_HEIGHT / 2;
+		gs.paddles.player1 = Math.max(limits, Math.min(100 - limits, gs.paddles.player1));
+		gs.paddles.player2 = Math.max(limits, Math.min(100 - limits, gs.paddles.player2));
 	}
 
 	_checkPaddleCollision(gs, player) {
@@ -107,7 +108,7 @@ export class LocalGameEngine {
 		const top = paddleY - PADDLE_HEIGHT / 2;
 		const bot = paddleY + PADDLE_HEIGHT / 2;
 
-		if (ball.y >= top && ball.y <= bot) {
+		if (ball.y + BALL_RADIUS >= top && ball.y - BALL_RADIUS <= bot) {
 			ball.vy = ((ball.y - paddleY) / (PADDLE_HEIGHT / 2)) * MAX_BOUNCE_ANGLE;
 			return true;
 		}

@@ -144,8 +144,9 @@ export class GameLoopService {
 		}
 
 		//	Set limits (0-100%)
-		gameState.paddles.player1 = Math.max(0, Math.min(100, gameState.paddles.player1));
-		gameState.paddles.player2 = Math.max(0, Math.min(100, gameState.paddles.player2));
+		const limits = PADDLE_HEIGHT / 2;
+		gameState.paddles.player1 = Math.max(limits, Math.min(100 - limits, gameState.paddles.player1));
+		gameState.paddles.player2 = Math.max(limits, Math.min(100 - limits, gameState.paddles.player2));
 	}
 
 	protected checkPaddleCollision(gameState: GameState, player: 'player1' | 'player2'): boolean {
@@ -157,14 +158,14 @@ export class GameLoopService {
 		const paddleTop = paddleY - (PADDLE_HEIGHT / 2);
 		const paddleBottom = paddleY + (PADDLE_HEIGHT / 2);
 
-		if (ball.y >= paddleTop && ball.y <= paddleBottom) {
+		// PATCH 1: correction collision surface
+		if (ball.y + BALL_RADIUS >= paddleTop && ball.y - BALL_RADIUS <= paddleBottom) {
 			// if error, check if the value is higher than 1 or less than -1
 			const relativeImpact = (ball.y - paddleY) / (PADDLE_HEIGHT / 2);
 			ball.vy = relativeImpact * MAX_BOUNCE_ANGLE;
 			return true;
 		}
 		return false;
-		// return ball.y >= paddleTop && ball.y <= paddleBottom;
 	}
 
 	protected updateBallSpeed(gameState: GameState) {
