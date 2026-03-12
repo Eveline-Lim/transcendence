@@ -78,6 +78,7 @@ export default function Profile() {
 		if (dn) body.displayName = dn;
 		if (em) body.email = em;
 
+		// TODO: Add check in backend
 		if (Object.keys(body).length === 0) {
 			setProfileError("No changes to save");
 			return;

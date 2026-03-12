@@ -16,9 +16,9 @@ import { generateBackupCodes } from "../utils/generateBackupCodes.js";
 export async function enableTwoFA(req, reply) {
 	try {
 		const token = req.headers.authorization.split(" ")[1];
-		console.log("TOKEN: ", token);
 		if (!token) {
 			return reply.code(401).send({
+				success: false,
 				code: "AUTH_REQUIRED",
 				message: "Authentication required",
 			});
@@ -29,6 +29,7 @@ export async function enableTwoFA(req, reply) {
 			decoded = jwt.verify(token, process.env.JWT_SECRET);
 		} catch {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_TOKEN",
 				message: "Invalid or expired token",
 			});
@@ -39,6 +40,7 @@ export async function enableTwoFA(req, reply) {
 		const user = await redisClient.hGetAll(userKey);
 		if (!user || Object.keys(user).length === 0) {
 			return reply.code(401).send({
+				success: false,
 				code: "USER_NOT_FOUND",
 				message: "User does not exist",
 			});
@@ -46,6 +48,7 @@ export async function enableTwoFA(req, reply) {
 
 		if (user.has2FAEnabled === "true") {
 			return reply.code(409).send({
+				success: false,
 				code: "2FA_ALREADY_ENABLED",
 				message: "2FA already enabled",
 			});
@@ -53,16 +56,12 @@ export async function enableTwoFA(req, reply) {
 
 		// Generate TOTP secret
 		const secret = speakeasy.generateSecret({ name: "Transcendence" });
-		console.log("secret: ", secret);
 
 		// Generate QR code
 		const qrCodeUrl = await qrcode.toDataURL(secret.otpauth_url);
-		console.log("qrcode: ", qrCodeUrl);
-
 
 		// Generate and hashed backup codes
 		const { codes, backupCodes } = generateBackupCodes();
-		console.log("codes: ", codes);
 
 		// Store 2FA secret as pending (not yet enabled until verified)
 		await redisClient.hSet(userKey, {
@@ -79,7 +78,8 @@ export async function enableTwoFA(req, reply) {
 		return reply.code(200).send(responseModel.toJSON());
 	} catch (error) {
 		return reply.code(500).send({
-			code: "INTERNAL_ERROR",
+			success: false,
+			code: "INTERNAL_SERVER_ERROR",
 			message: "Unable to enable 2FA",
 		});
 	}
@@ -90,19 +90,17 @@ export async function verifyTwoFA(req, reply) {
 
 	try {
 		verifyData = Verify2FARequest.validate(req.body);
-		console.log("VERIFY DATA: ", verifyData);
-	} catch (err) {
+	} catch (error) {
 		return reply.code(400).send({
-			code: "INVALID_REQUEST",
-			message: "Invalid fields",
+			success: false,
+			code: "INVALID_REQUEST_PARAMETERS",
+			message: error.message,
 		});
 	}
 
 	const { code } = verifyData;
-	console.log("code: ", code);
 
 	const validation = validate2FACode(code);
-	console.log("validation: ", validation);
 	if (!validation) {
 		return reply.code(400).send({
 			success: false,
@@ -113,9 +111,9 @@ export async function verifyTwoFA(req, reply) {
 
 	try {
 		const token = req.headers.authorization.split(" ")[1];
-		console.log("BACK token: ", token);
 		if (!token) {
 			return reply.code(401).send({
+				success: false,
 				code: "AUTH_REQUIRED",
 				message: "Authentication required",
 			});
@@ -126,20 +124,19 @@ export async function verifyTwoFA(req, reply) {
 			decoded = jwt.verify(token, process.env.JWT_SECRET);
 		} catch {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_TOKEN",
 				message: "Invalid or expired token",
 			});
 		}
 
 		const username = decoded.username;
-		console.log("username: ", username);
 		const userKey = `user:${username}`;
-		console.log("userKey: ", userKey);
 		const user = await redisClient.hGetAll(userKey);
-		console.log("user:" ,user);
 		if (!user || !user.twoFASecret) {
 			return reply.code(401).send({
-				code: "UNAUTHORIZED",
+				success: false,
+				code: "INVALID_TOKEN",
 				message: "Invalid token",
 			});
 		}
@@ -151,9 +148,9 @@ export async function verifyTwoFA(req, reply) {
 			token: code,
 			window: 1,
 		});
-		console.log("verified: ", verified);
 		if (!verified) {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_2FA_CODE",
 				message: "Invalid 2FA code",
 		  });
@@ -175,12 +172,10 @@ export async function verifyTwoFA(req, reply) {
 			process.env.JWT_SECRET,
 			{ expiresIn: ACCESS_TOKEN_TTL }
 		);
-		// console.log("ACCESS TOKEN: ", accessToken);
 
 		// Refresh Token
 		// Generate a random salt (64 bytes)
 		const refreshToken = crypto.randomBytes(64).toString("hex");
-		// console.log("REFRESH_TOKEN: ", refreshToken);
 
 		// Store refresh token in Redis
 		await redisClient.set(
@@ -189,13 +184,13 @@ export async function verifyTwoFA(req, reply) {
 			{ EX: REFRESH_TOKEN_TTL }
 		);
 		const storedRefreshToken = await redisClient.get(`refresh:${refreshToken}`);
-		// console.log("storedRefreshToken: ", storedRefreshToken);
 
 		const userInfo = UserInfo.fromRedis(user);
 
 		const response = new AuthResponse({
 			accessToken,
 			refreshToken,
+			tokenType: "Bearer",
 			expiresIn: ACCESS_TOKEN_TTL,
 			user: userInfo,
 			requires2FA: "true",
@@ -203,9 +198,10 @@ export async function verifyTwoFA(req, reply) {
 
 		return reply.code(201).send(response);
 	} catch (error) {
-		console.log("error: ", error);
+		console.log("verify2FA error:", error);
 		return reply.code(500).send({
-			code: "INTERNAL_ERROR",
+			success: false,
+			code: "INTERNAL_SERVER_ERROR",
 			message: "Unable to verify 2FA",
 		});
 	}
@@ -216,10 +212,11 @@ export async function disable2FA(req, reply) {
 
 	try {
 		disableData = Disable2FARequest.validate(req.body);
-	} catch (err) {
+	} catch (error) {
 		return reply.code(400).send({
-			code: "INVALID_REQUEST",
-			message: err.message,
+			success: false,
+			code: "INVALID_REQUEST_PARAMETERS",
+			message: error.message,
 		});
 	}
 
@@ -260,6 +257,7 @@ export async function disable2FA(req, reply) {
 			return reply.code(401).send({
 				success: false,
 				code: "2FA_NOT_ENABLED",
+				message: "2FA is not enabled",
 			});
 		}
 
@@ -280,8 +278,6 @@ export async function disable2FA(req, reply) {
 			token: code,
 			window: 1,
 		});
-
-		console.log("verified: ", verified);
 		if (!verified) {
 			return reply.code(400).send({
 				success: false,
@@ -336,7 +332,7 @@ export async function disable2FA(req, reply) {
 		console.log("disable2FA error:", error);
 		return reply.code(500).send({
 			success: false,
-			code: "INTERNAL_ERROR",
+			code: "INTERNAL_SERVER_ERROR",
 			message: "Unable to disable 2FA",
 		});
 	}

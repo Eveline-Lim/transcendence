@@ -21,7 +21,6 @@ export default function TwoFACode() {
 		if (!code || code.length !== 6) { setError("Enter 6-digit code"); return; }
 
 		const token = localStorage.getItem("token");
-		console.log("token: ", token);
 		const res = await sendData("/api/v1/auth/2fa/verify", {
 			method: "POST",
 			headers: {
@@ -31,7 +30,6 @@ export default function TwoFACode() {
 			body: JSON.stringify({ code }),
 		});
 
-		console.log("VERIFY RES: ", res);
 		if (res.success !== false) {
 			if (isVerifying && currentUser) {
 				updateUser({ ...currentUser, has2FAEnabled: "true" });

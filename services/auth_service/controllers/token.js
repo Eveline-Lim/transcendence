@@ -1,8 +1,6 @@
 import TokenInfo from "../models/TokenInfo.js";
 
 export async function verifyToken(req, reply) {
-	console.log("VERIFY TOKEN");
-
 	const tokenInfo = new TokenInfo({
 		valid: true,
 		userId: req.user.userId,

@@ -2,19 +2,25 @@ import { redisClient } from "../redisClient.js";
 import { validatePassword } from "../utils/validators.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import ChangePasswordRequest from "../models/ChangePasswordRequest.js";
 
 export async function changePassword(req, reply) {
-	const { currentPassword, newPassword } = req.body;
+	let changePasswordData;
 
-	if (!currentPassword || !newPassword) {
+	try {
+		changePasswordData = ChangePasswordRequest.validate(req.body);
+	} catch (error) {
 		return reply.code(400).send({
-			code: "INVALID_REQUEST_PARAMETERS",
-			message: "Current password and new password are required",
+			success: false,
+			code: "INVALID_CREDENTIALS",
+			message: error.message,
 		});
 	}
 
+	const { currentPassword, newPassword } = changePasswordData;
 	if (!validatePassword(newPassword)) {
 		return reply.code(400).send({
+			success: false,
 			code: "INVALID_REQUEST_PARAMETERS",
 			message: "New password does not meet requirements",
 		});
@@ -24,6 +30,7 @@ export async function changePassword(req, reply) {
 		const token = req.headers.authorization?.split(" ")[1];
 		if (!token) {
 			return reply.code(401).send({
+				success: false,
 				code: "AUTH_REQUIRED",
 				message: "Authentication required",
 			});
@@ -34,6 +41,7 @@ export async function changePassword(req, reply) {
 			decoded = jwt.verify(token, process.env.JWT_SECRET);
 		} catch {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_TOKEN",
 				message: "Invalid or expired token",
 			});
@@ -45,6 +53,7 @@ export async function changePassword(req, reply) {
 
 		if (!user || Object.keys(user).length === 0 || !user.password) {
 			return reply.code(401).send({
+				success: false,
 				code: "USER_NOT_FOUND",
 				message: "User does not exist",
 			});
@@ -54,6 +63,7 @@ export async function changePassword(req, reply) {
 		const isValid = await bcrypt.compare(currentPassword, user.password);
 		if (!isValid) {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_CREDENTIALS",
 				message: "Current password is incorrect",
 			});
@@ -63,6 +73,7 @@ export async function changePassword(req, reply) {
 		const isSame = await bcrypt.compare(newPassword, user.password);
 		if (isSame) {
 			return reply.code(400).send({
+				success: false,
 				code: "PASSWORD_UNCHANGED",
 				message: "New password must be different from current password",
 			});
@@ -73,13 +84,15 @@ export async function changePassword(req, reply) {
 		await redisClient.hSet(userKey, { password: hashedPassword });
 
 		return reply.code(200).send({
+			success: true,
 			code: "PASSWORD_CHANGE_SUCCESS",
 			message: "Password successfully changed",
 		});
 	} catch (error) {
 		console.error("CHANGE PASSWORD ERROR:", error);
 		return reply.code(500).send({
-			code: "INTERNAL_ERROR",
+			success: false,
+			code: "INTERNAL_SERVER_ERROR",
 			message: "Unable to change password",
 		});
 	}

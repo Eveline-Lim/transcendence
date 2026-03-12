@@ -14,21 +14,19 @@ export async function forgotPassword(req, reply) {
 
 	try {
 		forgotPasswordData = ForgotPasswordRequest.validate(req.body);
-		console.log("FORGOT PASSWORD DATA: ", forgotPasswordData);
 	} catch (error) {
 		return reply.code(400).send({
 			success: false,
 			code: "INVALID_CREDENTIALS",
-			message: "Invalid fields",
+			message: error.message,
 		});
 	}
 
 	const { email } = forgotPasswordData;
-	console.log("email: ", email);
 	const validation = validateEmail(email);
-	console.log("validation: ", validation);
 	if (!validation) {
 		return reply.code(400).send({
+			success: false,
 			code: "INVALID_CREDENTIALS",
 			message: "Invalid field",
 		});
@@ -38,7 +36,6 @@ export async function forgotPassword(req, reply) {
 	try {
 		// Rate limit check
 		const rlKey = `login:rateLimit:${email}:${ip}`;
-		console.log("rlKey: ", rlKey);
 		const attempts = await redisClient.incr(rlKey);
 		if (attempts === 1) {
 			await redisClient.expire(rlKey, RATE_LIMIT_WINDOW_SECONDS);
@@ -46,6 +43,7 @@ export async function forgotPassword(req, reply) {
 		// console.log("attempts: ", attempts);
 		if (attempts > MAX_LOGIN_ATTEMPTS) {
 			return reply.code(429).send({
+				success: false,
 				code: "TOO_MANY_ATTEMPTS",
 				message: "Too many login attempts. Try again in five minutes."
 			});
@@ -54,6 +52,7 @@ export async function forgotPassword(req, reply) {
 		const username = await redisClient.get(`email:${email}`);
 		if (!username) {
 			return reply.code(202).send({
+				success: false,
 				code: "(error) PASSWORD_RESET_EMAIL_SENT_SUCCESS",
 				message: "If an account exists for this email address, a password reset link has been sent.",
 			});
@@ -79,7 +78,6 @@ export async function forgotPassword(req, reply) {
 		);
 
 		const resetToken = await redisClient.get(`passwordReset:${hashedToken}`);
-		console.log("resetToken: ", resetToken);
 		// Send raw token in email link
 		const resetLink = `${process.env.FRONTEND_URL}/password/reset?token=${token}`;
 		console.log("resetLink: ", resetLink);
@@ -102,14 +100,14 @@ export async function forgotPassword(req, reply) {
 		});
 	} catch (error) {
 		return reply.code(500).send({
-			code: "INTERNAL_ERROR",
+			success: false,
+			code: "INTERNAL_SERVER_ERROR",
 			message: "Unable to send reset password email",
 		});
 	}
 }
 
 export async function resetPassword(req, reply) {
-	console.log("RESET");
 	let resetPasswordData;
 
 	try {
@@ -130,6 +128,7 @@ export async function resetPassword(req, reply) {
 	const validationPassword = validatePassword(password);
 	if (!validationPassword) {
 		return reply.code(400).send({
+			success: false,
 			code: "INVALID_CREDENTIALS",
 			message: "Invalid fields",
 		});
@@ -224,6 +223,7 @@ export async function changePassword(req, reply) {
 	console.log("validation: ", validation);
 	if (!validation) {
 		return reply.code(400).send({
+			success: false,
 			code: "INVALID_CREDENTIALS",
 			message: "Invalid fields",
 		});
@@ -233,6 +233,7 @@ export async function changePassword(req, reply) {
 		const token = req.headers.authorization?.split(" ")[1];
 		if (!token) {
 			return reply.code(401).send({
+				success: false,
 				code: "AUTH_REQUIRED",
 				message: "Authentication required",
 			});
@@ -243,6 +244,7 @@ export async function changePassword(req, reply) {
 		} catch (error) {
 			console.error("JWT VERIFY ERROR:", error);
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_TOKEN",
 				message: "Invalid or expired token",
 			});
@@ -253,6 +255,7 @@ export async function changePassword(req, reply) {
 		const user = await redisClient.hGetAll(userKey);
 		if (!user) {
 			return reply.code(401).send({
+				success: false,
 				code: "USER_NOT_FOUND",
 				message: "User does not exist",
 			});
@@ -262,6 +265,7 @@ export async function changePassword(req, reply) {
 		const isValid = await bcrypt.compare(currentPassword, user.password);
 		if (!isValid) {
 			return reply.code(401).send({
+				success: false,
 				code: "INVALID_CREDENTIALS",
 				message: "Current password is incorrect",
 			});
@@ -269,6 +273,7 @@ export async function changePassword(req, reply) {
 		const isSame = await bcrypt.compare(newPassword, user.password);
 		if (isSame) {
 			return reply.code(400).send({
+				success: false,
 				code: "PASSWORD_UNCHANGED",
 				message: "New password must be different from current password",
 			});
@@ -285,6 +290,7 @@ export async function changePassword(req, reply) {
 		});
 	} catch (error) {
 		return reply.code(500).send({
+			success: false,
 			code: "INTERNAL_ERROR",
 			message: "Unable to change password",
 		});
