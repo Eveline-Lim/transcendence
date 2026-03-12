@@ -1,4 +1,15 @@
-## Quick Start
+*This project has been created as part of the 42 curriculum by
+	evlim,
+	thbasse,
+	hsoyal,
+	kahoumou,
+	ckenaip.*
+
+## Description
+
+ft_transcendence is a full-stack web application built around a real-time Pong game. Players can compete online against other players, challenge an AI opponent, or play locally in offline mode. The project features a React frontend, a TypeScript/Node.js backend powered by Fastify and Express, real-time communication via Socket.io, and Redis for state management.
+
+## Quick Start / Instructions
 
 > No clone needed. Requires `docker`, `docker compose`, and `openssl`.
 
@@ -19,104 +30,112 @@ Once up:
 
 ## Modules
 
-### Minors
+### MAJORS
+
+#### Web
+
+- Use a framework for both the frontend and backend.
+  - **Frontend:** React
+  - **Backend:** TypeScript / Node.js with Fastify. Express for the game-service
+
+
+- Implement real-time features using WebSockets or similar technology.
+  - Real-time updates across clients.
+  - Handle connection/disconnection gracefully.
+  - Efficient message broadcasting.
+
+- Allow users to interact with other users. The minimum requirements are:
+  - A basic chat system (send/receive messages between users).
+  - A profile system (view user information).
+  - A friends system (add/remove friends, see friends list).
+
+- A public API to interact with the database with a secured API key, rate
+limiting, documentation, and at least 5 endpoints:
+  - GET /api/{something}
+  - POST /api/{something}
+  - PUT /api/{something}
+  - DELETE /api/{something}
+  - PATCH /api/{something}
+  - Check for more details: https://eveline-lim.github.io/transcendence/
+
+**User Management**
+
+- Standard user management and authentication.
+  - Users can update their profile information.
+  - Users can upload an avatar (with a default avatar if none provided).
+  - Users can add other users as friends and see their online status.
+  - Users have a profile page displaying their information.
+
+**Artificial Intelligence**
+
+- Introduce an AI Opponent for games.
+  - The AI must be challenging and able to win occasionally.
+  - The AI should simulate human-like behavior (not perfect play).
+  - You must be able to explain your AI implementation during evaluation.
+
+**Cybersecurity**
+
+- Implement WAF/ModSecurity (hardened) + HashiCorp Vault for secrets:
+  - Configure strict ModSecurity/WAF.
+  - Manage secrets in Vault (API keys, credentials, environment variables), encrypted and isolated.
+
+**Gaming and user experience**
+
+- Implement a complete web-based game where users can play against each
+other.
+  - We built a real-time multiplayer Pong with casual, ranked, and offline game modes Matches are played in 2D, and the first player to reach 11 points wins.
+  - The AI and offline logic runs entirely in JavaScript on the frontend, so players can keep playing even without a connection.
+  - The casual and ranked logic is fully handled by the backend. Only the rendering happens on the frontend, making cheating significantly harder.
+  - Game states are cached and synced with Redis, allowing players to reconnect seamlessly after an unexpected client crash.
+  - Express backend, chosen for its native Socket.io integration, handling up to 60 exchanges per second between client and server.
+
+- Remote players — Enable two players on separate computers to play the
+same game in real-time.
+  - Handle network latency and disconnections gracefully.
+  - Provide a smooth user experience for remote gameplay.
+  - Implement reconnection logic.
+
+**Devops**
+
+- Backend as microservices.
+  - Design loosely-coupled services with clear interfaces.
+  - Use REST APIs or message queues for communication.
+  - Each service should have a single responsibility.
+
+=> 10 majors = 20 pts
+
+**MINORS**
+
+**Web**
+
+- Use an ORM for the database.
+
+- Progressive Web App (PWA) with offline support and installability.
+
+**Accessibility and Internalinalization**
+
+- Support for additional browsers.
+  - Full compatibility with at least 2 additional browsers (Firefox, Safari, Edge,
+etc.).
+  - Test and fix all features in each browser.
+  - Document any browser-specific limitations.
+  - Consistent UI/UX across all supported browsers.
+
+**User Management**
+
+- Game statistics and match history (requires a game module).
+  - Track user game statistics (wins, losses, ranking, level, etc.).
+  - Display match history (1v1 games, dates, results, opponents).
+  - Show achievements and progression.
+  - Leaderboard integration.
 
 - Implement remote authentication with OAuth 2.0 (Google, GitHub, 42,
 etc.).
-- Game statistics and match history (requires a game module).
 
 - Implement a complete 2FA (Two-Factor Authentication) system for the
 users.
 
-- Progressive Web App (PWA) with offline support and installability.
-
--  Use an ORM for the database.
-
-### Majors
-
-- Standard user management and authentication.
-
-- Introduce an AI Opponent for games.
-	- The AI must be challenging and able to win occasionally.
-	- The AI should simulate human-like behavior (not perfect play).
-	- If you implement game customization options, the AI must be able to use
-them.
-	- You must be able to explain your AI implementation during evaluation.
-
-- Implement WAF/ModSecurity (hardened) + HashiCorp Vault for secrets:
-	- Configure strict ModSecurity/WAF.
-	- Manage secrets in Vault (API keys, credentials, environment variables), encrypted and isolated.
-
-- Implement a complete web-based game where users can play against each
-other.
-	- The game can be real-time multiplayer (e.g., Pong, Chess, Tic-Tac-Toe, Card
-games, etc.).
-	- Players must be able to play live matches.
-	- The game must have clear rules and win/loss conditions.
-	- The game can be 2D or 3D.
-
-- Remote players — Enable two players on separate computers to play the
-same game in real-time.
-	- Handle network latency and disconnections gracefully.
-	- Provide a smooth user experience for remote gameplay.
-	- Implement reconnection logic.
-
-- Allow users to interact with other users. The minimum requirements are:
-	- A basic chat system (send/receive messages between users).
-	- A profile system (view user information).
-	- A friends system (add/remove friends, see friends list).
-
-- Use a framework for both the frontend and backend.
-	- Use a frontend framework (React, Vue, Angular, Svelte, etc.).
-	- Use a backend framework (Express, NestJS, Django, Flask, Ruby on Rails,
-etc.).
-	- Full-stack frameworks (Next.js, Nuxt.js, SvelteKit) count as both if you use
-both their frontend and backend capabilities.
-
--  A public API to interact with the database with a secured API key, rate
-limiting, documentation, and at least 5 endpoints:
-	- GET /api/{something}
-	- POST /api/{something}
-	- PUT /api/{something}
-	- DELETE /api/{something}
-
-- Implement real-time features using WebSockets or similar technology.
-	- Real-time updates across clients.
-	- Handle connection/disconnection gracefully.
-	- Efficient message broadcasting.
-
-- Backend as microservices.
-	- Design loosely-coupled services with clear interfaces.
-	- Use REST APIs or message queues for communication.
-	- Each service should have a single responsibility.
-
-- Monitoring system with Prometheus and Grafana.
-	- Set up Prometheus to collect metrics.
-	- Configure exporters and integrations.
-	- Create custom Grafana dashboards.
-	- Set up alerting rules.
-	- Secure access to Grafana.
-
-
-### Optional
-
-- Major: Advanced permissions system:
-	- View, edit, and delete users (CRUD).
-	- Roles management (admin, user, guest, moderator, etc.).
-	- Different views and actions based on user role.
-
-- Minor: User activity analytics and insights dashboard.
-
-- Major: Multiplayer game (more than two players).
-	- Support for three or more players simultaneously.
-	- Fair gameplay mechanics for all participants.
-	- Proper synchronization across all clients
-
-- Major: Add another game with user history and matchmaking.
-	- Implement a second distinct game.
-	- Track user history and statistics for this game.
-	- Implement a matchmaking system.
-	- Maintain performance and responsiveness.
+=> 6 minors = 6 pts
 
 
 ## Ressources
@@ -135,3 +154,7 @@ limiting, documentation, and at least 5 endpoints:
 - https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
 - https://www.sonarsource.com/fr/integrations/
 - https://node.testcontainers.org/quickstart/
+
+### GitHub
+
+- https://github.com/Eveline-Lim/transcendence
