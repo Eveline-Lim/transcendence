@@ -9,6 +9,12 @@ import ForgotPasswordRequest from "../models/ForgotPasswordRequest.js";
 import ResetPasswordRequest from "../models/ResetPasswordRequest.js";
 import ChangePasswordRequest from "../models/ChangePasswordRequest.js";
 
+/**
+ * Handles forgot password requests.
+ * Validates the email, applies rate limiting per email+IP, generates a
+ * signed reset token, stores its hash in Redis and sends a reset link
+ * by email. Always returns a 202 to avoid leaking whether the email exists.
+ */
 export async function forgotPassword(req, reply) {
 	let forgotPasswordData;
 
@@ -40,7 +46,6 @@ export async function forgotPassword(req, reply) {
 		if (attempts === 1) {
 			await redisClient.expire(rlKey, RATE_LIMIT_WINDOW_SECONDS);
 		}
-		// console.log("attempts: ", attempts);
 		if (attempts > MAX_LOGIN_ATTEMPTS) {
 			return reply.code(429).send({
 				success: false,
@@ -68,7 +73,6 @@ export async function forgotPassword(req, reply) {
 			.createHash("sha256")
 			.update(token)
 			.digest("hex");
-		// console.log("FORGOT PASSWORD hashed token: ", hashedToken);
 
 		// Store hashed token in Redis
 		await redisClient.set(
@@ -77,8 +81,7 @@ export async function forgotPassword(req, reply) {
 			{ EX: RESET_TOKEN_ETTL }
 		);
 
-		const resetToken = await redisClient.get(`passwordReset:${hashedToken}`);
-		// Send raw token in email link
+		// Build the reset URL with the raw token as a query param
 		const resetLink = `${process.env.FRONTEND_URL}/password/reset?token=${token}`;
 		console.log("resetLink: ", resetLink);
 
@@ -90,7 +93,7 @@ export async function forgotPassword(req, reply) {
 			// Don't fail the request if email sending fails — the token is stored
 		}
 
-		// Reset rate limite on success
+		// Clear the rate-limite on success
 		await redisClient.del(rlKey);
 
 		return reply.code(202).send({
@@ -107,12 +110,16 @@ export async function forgotPassword(req, reply) {
 	}
 }
 
+/**
+ * Handles password reset via a token received from the reset email link.
+ * Hashes the incoming token, looks up the associated userId in Redis,
+ * then updates the user's password and invalidates the token.
+ */
 export async function resetPassword(req, reply) {
 	let resetPasswordData;
 
 	try {
 		resetPasswordData = ResetPasswordRequest.validate(req.body);
-		console.log("RESET PASSWORD DATA: ", resetPasswordData);
 	} catch (error) {
 		return reply.code(400).send({
 			success: false,
@@ -122,9 +129,6 @@ export async function resetPassword(req, reply) {
 	}
 
 	const { token, password } = resetPasswordData;
-	console.log("token: ", token);
-	console.log("password: ", password);
-
 	const validationPassword = validatePassword(password);
 	if (!validationPassword) {
 		return reply.code(400).send({
@@ -135,16 +139,13 @@ export async function resetPassword(req, reply) {
 	}
 
 	try {
-		// Hash received token
+		// Hash the incoming token to compare against the stored hash
 		const hashedToken = crypto
 			.createHash("sha256")
 			.update(token)
 			.digest("hex");
-		// console.log("RESET PASSWORD hashed token: ", hashedToken);
-
 
 		const userId = await redisClient.get(`passwordReset:${hashedToken}`);
-		console.log("userId: ", userId);
 		if (!userId) {
 			return reply.code(401).send({
 				success: false,
@@ -174,17 +175,13 @@ export async function resetPassword(req, reply) {
 
 		// Hash new password
 		const hashedPassword = await bcrypt.hash(password, 10);
-		// console.log("hasedPassword: ", hashedPassword);
 
 		// Update user password
 		await redisClient.hSet(userKey, {
 			password: hashedPassword
 		});
 
-		// const userUpdated = await redisClient.hGetAll(userKey);
-		// console.log("userUpdated: ", userUpdated);
-
-		// Delete token
+		// Invalidate the reset token so it cannot be reused
 		await redisClient.del(`passwordReset:${hashedToken}`);
 
 		return reply.code(200).send({
@@ -201,12 +198,17 @@ export async function resetPassword(req, reply) {
 	}
 }
 
+/**
+ * Handles authenticated password change requests.
+ * Requires a valid JWT in the Authorization header.
+ * Verifies the current password, enforces that the new password differs,
+ * then updates the stored hash.
+ */
 export async function changePassword(req, reply) {
 	let changePasswordData;
 
 	try {
 		changePasswordData = ChangePasswordRequest.validate(req.body);
-		console.log("CHANGE PASSWORD DATA: ", changePasswordData);
 	} catch (error) {
 		return reply.code(400).send({
 			success: false,
@@ -216,11 +218,7 @@ export async function changePassword(req, reply) {
 	}
 
 	const { currentPassword, newPassword } = changePasswordData;
-	console.log("currentPassword: ", currentPassword);
-	console.log("newPassword: ", newPassword);
-
 	const validation = validatePassword(newPassword);
-	console.log("validation: ", validation);
 	if (!validation) {
 		return reply.code(400).send({
 			success: false,
@@ -250,7 +248,6 @@ export async function changePassword(req, reply) {
 			});
 		}
 		const username = decoded.username;
-		console.log("username: ", username);
 		const userKey = `user:${username}`;
 		const user = await redisClient.hGetAll(userKey);
 		if (!user) {
@@ -260,8 +257,7 @@ export async function changePassword(req, reply) {
 				message: "User does not exist",
 			});
 		}
-		console.log("CURRENT PASSWORD: ", currentPassword);
-		console.log("DB PASSWORD: ", user.password);
+
 		const isValid = await bcrypt.compare(currentPassword, user.password);
 		if (!isValid) {
 			return reply.code(401).send({
@@ -270,6 +266,8 @@ export async function changePassword(req, reply) {
 				message: "Current password is incorrect",
 			});
 		}
+
+		// Reject the change if the new password is identical to the current one
 		const isSame = await bcrypt.compare(newPassword, user.password);
 		if (isSame) {
 			return reply.code(400).send({
@@ -284,7 +282,7 @@ export async function changePassword(req, reply) {
 			password: hashedPassword,
 		});
 		return reply.code(200).send({
-			sucess: true,
+			success: true,
 			code: "PASSWORD_CHANGE_SUCCESS",
 			message: "Password successfully changed",
 		});

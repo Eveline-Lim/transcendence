@@ -7,6 +7,8 @@ import { disable2FA, enableTwoFA, verifyTwoFA } from "../controllers/twofa.js";
 import { initiateOauth, oauthCallback } from "../controllers/oauth.js";
 import { verifyToken } from "../controllers/token.js";
 import { listSessions, revokeSession, revokeAllSessions } from "../controllers/session.js";
+import { acceptPrivacyPolicy } from "../controllers/privacyPolicy.js";
+import { acceptTermsOfService } from "../controllers/termsOfService.js";
 
 export default async function authRoutes(fastify) {
 	// Auth
@@ -36,4 +38,8 @@ export default async function authRoutes(fastify) {
 	// OAuth
 	fastify.get("/oauth/:provider", initiateOauth);
 	fastify.get("/oauth/:provider/callback", oauthCallback);
+
+	// Privacy Policy and Terms of Service
+	fastify.post("/accept/privacy-policy", { preHandler: authenticate }, acceptPrivacyPolicy);
+	fastify.post("/accept/terms-service", { preHandler: authenticate }, acceptTermsOfService);
 }

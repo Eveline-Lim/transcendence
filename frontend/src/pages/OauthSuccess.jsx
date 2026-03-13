@@ -26,7 +26,6 @@ export default function OAuthSuccess() {
 			}
 
 			login(null, accessToken, refreshToken);
-
 			try {
 				const user = await sendData("/api/v1/players/me", {
 					headers: {
