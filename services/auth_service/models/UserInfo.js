@@ -7,6 +7,8 @@ class UserInfo {
 	 * @param {string} [data.displayName]
 	 * @param {string} [data.avatarUrl]
 	 * @param {boolean} [data.has2FAEnabled]
+	 * @param {boolean} [data.acceptedPrivacyPolicy]
+	 * @param {boolean} [data.acceptedTermsOfService]
 	 */
 	constructor(data = {}) {
 		this.id = data.id ?? undefined;
@@ -15,6 +17,14 @@ class UserInfo {
 		this.displayName = data.displayName ?? undefined;
 		this.avatarUrl = data.avatarUrl ?? undefined;
 		this.has2FAEnabled = data.has2FAEnabled !== undefined ? Boolean(data.has2FAEnabled) : undefined;
+		this.has2FAEnabled =
+			data.has2FAEnabled !== undefined ? Boolean(data.has2FAEnabled) : undefined;
+
+		this.acceptedPrivacyPolicy =
+			data.acceptedPrivacyPolicy !== undefined ? Boolean(data.acceptedPrivacyPolicy) : undefined;
+
+		this.acceptedTermsOfService =
+			data.acceptedTermsOfService !== undefined ? Boolean(data.acceptedTermsOfService) : undefined;
 	}
 
 	/**
@@ -35,6 +45,8 @@ class UserInfo {
 		return new UserInfo({
 			...data,
 			has2FAEnabled: data.has2FAEnabled === 'true',
+			acceptedPrivacyPolicy: data.acceptedPrivacyPolicy === "true",
+			acceptedTermsOfService: data.acceptedTermsOfService === "true",
 		});
 	}
 
@@ -65,6 +77,8 @@ class UserInfo {
 			displayName: this.displayName,
 			avatarUrl: this.avatarUrl,
 			has2FAEnabled: this.has2FAEnabled,
+			acceptedPrivacyPolicy: this.acceptedPrivacyPolicy,
+			acceptedTermsOfService: this.acceptedTermsOfService,
 		};
 	}
 }

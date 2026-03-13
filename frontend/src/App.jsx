@@ -15,6 +15,8 @@ import ConfirmDisable2FA from "./pages/ConfirmDisable2FA";
 import Chat from "./pages/Chat";
 import PageNotFound from "./pages/PageNotFound";
 import OauthSuccess from "./pages/OauthSuccess";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 export default function App() {
 	return (
@@ -43,6 +45,10 @@ export default function App() {
 					<Route path="/play/casual" element={<Game />} />
 					<Route path="/play/ai" element={<Game />} />
 					<Route path="/play/offline" element={<Game />} />
+
+					{/* Privacy Policy and Terms of Service */}
+					<Route path="/privacy-policy" element={<PrivacyPolicy />} />
+					<Route path="/terms-service" element={<TermsOfService />} />
 
 					{/* 404 */}
 					<Route path="*" element={<PageNotFound />} />

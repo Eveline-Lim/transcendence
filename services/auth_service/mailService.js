@@ -1,5 +1,10 @@
 import nodemailer from "nodemailer";
 
+/*
+ * Sends a password reset email to the specified address.
+ * Uses Gmail as the SMTP transport, authenticated via environment variables.
+ * The email contains a styled HTML button linking to the reset URL.
+ */
 export async function sendResetEmail(to, resetLink) {
 	const transporter = nodemailer.createTransport({
 		service: "gmail",
@@ -30,5 +35,4 @@ export async function sendResetEmail(to, resetLink) {
 			</div>
 		`,
 	});
-	// console.log("MAIL INFO: ", info);
 }

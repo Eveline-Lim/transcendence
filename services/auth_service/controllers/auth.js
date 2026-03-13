@@ -89,6 +89,10 @@ export async function signup(req, reply) {
 			avatarUrl,
 			has2FAEnabled: "false",
 			requires2FA: "false",
+
+			// Legal flags
+			acceptedPrivacyPolicy: "false",
+			acceptedTermsOfService: "false",
 		});
 
 		await redisClient.set(emailKey, username);
@@ -146,6 +150,8 @@ export async function signup(req, reply) {
 			expiresIn: ACCESS_TOKEN_TTL,
 			user: userInfo,
 			requires2FA: "false",
+			
+
 		});
 		return reply.code(201).send(response);
 	} catch (error) {
@@ -166,7 +172,7 @@ export async function login(req, reply) {
 		return reply.code(400).send({
 			success: false,
 			code: "INVALID_REQUEST_PARAMETERS",
-			message: validation.message,
+			message: error.message,
 		});
 	}
 
@@ -300,7 +306,7 @@ export async function login(req, reply) {
 
 export async function logout(req, reply) {
 	try {
-		const token = req.headers.authorization.split(" ")[1];
+		const token = req.headers.authorization?.split(" ")[1];
 		if (!token) {
 			return reply.code(401).send({
 				success: false,
@@ -320,12 +326,11 @@ export async function logout(req, reply) {
 			});
 		}
 
-		// Hash token before blacklisting ?
-		// const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+		const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
 		// Add JWT token to blacklist
 		await redisClient.set(
-			`blacklist:${token}`,
+			`blacklist:${tokenHash}`,
 			"1", // to modify ?
 			{ EX: ACCESS_TOKEN_TTL}
 		);

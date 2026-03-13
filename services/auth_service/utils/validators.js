@@ -2,6 +2,7 @@
 - Length between 3 and 20 characters
 - Uppercase letters
 - Lowercase letters
+- Numbers
 - Underscore
 */
 export function validateUsername(username) {

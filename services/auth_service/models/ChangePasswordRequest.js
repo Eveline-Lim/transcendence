@@ -34,12 +34,8 @@ class ChangePasswordRequest {
 			if (!data[field]) {
 				throw new Error(`The required field \`${field}\` is missing or empty`);
 			}
-		}
-
-		for (const field of ChangePasswordRequest.RequiredProperties) {
 			if (typeof data[field] !== 'string') {
-				throw new Error(`Expected field \`${field}\` to be a string, got ${typeof data[field]}`
-				);
+				throw new Error(`Expected field \`${field}\` to be a string, got ${typeof data[field]}`);
 			}
 		}
 
