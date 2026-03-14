@@ -11,6 +11,8 @@ export async function initiateOauth(req, reply) {
 	const referer = req.headers.referer;
 	console.log("referer: ", referer);
 	console.log("Backend URL:", referer);
+	console.log("protocol: ", req.protocol);
+	console.log("hostname: ", req.hostname);
 
 	if (provider !== "fortytwo") {
 		return reply.code(400).send({
@@ -36,7 +38,8 @@ export async function initiateOauth(req, reply) {
 			origin: referer
 		});
 
-		const state = oauthSessionId;
+		const state = `${oauthSessionId}:${csrfToken}`;
+		console.log("state: ", state);
 
 		// Create the 42 authorization url
 		const authUrl =
@@ -47,7 +50,6 @@ export async function initiateOauth(req, reply) {
 				response_type: "code",
 				state
 			});
-		console.log("state: ", state);
 		console.log("authUrl: \n", authUrl);
 
 		// Redirect the user to authorization page
@@ -83,19 +85,38 @@ export async function oauthCallback(req, reply) {
 	}
 
 	try {
-		const oauthSessionId = state;
+		// const oauthSessionId = state;
+
+		// Split state back into its two parts and validate both
+		const [oauthSessionId, csrfToken] = state.split(":");
+		if (!oauthSessionId || !csrfToken) {
+			return reply.code(400).send({
+				success: false,
+				code: "INVALID_STATE",
+				message: "Malformed state parameter"
+			});
+		}
 
 		// Validate session in Redis
 		const storedSession = await redisClient.hGetAll(`oauth:${oauthSessionId}`);
+		console.log("storedSession: ", storedSession);
 		if (!storedSession || Object.keys(storedSession).length === 0 ||
 			storedSession.isOAuth !== "true") {
 				return reply.code(400).send({
 					success: false,
 					code: "INVALID_STATE",
-					message: "CSRF validation failed"
+					message: "CSRF validation failed: session not found"
 				});
 		}
 
+		// Compare the CSRF token now that we have it
+		if (storedSession.csrfToken !== csrfToken) {
+			return reply.code(400).send({
+				success: false,
+				code: "INVALID_STATE",
+				message: "CSRF validation failed: token mismatch"
+			});
+		}
 		const frontendUrl = storedSession.origin;
 		console.log("frontendUrl: ", frontendUrl);
 
