@@ -66,14 +66,14 @@ DIFFICULTY_PROFILES: dict[int, DifficultyProfile] = {
         power_up_interest=0.7,
     ),
     4: DifficultyProfile(
-        reaction_delay_min_ms=10.0,
-        reaction_delay_max_ms=30.0,
+        reaction_delay_min_ms=0.0,
+        reaction_delay_max_ms=0.0,
         prediction_error_min_px=0.0,
-        prediction_error_max_px=5.0,
+        prediction_error_max_px=0.0,
         update_interval=1,
         tracking_zone_ratio=1.00,
-        return_to_center_probability=0.10,
-        power_up_interest=0.9,
+        return_to_center_probability=0.0,
+        power_up_interest=1.0,
     ),
 }
 
