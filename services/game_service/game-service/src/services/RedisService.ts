@@ -78,7 +78,7 @@ export class RedisService {
 	}
 
 
-	async createGame(gameId: string, player1_id: string, player2_id: string, game_mode: 'casual' | 'ranked' = 'casual'): Promise<void> {
+	async createGame(gameId: string, player1_id: string, player2_id: string, game_mode: 'casual' | 'ranked' | 'ai' = 'casual'): Promise<void> {
 		
 		if (!this.client) throw new Error('Redis not initialized');
 

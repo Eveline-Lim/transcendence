@@ -6,6 +6,7 @@ import { Server } from 'socket.io';
 import { redis } from './RedisInstance';
 import { GameState } from '../models/GameState';
 import { PlayerServiceClient } from './PlayerServiceClient';
+import { AIServiceClient } from './AIServiceClient';
 import {
 	BALL_RADIUS,
 	PADDLE_SPEED,
@@ -26,8 +27,15 @@ export class GameLoopService {
 	// Cache in RAM – also written to directly by WebsocketService for player inputs
 	private gameStatesCache: Map<string, GameState> = new Map();
 
+	// AI integration
+	private aiClient: AIServiceClient;
+	private aiTargets: Map<string, number>      = new Map(); // gameId → target paddle Y
+	private aiPending: Set<string>              = new Set(); // games with in-flight gRPC requests
+	private aiTickCounters: Map<string, number> = new Map(); // tick counter per game
+
 	constructor(io: Server) {
 		this.io = io;
+		this.aiClient = new AIServiceClient();
 	}
 
 	async startGameLoop(gameId: string) {
@@ -68,6 +76,9 @@ export class GameLoopService {
 			clearInterval(interval);
 			this.activeLoops.delete(gameId);
 			this.gameStatesCache.delete(gameId);
+			this.aiTargets.delete(gameId);
+			this.aiPending.delete(gameId);
+			this.aiTickCounters.delete(gameId);
 			console.log(`Stopped game loop for ${gameId}`);
 		}
 	}
@@ -87,6 +98,9 @@ export class GameLoopService {
 			}
 
 			this.updatePaddles(gameState);
+			if (gameState.game_mode === 'ai') {
+				this.driveAIPaddle(gameId, gameState);
+			}
 			this.updateBall(gameState);
 
 			const pointScored = this.checkCollisionsX(gameState);
@@ -296,9 +310,54 @@ export class GameLoopService {
 	}
 
 	/**
+	 * Move the AI paddle one step toward the cached target_y.
+	 * Every AI_UPDATE_INTERVAL ticks a new gRPC GetMove request is fired
+	 * so the target refreshes without blocking the loop.
+	 */
+	private driveAIPaddle(gameId: string, gameState: GameState): void {
+		const AI_UPDATE_INTERVAL = 6; // request new move every ~100 ms (6 × 16 ms)
+
+		// Move paddle toward the cached target
+		const targetY   = this.aiTargets.get(gameId) ?? gameState.paddles.player2;
+		const currentY  = gameState.paddles.player2;
+		const diff      = targetY - currentY;
+
+		if (Math.abs(diff) > PADDLE_SPEED) {
+			gameState.paddles.player2 += diff > 0 ? PADDLE_SPEED : -PADDLE_SPEED;
+		} else {
+			gameState.paddles.player2 = targetY;
+		}
+
+		// Clamp within bounds
+		const limit = PADDLE_HEIGHT / 2;
+		gameState.paddles.player2 = Math.max(limit, Math.min(100 - limit, gameState.paddles.player2));
+
+		// Periodically request a fresh AI move (fire-and-forget)
+		const tick = (this.aiTickCounters.get(gameId) ?? 0) + 1;
+		this.aiTickCounters.set(gameId, tick);
+
+		if (tick % AI_UPDATE_INTERVAL === 0 && !this.aiPending.has(gameId)) {
+			this.aiPending.add(gameId);
+			this.aiClient
+				.getMove(gameState)
+				.then((move) => {
+					this.aiTargets.set(gameId, move.target_y);
+				})
+				.catch((err) => {
+					console.error(`AI GetMove error for game ${gameId}:`, err);
+				})
+				.finally(() => {
+					this.aiPending.delete(gameId);
+				});
+		}
+	}
+
+	/**
 	 * Report the match result to the player service (fire-and-forget).
+	 * Skipped for AI games since there is no real opponent to record.
 	 */
 	private reportMatchResult(gameState: GameState): void {
+		if (gameState.game_mode === 'ai') return;
 		const winnerId = gameState.winner!;
 		const loserId = winnerId === gameState.player1_id
 			? gameState.player2_id

@@ -55,3 +55,36 @@ gameRouter.post('/create-game', extractUserIdOnly, async (req, res) => {
 	}
 
 })
+
+/**
+ * POST /api/create-ai-game
+ * Creates a single-player game against the AI opponent service.
+ * player2_id is set to the reserved value 'ai'.
+ * Requires a valid JWT (X-User-Id injected by nginx gateway).
+ */
+gameRouter.post('/create-ai-game', extractUserIdOnly, async (req, res) => {
+
+	if (!redis) return res.status(503).json({ error: 'Redis unavailable' });
+
+	const userId = req.userId as string;
+	if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+	try {
+		const gameId = `game_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+
+		await redis.createGame(gameId, userId, 'ai', 'ai');
+		await redis.setPlayerGame(userId, gameId);
+		// No Redis mapping for the 'ai' pseudo-player
+
+		res.status(201).json({
+			gameId,
+			status: 'created',
+			message: 'AI game created successfully',
+		});
+	}
+	catch (error) {
+		console.error('Error creating AI game:', error);
+		res.status(500).json({ error: 'Failed to create AI game' });
+	}
+
+})

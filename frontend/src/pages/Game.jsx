@@ -4,7 +4,8 @@ import { AuthContext } from "../context/AuthContext";
 import NavBar from "../components/NavBar";
 import { MatchSocket } from "../utils/matchSocket";
 import { GameSocket } from "../utils/gameSocket";
-import { LocalGameEngine, SimpleAI } from "../utils/localGameEngine";
+import { LocalGameEngine } from "../utils/localGameEngine";
+import { api } from "../utils/api";
 
 // ─── Canvas rendering constants ──────────────────────────────────────────────
 const CANVAS_W = 800;
@@ -114,7 +115,7 @@ export default function Game() {
 	const phaseRef       = useRef("idle");
 	const localEngineRef = useRef(null);
 
-	const isLocal = mode === "offline" || mode === "ai";
+	const isLocal = mode === "offline";
 
 	const updatePhase = (next) => {
 		phaseRef.current = next;
@@ -217,10 +218,9 @@ export default function Game() {
 		};
 	}, [phase, isLocal, mode]);
 
-	// ── Local game (offline / AI) ─────────────────────────────────────────────
+	// ── Local game (offline) ─────────────────────────────────────────────────
 	const startLocalGame = useCallback(() => {
 		setError(null);
-		const ai = mode === "ai" ? new SimpleAI(0.7) : null;
 		const engine = new LocalGameEngine(
 			(state) => {
 				gameStateRef.current = state;
@@ -230,7 +230,7 @@ export default function Game() {
 				setGameState({ ...state });
 				updatePhase("finished");
 			},
-			ai,
+			null,
 		);
 		localEngineRef.current = engine;
 		const initial = engine.getState();
@@ -304,6 +304,28 @@ export default function Game() {
 		}
 	}, [currentUser]);
 
+	// ── AI game (server-side via AI opponent service) ─────────────────────────
+	const startAIGame = useCallback(async () => {
+		setError(null);
+		updatePhase("matchmaking");
+
+		try {
+			const result = await api("/api/v1/game/create-ai-game", { method: "POST" });
+			if (!result.success) {
+				setError(result.message || "Failed to create AI game");
+				updatePhase("idle");
+				return;
+			}
+			// Fake matchInfo so opponent-display code has something to show
+			setMatchInfo({ opponent: { username: "AI", avatarUrl: null } });
+			updatePhase("found");
+			connectToGame();
+		} catch {
+			setError("Could not create AI game. Please try again.");
+			updatePhase("idle");
+		}
+	}, [connectToGame]);
+
 	// ── Match service connection ──────────────────────────────────────────────
 	const startMatchmaking = useCallback(async () => {
 		setError(null);
@@ -374,11 +396,15 @@ export default function Game() {
 	// ── Winner label ──────────────────────────────────────────────────────────
 	const winnerLabel = () => {
 		if (!gameState?.winner) return "Draw";
-		if (isLocal) {
-			if (mode === "ai") return gameState.winner === "player1" ? "You win! 🎉" : "AI wins!";
+		if (mode === "offline") {
 			return gameState.winner === "player1" ? "Player 1 wins! 🎉" : "Player 2 wins! 🎉";
 		}
 		const uid = String(currentUser?.id ?? currentUser?.userId ?? "");
+		if (mode === "ai") {
+			if (uid && gameState.winner === uid) return "You win! 🎉";
+			return "AI wins!";
+		}
+		// Online (casual / ranked)
 		if (uid && gameState.winner === uid) return "You win! 🎉";
 		return `${matchInfo?.opponent?.username ?? "Opponent"} wins`;
 	};
@@ -386,6 +412,7 @@ export default function Game() {
 	// ─── Render ───────────────────────────────────────────────────────────────
 
 	if (authLoading) return null;
+
 
 
 
@@ -401,11 +428,15 @@ export default function Game() {
 							{MODE_LABEL[mode] ?? mode} Mode
 						</h1>
 						<p className="msg-info mb-6">
-								{isLocal ? "Press Start to play Pong!" : "Find an opponent and play Pong!"}
+								{mode === "offline" ? "Press Start to play Pong!" : mode === "ai" ? "Challenge the AI!" : "Find an opponent and play Pong!"}
 							</p>
 						{error && <p className="msg-error mb-4">{error}</p>}
-						<button className="btn w-full" onClick={isLocal ? startLocalGame : startMatchmaking}>
-							{isLocal ? "Start Game" : "Find Match"}
+			<button className="btn w-full" onClick={
+					mode === "offline" ? startLocalGame
+					: mode === "ai"      ? startAIGame
+					:                     startMatchmaking
+				}>
+							{isLocal ? "Start Game" : mode === "ai" ? "Play vs AI" : "Find Match"}
 						</button>
 						<button
 							className="btn btn-secondary mt-2 w-full"
@@ -470,17 +501,21 @@ export default function Game() {
 						>
 							<span>
 							{isLocal
-								? (mode === "ai" ? "▶ You" : "▶ Player 1 (W / S)")
-								: myId === "player1"
+								? "▶ Player 1 (W / S)"
+								: mode === "ai"
 									? `▶ You (${currentUser?.username ?? ""})`
-									: (matchInfo?.opponent?.username ?? "Player 1")}
+									: myId === "player1"
+										? `▶ You (${currentUser?.username ?? ""})`
+										: (matchInfo?.opponent?.username ?? "Player 1")}
 						</span>
 						<span>
 							{isLocal
-								? (mode === "ai" ? "AI ◀" : "Player 2 (↑ / ↓) ◀")
-								: myId === "player2"
-									? `You (${currentUser?.username ?? ""}) ◀`
-									: (matchInfo?.opponent?.username ?? "Player 2")}
+								? "Player 2 (↑ / ↓) ◀"
+								: mode === "ai"
+									? "AI ◀"
+									: myId === "player2"
+										? `You (${currentUser?.username ?? ""}) ◀`
+										: (matchInfo?.opponent?.username ?? "Player 2")}
 							</span>
 						</div>
 

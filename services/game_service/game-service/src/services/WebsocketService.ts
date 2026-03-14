@@ -64,20 +64,22 @@ export class WebsocketService {
 				await redis!.updateGameState(gameId, gameState);
 				this.gameLoopService.stopGameLoop(gameId);
 
-				// Report forfeit to player service
-				const loserId = player_id;
-				const winnerId = gameState.winner!;
-				const winnerScore = winnerId === gameState.player1_id
-					? gameState.score.player1 : gameState.score.player2;
-				const loserScore = winnerId === gameState.player1_id
-					? gameState.score.player2 : gameState.score.player1;
-				const durationSec = Math.round((Date.now() - gameState.created_at) / 1000);
-				PlayerServiceClient.reportMatchResult({
-					winnerId, loserId,
-					winnerScore, loserScore,
-					gameMode: gameState.game_mode,
-					duration: durationSec,
-				});
+				// AI games: report forfeit only if there is a real opponent
+				if (gameState.game_mode !== 'ai') {
+					const loserId  = player_id;
+					const winnerId = gameState.winner!;
+					const winnerScore = winnerId === gameState.player1_id
+						? gameState.score.player1 : gameState.score.player2;
+					const loserScore  = winnerId === gameState.player1_id
+						? gameState.score.player2 : gameState.score.player1;
+					const durationSec = Math.round((Date.now() - gameState.created_at) / 1000);
+					PlayerServiceClient.reportMatchResult({
+						winnerId, loserId,
+						winnerScore, loserScore,
+						gameMode: gameState.game_mode,
+						duration: durationSec,
+					});
+				}
 
 				this.io.to(gameId).emit('game-over', {
 					message: `Player ${player_id} disconnected. Game forfeited.`,
@@ -129,7 +131,13 @@ export class WebsocketService {
 
 				const socketsInRoom = await this.io.in(gameId).fetchSockets();
 
-				if (socketsInRoom.length === 2) {
+				// For AI games a single human player is enough to start.
+				// For PvP games we wait for both players to connect.
+				const readyToStart =
+					socketsInRoom.length === 2 ||
+					(gameState.game_mode === 'ai' && socketsInRoom.length >= 1);
+
+				if (readyToStart) {
 					gameState.status = 'playing';
 					await redis!.updateGameState(gameId, gameState);
 				
