@@ -51,7 +51,8 @@ export class GameSocket {
 
 	/** Emit join-game to let the server attach us to our game room. */
 	joinGame() {
-		this._socket?.emit("join-game");
+		if (!this._socket) throw new Error("Not connected");
+		this._socket.emit("join-game");
 	}
 
 	/**

@@ -38,5 +38,6 @@ export interface GameState {
 	updated_at?: number;	// Timestamp updated (Do I need it ?)
 	
 	winner?: string;		// ID winner
-	game_mode: 'casual' | 'ranked';
+	game_mode: 'casual' | 'ranked' | 'ai';
+	ai_difficulty?: number;	// 1=Easy, 2=Medium, 3=Hard, 4=Impossible
 }

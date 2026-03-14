@@ -130,11 +130,14 @@ services:
       REDIS_URL: redis://redis:6379/1
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
       PLAYER_SERVICE_URL: http://player_service:8080
+      AI_SERVICE_URL: ai_opponent_service:50051
       PORT: 3001
     depends_on:
       redis:
         condition: service_healthy
       player_service:
+        condition: service_healthy
+      ai_opponent_service:
         condition: service_healthy
     networks:
       - transcendence_network
