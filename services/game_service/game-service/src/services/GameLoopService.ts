@@ -11,6 +11,7 @@ import {
 	BALL_RADIUS,
 	PADDLE_SPEED,
 	PADDLE_HEIGHT,
+	PADDLE_WIDTH,
 	PADDLE_LEFT_X,
 	PADDLE_RIGHT_X,
 	MAX_BOUNCE_ANGLE,
@@ -195,21 +196,25 @@ export class GameLoopService {
 
 		const targetX = ball.x + ball.vx;
 
+		// Collision surfaces at the front face of each paddle
+		const collisionLeftX = PADDLE_LEFT_X + PADDLE_WIDTH / 2;
+		const collisionRightX = PADDLE_RIGHT_X - PADDLE_WIDTH / 2;
+
 		// ---	CHECK IF TUNNELING	---
 			//	tunneling left
 		if (ball.vx < 0 &&
-			ball.x - BALL_RADIUS >= PADDLE_LEFT_X &&
-			targetX - BALL_RADIUS <= PADDLE_LEFT_X) {
+			ball.x - BALL_RADIUS >= collisionLeftX &&
+			targetX - BALL_RADIUS <= collisionLeftX) {
 			
-			const distanceToPaddle = ball.x - BALL_RADIUS - PADDLE_LEFT_X;
+			const distanceToPaddle = ball.x - BALL_RADIUS - collisionLeftX;
 			const totalDistance = Math.abs(ball.vx);
 			const ratioToPaddle = distanceToPaddle / totalDistance;
 
-			ball.x = PADDLE_LEFT_X + BALL_RADIUS;
+			ball.x = collisionLeftX + BALL_RADIUS;
 			this.checkCollisionY(gameState, ratioToPaddle);
 
 			if (this.checkPaddleCollision(gameState, 'player1')) {
-				ball.vx = -ball.vx
+				ball.vx = -ball.vx;
 				this.updateBallSpeed(gameState);
 
 				const remainingRatio = 1 - ratioToPaddle;
@@ -218,17 +223,21 @@ export class GameLoopService {
 				
 				return;
 			}
+			// Paddle missed – apply remaining movement only
+			ball.x = targetX;
+			this.checkCollisionY(gameState, 1 - ratioToPaddle);
+			return;
 		}
 			//	tunneling right
 		if (ball.vx > 0 &&
-			ball.x + BALL_RADIUS <= PADDLE_RIGHT_X &&
-			targetX + BALL_RADIUS >= PADDLE_RIGHT_X) {
+			ball.x + BALL_RADIUS <= collisionRightX &&
+			targetX + BALL_RADIUS >= collisionRightX) {
 			
-			const distanceToPaddle = PADDLE_RIGHT_X - (ball.x + BALL_RADIUS);
+			const distanceToPaddle = collisionRightX - (ball.x + BALL_RADIUS);
 			const totalDistance = Math.abs(ball.vx);
 			const ratioToPaddle = distanceToPaddle / totalDistance;
 			
-			ball.x = PADDLE_RIGHT_X - BALL_RADIUS;
+			ball.x = collisionRightX - BALL_RADIUS;
 			this.checkCollisionY(gameState, ratioToPaddle);
 
 			if (this.checkPaddleCollision(gameState, 'player2')) {
@@ -241,6 +250,10 @@ export class GameLoopService {
 
 				return;
 			}
+			// Paddle missed – apply remaining movement only
+			ball.x = targetX;
+			this.checkCollisionY(gameState, 1 - ratioToPaddle);
+			return;
 		}
 
 		//	---	NO TUNNELLING	---
@@ -315,7 +328,9 @@ export class GameLoopService {
 	 * so the target refreshes without blocking the loop.
 	 */
 	private driveAIPaddle(gameId: string, gameState: GameState): void {
-		const AI_UPDATE_INTERVAL = 6; // request new move every ~100 ms (6 × 16 ms)
+		// Harder difficulties poll more frequently: Impossible=1, Hard=3, default=6
+		const difficulty = gameState.ai_difficulty ?? 2;
+		const AI_UPDATE_INTERVAL = difficulty >= 4 ? 1 : difficulty >= 3 ? 3 : 6;
 
 		// Move paddle toward the cached target
 		const targetY   = this.aiTargets.get(gameId) ?? gameState.paddles.player2;

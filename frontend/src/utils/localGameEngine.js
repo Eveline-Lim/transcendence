@@ -8,6 +8,7 @@
 const BALL_RADIUS = 1;
 const PADDLE_SPEED = 2;
 const PADDLE_HEIGHT = 15;
+const PADDLE_WIDTH = 1.5;
 const PADDLE_LEFT_X = 5;
 const PADDLE_RIGHT_X = 95;
 const MAX_BOUNCE_ANGLE = 2;
@@ -140,10 +141,14 @@ export class LocalGameEngine {
 		const ball = gs.ball;
 		const targetX = ball.x + ball.vx;
 
+		// Collision surfaces at the front face of each paddle
+		const collisionLeftX = PADDLE_LEFT_X + PADDLE_WIDTH / 2;
+		const collisionRightX = PADDLE_RIGHT_X - PADDLE_WIDTH / 2;
+
 		// Tunneling check — left paddle
-		if (ball.vx < 0 && ball.x - BALL_RADIUS >= PADDLE_LEFT_X && targetX - BALL_RADIUS <= PADDLE_LEFT_X) {
-			const ratio = (ball.x - BALL_RADIUS - PADDLE_LEFT_X) / Math.abs(ball.vx);
-			ball.x = PADDLE_LEFT_X + BALL_RADIUS;
+		if (ball.vx < 0 && ball.x - BALL_RADIUS >= collisionLeftX && targetX - BALL_RADIUS <= collisionLeftX) {
+			const ratio = (ball.x - BALL_RADIUS - collisionLeftX) / Math.abs(ball.vx);
+			ball.x = collisionLeftX + BALL_RADIUS;
 			this._checkCollisionY(gs, ratio);
 
 			if (this._checkPaddleCollision(gs, "player1")) {
@@ -154,12 +159,16 @@ export class LocalGameEngine {
 				this._checkCollisionY(gs, rem);
 				return;
 			}
+			// Paddle missed – apply remaining movement only
+			ball.x = targetX;
+			this._checkCollisionY(gs, 1 - ratio);
+			return;
 		}
 
 		// Tunneling check — right paddle
-		if (ball.vx > 0 && ball.x + BALL_RADIUS <= PADDLE_RIGHT_X && targetX + BALL_RADIUS >= PADDLE_RIGHT_X) {
-			const ratio = (PADDLE_RIGHT_X - (ball.x + BALL_RADIUS)) / Math.abs(ball.vx);
-			ball.x = PADDLE_RIGHT_X - BALL_RADIUS;
+		if (ball.vx > 0 && ball.x + BALL_RADIUS <= collisionRightX && targetX + BALL_RADIUS >= collisionRightX) {
+			const ratio = (collisionRightX - (ball.x + BALL_RADIUS)) / Math.abs(ball.vx);
+			ball.x = collisionRightX - BALL_RADIUS;
 			this._checkCollisionY(gs, ratio);
 
 			if (this._checkPaddleCollision(gs, "player2")) {
@@ -170,6 +179,10 @@ export class LocalGameEngine {
 				this._checkCollisionY(gs, rem);
 				return;
 			}
+			// Paddle missed – apply remaining movement only
+			ball.x = targetX;
+			this._checkCollisionY(gs, 1 - ratio);
+			return;
 		}
 
 		ball.x = targetX;

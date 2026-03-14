@@ -5,7 +5,7 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
-import { AI_SERVICE_URL, PADDLE_HEIGHT, PADDLE_SPEED } from '../config/env';
+import { AI_SERVICE_URL, PADDLE_HEIGHT, PADDLE_SPEED, PADDLE_RIGHT_X, PADDLE_WIDTH } from '../config/env';
 import { GameState } from '../models/GameState';
 import { logger } from '../config/logger';
 
@@ -78,7 +78,7 @@ export class AIServiceClient {
         speed: PADDLE_SPEED,
       },
       arena: {
-        width: 100,
+        width: PADDLE_RIGHT_X - PADDLE_WIDTH / 2,
         height: 100,
       },
       ai_score: gameState.score.player2,
