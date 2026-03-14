@@ -73,6 +73,32 @@ limiting, documentation, and at least 5 endpoints:
   - The AI should simulate human-like behavior (not perfect play).
   - You must be able to explain your AI implementation during evaluation.
 
+  ```markdown
+
+**Artificial Intelligence**
+- Introduce an AI Opponent for games.
+- Built as a standalone Python microservice, chosen for its readability and rich standard library for algorithmic AI — no heavy ML framework needed.
+
+  - Communicates with the game engine over gRPC (Protocol Buffers), chosen over REST for its low-latency binary serialization,
+     and native support for bidirectional streaming — critical for real-time play at 60 updates per second.
+
+  - Exposes three RPCs: GetMove for single move requests, StreamMoves for real-time bidirectional gameplay, and AnalyzeMatch for post-match pattern learning.
+
+  - Fully algorithmic approach: ball trajectory is predicted by simulating wall bounces forward, making every decision traceable and explainable.
+
+  - Four difficulty levels (Easy, Medium, Impossible), each with tuned reaction delays, prediction error margins, tracking zones, and update frequencies. 
+    Humanization relies on Gaussian distribution (random.gauss) rather than uniform randomness, so behavior clusters naturally around a realistic center.
+
+  - When power-ups are enabled, the AI evaluates active items on the field and adjusts, 
+    positioning toward beneficial ones when no immediate ball threat exists.
+    
+  - A lightweight player profiling system detects tendencies (high/low bias, timing patterns)
+    from match history and adapts predictions in subsequent games.
+
+  - Runs asynchronously with grpc.aio, handles graceful shutdown via loop.add_signal_handler(), 
+    and ships as a slim Docker image integrated into the project's docker-compose stack.
+
+
 **Cybersecurity**
 
 - Implement WAF/ModSecurity (hardened) + HashiCorp Vault for secrets:
