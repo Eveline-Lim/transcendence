@@ -104,6 +104,7 @@ export default function Game() {
 	const [gameState, setGameState] = useState(null);   // live snapshot for the game-over UI
 	const [myId,      setMyId]      = useState(null);   // "player1" | "player2"
 	const [error,     setError]     = useState(null);
+	const [aiDifficulty, setAiDifficulty] = useState(2); // 1=Easy, 2=Medium, 3=Hard, 4=Impossible
 
 	// ── Refs (mutations here must not trigger re-renders) ─────────────────────
 	const canvasRef      = useRef(null);
@@ -310,7 +311,11 @@ export default function Game() {
 		updatePhase("matchmaking");
 
 		try {
-			const result = await api("/api/v1/game/create-ai-game", { method: "POST" });
+			const result = await api("/api/v1/game/create-ai-game", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ difficulty: aiDifficulty }),
+			});
 			if (!result.success) {
 				setError(result.message || "Failed to create AI game");
 				updatePhase("idle");
@@ -324,7 +329,7 @@ export default function Game() {
 			setError("Could not create AI game. Please try again.");
 			updatePhase("idle");
 		}
-	}, [connectToGame]);
+	}, [connectToGame, aiDifficulty]);
 
 	// ── Match service connection ──────────────────────────────────────────────
 	const startMatchmaking = useCallback(async () => {
@@ -427,9 +432,31 @@ export default function Game() {
 						<h1 className="text-2xl font-bold mb-1">
 							{MODE_LABEL[mode] ?? mode} Mode
 						</h1>
-						<p className="msg-info mb-6">
-								{mode === "offline" ? "Press Start to play Pong!" : mode === "ai" ? "Challenge the AI!" : "Find an opponent and play Pong!"}
-							</p>
+					<p className="msg-info mb-4">
+							{mode === "offline" ? "Press Start to play Pong!" : mode === "ai" ? "Choose difficulty and challenge the AI!" : "Find an opponent and play Pong!"}
+						</p>
+						{mode === "ai" && (
+							<div className="flex gap-2 justify-center mb-6">
+								{[
+									{ value: 1, label: "Easy",       color: "bg-green-600 hover:bg-green-500" },
+									{ value: 2, label: "Medium",     color: "bg-yellow-600 hover:bg-yellow-500" },
+									{ value: 3, label: "Hard",       color: "bg-orange-600 hover:bg-orange-500" },
+									{ value: 4, label: "Impossible", color: "bg-red-600 hover:bg-red-500" },
+								].map((d) => (
+									<button
+										key={d.value}
+										className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+											aiDifficulty === d.value
+												? `${d.color} text-white ring-2 ring-white`
+												: "bg-gray-700 text-gray-300 hover:bg-gray-600"
+										}`}
+										onClick={() => setAiDifficulty(d.value)}
+									>
+										{d.label}
+									</button>
+								))}
+							</div>
+						)}
 						{error && <p className="msg-error mb-4">{error}</p>}
 			<button className="btn w-full" onClick={
 					mode === "offline" ? startLocalGame

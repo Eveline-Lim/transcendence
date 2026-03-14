@@ -69,10 +69,14 @@ gameRouter.post('/create-ai-game', extractUserIdOnly, async (req, res) => {
 	const userId = req.userId as string;
 	if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
+	// Validate difficulty: 1=Easy, 2=Medium, 3=Hard, 4=Impossible
+	const rawDifficulty = parseInt(req.body?.difficulty, 10);
+	const difficulty = [1, 2, 3, 4].includes(rawDifficulty) ? rawDifficulty : 2;
+
 	try {
 		const gameId = `game_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
-		await redis.createGame(gameId, userId, 'ai', 'ai');
+		await redis.createGame(gameId, userId, 'ai', 'ai', difficulty);
 		await redis.setPlayerGame(userId, gameId);
 		// No Redis mapping for the 'ai' pseudo-player
 

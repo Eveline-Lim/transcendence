@@ -39,4 +39,5 @@ export interface GameState {
 	
 	winner?: string;		// ID winner
 	game_mode: 'casual' | 'ranked' | 'ai';
+	ai_difficulty?: number;	// 1=Easy, 2=Medium, 3=Hard, 4=Impossible
 }

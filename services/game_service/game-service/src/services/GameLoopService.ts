@@ -339,7 +339,7 @@ export class GameLoopService {
 		if (tick % AI_UPDATE_INTERVAL === 0 && !this.aiPending.has(gameId)) {
 			this.aiPending.add(gameId);
 			this.aiClient
-				.getMove(gameState)
+				.getMove(gameState, gameState.ai_difficulty ?? 2)
 				.then((move) => {
 					this.aiTargets.set(gameId, move.target_y);
 				})
