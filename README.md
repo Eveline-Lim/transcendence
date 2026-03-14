@@ -1,13 +1,35 @@
 *This project has been created as part of the 42 curriculum by
 	evlim,
 	thbasse,
-	hsoyal,
+	hsoysal,
 	kahoumou,
 	ckenaip.*
+
+---
+
+# 🏓 ft_transcendence
+
+## Table of Contents
+
+- [Description](#description)
+- [Quick Start / Instructions](#quick-start/instructions)
+- [Team Information](#team-information)
+- [Project Management](#project-management)
+- [Technical Stack](#technical-stack)
+- [Database Schema](#database-schema)
+- [Features List](#features-list)
+- [Modules](#modules)
+- [Individual Contributions](#individual-contributions)
+- [Resources](#resources)
+
+---
+
 
 ## Description
 
 ft_transcendence is a full-stack web application built around a real-time Pong game. Players can compete online against other players, challenge an AI opponent, or play locally in offline mode. The project features a React frontend, a TypeScript/Node.js backend powered by Fastify and Express, real-time communication via Socket.io, and Redis for state management.
+
+---
 
 ## Quick Start / Instructions
 
@@ -28,16 +50,112 @@ Once up:
 
 ---
 
+### Key Features
+
+- 👤 User registration, login and profile management
+- 🎮 Real-time 1v1 Pong matches
+- 🔐 JWT-based authentication with OAuth 2.0 via the 42 API
+- 🛡️ Two-factor authentication (2FA) via TOTP
+- 👥 Friend system with online status
+- 📊 Match statistics, rankings and leaderboard
+- 🤖 AI opponent with adjustable difficulty
+- 🌐 Single-Page Application (no full page reloads)
+
+---
+
+## Team Information
+
+| Login | Role | Responsibilities |
+|---|---|---|
+| evlim | Product Owner, Developer | |
+| ckenaip | Project Manager, Developer | |
+| hsoysal | Technical Lead, Developer |  |
+| kahoumou | Developer | |
+| thbasse | Developer |  |
+
+---
+## Project Management
+
+### Tools
+
+- **GitHub Pull Requests** — all code reviewed by at least one other team member before merge
+- **Documentation** — https://eveline-lim.github.io/transcendence/ |
+
+### Communication
+
+Discord server with dedicated channels per service
+
+---
+
+## Technical Stack
+
+### Frontend
+
+| Technology | Purpose |
+|---|---|
+| React | SPA framework |
+| Tailwind CSS | Styling |
+
+### Backend
+
+| Technology | Purpose |
+|---|---|
+| **Node.js** | Runtime |
+| **Fastify** | Auth service |
+| **Express** | Game service |
+
+### Database
+
+| Technology |
+|---|
+| **Redis** |
+| **PostgreSQL** |
+
+---
+
+## Database Schema
+
+---
+
+## Features List
+
+| Feature | Description | Implemented by |
+|---|---|---|
+| **User registration** | Create an account with username, display name, email and password | evlim |
+| **Email/username login** | Authenticate with credentials, receive JWT + refresh token | evlim |
+| **JWT Access Token** | Short-lived signed token (Bearer) | evlim |
+| **Refresh Token** | Refresh token stored in Redis, revoked on logout | hsoysal |
+| **OAuth 2.0 (42)** | Login via 42 intranet | evlim |
+| **Two-Factor Authentication (2FA)** | TOTP-based 2FA using an authenticator app. Setup returns QR code + backup codes | evlim |
+| **Password Reset** | Sends a one-time reset link via email | evlim |
+| **Password Change** | Authenticated users can change their password | evlim |
+| **Session Management** | List all active sessions with device/IP info; revoke individual sessions or all at once | evlim |
+| **Logout** | Invalidates the current session and blacklists the refresh token | evlim |
+| **Player profile** | Edit profile, delete account | hsoysal |
+| **Friend system** | Add/remove/block friends | hsoysal |
+| **Leaderboard** | Global ranking by win rate | hsoysal |
+| **Real-time Pong** | Live 1v1 game | ckenaip |
+| **Matchmaking** | Automatic queue-based opponent pairing | hsoysal |
+| **AI opponent** | Adjustable difficulty AI | kahoumou |
+| **WAF/ModSecurity** | | thbasse |
+| **Secrets Management (HashiCorp Vault)** | | thbasse |
+| **Responsive SPA** | Single-page app, works on desktop and mobile | hsoysal |
+
+---
+
 ## Modules
 
-### MAJORS
+Total: **10** Major × 2 + **6** Minor × 1 = 26 pts
+
+### Major Modules (2 pts each)
 
 #### Web
 
 - Use a framework for both the frontend and backend.
-  - **Frontend:** React
-  - **Backend:** TypeScript / Node.js with Fastify. Express for the game-service
-
+◦ Use a frontend framework (React, Vue, Angular, Svelte, etc.).
+◦ Use a backend framework (Express, NestJS, Django, Flask, Ruby on Rails,
+etc.).
+◦ Full-stack frameworks (Next.js, Nuxt.js, SvelteKit) count as both if you use both their frontend and backend capabilities.
 
 - Implement real-time features using WebSockets or similar technology.
   - Real-time updates across clients.
@@ -56,7 +174,8 @@ limiting, documentation, and at least 5 endpoints:
   - PUT /api/{something}
   - DELETE /api/{something}
   - PATCH /api/{something}
-  - Check for more details: https://eveline-lim.github.io/transcendence/
+
+  => Check for more details: https://eveline-lim.github.io/transcendence/
 
 **User Management**
 
@@ -83,11 +202,18 @@ limiting, documentation, and at least 5 endpoints:
 
 - Implement a complete web-based game where users can play against each
 other.
-  - We built a real-time multiplayer Pong with casual, ranked, and offline game modes Matches are played in 2D, and the first player to reach 11 points wins.
-  - The AI and offline logic runs entirely in JavaScript on the frontend, so players can keep playing even without a connection.
-  - The casual and ranked logic is fully handled by the backend. Only the rendering happens on the frontend, making cheating significantly harder.
-  - Game states are cached and synced with Redis, allowing players to reconnect seamlessly after an unexpected client crash.
-  - Express backend, chosen for its native Socket.io integration, handling up to 60 exchanges per second between client and server.
+  - The game can be real-time multiplayer (e.g., Pong, Chess, Tic-Tac-Toe, Card
+games, etc.).
+  - Players must be able to play live matches.
+  - The game must have clear rules and win/loss conditions.
+  - The game can be 2D or 3D.
+
+**Module implementation details**:
+- We built a real-time multiplayer Pong with casual, ranked, and offline game modes Matches are played in 2D, and the first player to reach 11 points wins.
+- The AI and offline logic runs entirely in JavaScript on the frontend, so players can keep playing even without a connection.
+- The casual and ranked logic is fully handled by the backend. Only the rendering happens on the frontend, making cheating significantly harder.
+- Game states are cached and synced with Redis, allowing players to reconnect seamlessly after an unexpected client crash.
+- Express backend, chosen for its native Socket.io integration, handling up to 60 exchanges per second between client and server.
 
 - Remote players — Enable two players on separate computers to play the
 same game in real-time.
@@ -102,13 +228,11 @@ same game in real-time.
   - Use REST APIs or message queues for communication.
   - Each service should have a single responsibility.
 
-=> 10 majors = 20 pts
-
-**MINORS**
+### Minor Modules (1 pt each)
 
 **Web**
 
-- Use an ORM for the database.
+- Use an ORM for the database. (?)
 
 - Progressive Web App (PWA) with offline support and installability.
 
@@ -132,29 +256,46 @@ etc.).
 - Implement remote authentication with OAuth 2.0 (Google, GitHub, 42,
 etc.).
 
+
 - Implement a complete 2FA (Two-Factor Authentication) system for the
 users.
 
-=> 6 minors = 6 pts
+---
+
+## Individual Contributions
 
 
-## Ressources
+---
 
-- https://jestjs.io/
+## Resources
+
+
+### Frontend
+- https://react.dev/learn
+- https://v6.vite.dev/
+- https://tailwindcss.com/docs
+
+### Backend
+- https://fastify.dev/docs/latest/
+
+
+### Databases
 - https://www.postgresql.org/docs/
 - https://redis.io/docs/latest/integrate/
-- https://fastify.dev/docs/latest/
+
+### GitHub
+- https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
+
+### Oauth
+- https://api.intra.42.fr/apidoc/guides/getting_started
+- https://api.intra.42.fr/apidoc/guides/web_application_flow
+
+
+(?)
+- https://jestjs.io/
 - https://doc.traefik.io/traefik/reference/install-configuration/providers/docker/
-- https://react.dev/learn
-- https://tailwindcss.com/docs
-- https://v6.vite.dev/
 - https://grafana.com/docs/
 - https://grafana.com/docs/opentelemetry/
 - https://prometheus.io/docs/introduction/overview/
-- https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
 - https://www.sonarsource.com/fr/integrations/
 - https://node.testcontainers.org/quickstart/
-
-### GitHub
-
-- https://github.com/Eveline-Lim/transcendence
