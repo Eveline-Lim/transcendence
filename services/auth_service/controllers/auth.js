@@ -62,7 +62,6 @@ export async function signup(req, reply) {
 		const playerResult = await createPlayerProfile({ username, displayName, email, password });
 
 		if (!playerResult.ok) {
-			console.log("PLAYER SERVICE ERROR: ", playerResult.data);
 			return reply.code(playerResult.status).send({
 				success: false,
 				code: "PLAYER_CREATION_FAILED",
@@ -71,11 +70,9 @@ export async function signup(req, reply) {
 		}
 
 		const playerData = playerResult.data;
-		console.log("PLAYER CREATED: ", playerData);
 
 		// Use the player ID from the player service (PostgreSQL) as the single source of truth
 		const uuid = playerData.id;
-		console.log("UUID (from player service): ", uuid);
 
 		const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -89,10 +86,6 @@ export async function signup(req, reply) {
 			avatarUrl,
 			has2FAEnabled: "false",
 			requires2FA: "false",
-
-			// Legal flags
-			acceptedPrivacyPolicy: "false",
-			acceptedTermsOfService: "false",
 		});
 
 		await redisClient.set(emailKey, username);

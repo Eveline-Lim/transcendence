@@ -49,6 +49,7 @@ export default function App() {
 					{/* Privacy Policy and Terms of Service */}
 					<Route path="/privacy-policy" element={<PrivacyPolicy />} />
 					<Route path="/terms-service" element={<TermsOfService />} />
+					
 
 					{/* 404 */}
 					<Route path="*" element={<PageNotFound />} />

@@ -2,6 +2,7 @@ import { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import NavBar from "../components/NavBar";
+import Footer from "../components/Footer";
 
 export default function Home() {
 	const { currentUser, authLoading } = useContext(AuthContext);
@@ -58,6 +59,7 @@ export default function Home() {
 					</div>
 				</div>
 			</div>
+			<Footer />
 		</div>
 	);
 }

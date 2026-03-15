@@ -49,15 +49,6 @@ export default function Auth() {
 				navigate("/twofaCode", { replace: true });
 			} else if (res.accessToken) {
 				login(res.user, res.accessToken, res.refreshToken);
-				if (!res.user.acceptedPrivacyPolicy) {
-					navigate("/privacy-policy", { replace: true });
-					return;
-				}
-
-				if (!res.user.acceptedTermsOfService) {
-					navigate("/terms-service", { replace: true });
-					return;
-				}
 				navigate("/home", { replace: true });
 			} else {
 				setError({ form: "Unexpected response from server" });
@@ -90,15 +81,6 @@ export default function Auth() {
 			} else if (res.accessToken) {
 				login(res.user, res.accessToken, res.refreshToken);
 				navigate("/");
-				if (!res.user.acceptedPrivacyPolicy) {
-					navigate("/privacy-policy", { replace: true });
-					return;
-				}
-
-				if (!res.user.acceptedTermsOfService) {
-					navigate("/terms-service", { replace: true });
-					return;
-				}
 			} else {
 				setError({ form: "Unexpected response from server" });
 			}

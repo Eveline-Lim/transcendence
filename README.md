@@ -138,7 +138,6 @@ Discord server with dedicated channels per service
 | **Matchmaking** | Automatic queue-based opponent pairing | hsoysal |
 | **AI opponent** | Adjustable difficulty AI | kahoumou |
 | **WAF/ModSecurity** | | thbasse |
-| **Secrets Management (HashiCorp Vault)** | | thbasse |
 | **Responsive SPA** | Single-page app, works on desktop and mobile | hsoysal |
 
 ---

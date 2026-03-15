@@ -1,8 +1,5 @@
 import { useState } from "react";
-import { sendData } from "../sendData.jsx";
-import { useNavigate } from "react-router-dom";
 import BackButton from "../components/BackButton.jsx";
-import FormButton from "../components/FormButton.jsx";
 
 const tagColors = {
   REQUIRED:    { text: "text-red-400",     border: "border-red-400/30"     },
@@ -84,28 +81,7 @@ const sections = [
 ];
 
 export default function TermsOfService() {
-	const navigate = useNavigate();
 	const [openSection, setOpenSection] = useState(null);
-	const [accepted] = useState(false);
-
-	const token = localStorage.getItem("token");
-	const acceptTermsOfService = async () => {
-		try {
-			const res = await sendData("/api/v1/auth/accept/terms-service", {
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
-			});
-			if (res.success) {
-				navigate("/home", { replace: true });
-			} else {
-				setError(res.message || "Failed to accept terms of service");
-			}
-		} catch (error) {
-			console.log("An error occurred: ", error);
-		}
-	}
 
   return (
     <div className="relative min-h-screen bg-gray-950 text-gray-300 font-mono overflow-x-hidden">
@@ -127,7 +103,7 @@ export default function TermsOfService() {
         <div className="max-w-3xl mx-auto">
 
 			{/* Back button */}
-			<BackButton to="/" />
+			<BackButton to="/home" />
 
           {/* Top row */}
           <div className="flex justify-between items-center mb-5 sm:mb-6">
@@ -162,16 +138,6 @@ export default function TermsOfService() {
               </div>
               <div className="w-px h-9 sm:h-10 bg-gray-800" />
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-gray-600 tracking-widest uppercase">
-                  Status
-                </span>
-                <span
-                  className={`text-base sm:text-lg font-black tracking-wide transition-colors duration-300 ${
-                    accepted ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {accepted ? "ACCEPTED" : "PENDING"}
-                </span>
               </div>
             </div>
           </div>
@@ -235,30 +201,6 @@ export default function TermsOfService() {
           );
         })}
       </main>
-
-      {/* Accept block */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8 sm:py-10">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 border border-emerald-400/20 bg-emerald-400/5 px-5 sm:px-8 py-6 sm:py-7">
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-bold tracking-widest text-emerald-400 uppercase mb-2">
-              {accepted ? "✓  Terms Accepted" : "Accept Terms"}
-            </div>
-            <p className="text-xs text-gray-600 leading-relaxed">
-              By clicking this button, you confirm that you have read and
-              accepted the full Terms of Service.
-            </p>
-          </div>
-			<FormButton variant="secondary" onClick={acceptTermsOfService}
-			className={`w-full sm:w-auto shrink-0 border border-emerald-400 px-6 sm:px-7 py-3 text-xs font-bold tracking-widest uppercase transition-all duration-200 ${
-				accepted
-                ? "bg-emerald-400 text-gray-950"
-                : "text-emerald-400 hover:bg-emerald-400/10"
-            }`}
-			>
-            {accepted ? "ACCEPTED ✓" : "ACCEPT"}
-			</FormButton>
-        </div>
-      </div>
 
       {/* Footer */}
       <footer className="px-4 sm:px-8 pb-10 sm:pb-12 text-center">

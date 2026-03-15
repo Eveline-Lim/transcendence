@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { sendData } from "../sendData.jsx";
 import BackButton from "../components/BackButton.jsx";
-import FormButton from "../components/FormButton.jsx";
 
 const sections = [
   {
@@ -79,27 +77,7 @@ const sections = [
 
 export default function PrivacyPolicy() {
 	const [openSection, setOpenSection] = useState(null);
-	const [error, setError] = useState(null);
 	const navigate = useNavigate();
-
-	const token = localStorage.getItem("token");
-	const acceptPrivacyPolicy = async () => {
-		try {
-			const res = await sendData("/api/v1/auth/accept/privacy-policy", {
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
-			});
-			if (res.success) {
-				navigate("/terms-service", { replace: true });
-			} else {
-				setError(res.message || "Failed to accept privacy policy");
-			}
-		} catch (error) {
-			console.log("An error occurred: ", error);
-		}
-	}
 
   return (
     <div className="relative min-h-screen bg-gray-950 text-gray-300 font-mono overflow-x-hidden">
@@ -123,7 +101,7 @@ export default function PrivacyPolicy() {
           <div className="flex-1 min-w-0">
 
             {/* Back button */}
-			<BackButton to="/" />
+			<BackButton to="/home" />
 
             <span className="inline-block border border-emerald-400 text-emerald-400 text-xs tracking-widest px-3 py-1 mb-5 sm:mb-6">
               TRANSCENDENCE
@@ -216,11 +194,6 @@ export default function PrivacyPolicy() {
             </div>
           );
         })}
-
-        {/* Agree button */}
-        <div className="max-w-xs mx-auto mt-10">
-		<FormButton variant="secondary" onClick={acceptPrivacyPolicy}>I agree</FormButton>
-        </div>
       </main>
 
       {/* Footer */}
