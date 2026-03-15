@@ -199,12 +199,18 @@ export default function Friends() {
 								ref={searchRef}
 								id="friend-search"
 								name="friend-search"
-								className="input"
+								className="input flex-6"
 								style={{ flex: '1 1 0%', minWidth: 0 }}
 								placeholder="Search by username..."
 								onKeyDown={(e) => e.key === "Enter" && handleSearch()}
 							/>
-							<FormButton onClick={handleSearch} className="shrink-0">Search</FormButton>
+							<button
+								type="button"
+								onClick={handleSearch}
+								className="btn btn-primary flex-2"
+							>
+								Search
+							</button>
 						</div>
 						{searchResults.map(p => (
 							<div key={p.id} className="list-item">

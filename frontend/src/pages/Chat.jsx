@@ -234,7 +234,13 @@ export default function Chat() {
 								rows={3}
 									className="input flex-5 resize-none"
 								/>
-								<FormButton onClick={handleSend} className="shrink-0">Send</FormButton>
+							<button
+								type="button"
+								onClick={handleSend}
+								className="btn btn-primary flex-2"
+							>
+								Send
+							</button>
 							</div>
 						</>
 					)}
