@@ -29,7 +29,6 @@ export default function ConfirmDisable2FA() {
 			},
 			body: JSON.stringify({ code, password }),
 		});
-		console.log("DISABLE 2FA RES: ", res);
 		if (res.success !== false) {
 			updateUser({ ...currentUser, has2FAEnabled: "false" });
 			setMsg("2FA disabled");

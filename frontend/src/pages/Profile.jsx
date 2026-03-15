@@ -29,7 +29,6 @@ export default function Profile() {
 	const newPwRef = useRef(null);
 
 	const token = localStorage.getItem("token");
-	console.log("token: ", token);
 
 	useEffect(() => {
 		if (!authLoading && !currentUser) { navigate("/", { replace: true }); return; }
@@ -59,8 +58,6 @@ export default function Profile() {
 				Authorization: `Bearer ${token}`,
 			}
 		});
-
-		console.log("SESSION RES: ", res);
 
 		if (res && Array.isArray(res.sessions)) {
 			setSessions(res.sessions);
@@ -149,7 +146,6 @@ export default function Profile() {
 	};
 
 	const handleRevokeSession = async (sessionId) => {
-		console.log("sessionId: ", sessionId);
 		if (!sessionId) {
 			setError("Missing session ID");
 			return;
@@ -416,8 +412,8 @@ export default function Profile() {
 								["soundEnabled", "Sound effects"],
 								["musicEnabled", "Music"],
 							].map(([key, label]) => (
-								<label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
-									<input type="checkbox" className="checkbox" checked={!!prefs[key]} onChange={(e) => togglePref(key, e.target.checked)} />
+								<label key={key} htmlFor={key} className="flex items-center gap-2 text-sm cursor-pointer">
+									<input id={key} name={key} type="checkbox" className="checkbox" checked={!!prefs[key]} onChange={(e) => togglePref(key, e.target.checked)} />
 									{label}
 								</label>
 							))}
@@ -431,8 +427,10 @@ export default function Profile() {
 										["showMatchHistory", "Show match history"],
 										["showStatistics", "Show statistics"],
 									].map(([key, label]) => (
-										<label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
+										<label htmlFor={`privacy-${key}`} className="flex items-center gap-2 text-sm cursor-pointer">
 											<input
+												id={`privacy-${key}`}
+												name={`privacy-${key}`}
 												type="checkbox"
 												className="checkbox"
 												checked={!!prefs.privacy[key]}

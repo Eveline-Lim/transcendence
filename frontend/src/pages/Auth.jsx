@@ -42,7 +42,6 @@ export default function Auth() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ identifier, password }),
 			});
-			console.log("LOGIN RES: ", res);
 			if (res.success === false) {
 				setError({ form: res.message || "Invalid credentials" });
 			} else if (res.requires2FA === "true" || res.requires2FA === true) {
@@ -86,7 +85,6 @@ export default function Auth() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ username, displayName, password, email }),
 			});
-			console.log("REGISTER RES: ", res);
 			if (res.success === false) {
 				setError({ form: res.message || "Registration failed" });
 			} else if (res.accessToken) {

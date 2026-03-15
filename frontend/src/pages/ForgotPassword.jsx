@@ -21,7 +21,6 @@ export default function ForgotPassword() {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ email }),
 		});
-		console.log("FORGOT PASSWORD: ", res);
 		if (res.success !== false) setMsg("If that email exists, a reset link was sent.");
 		else setError(res.message || "Error sending reset email");
 	};

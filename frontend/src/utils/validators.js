@@ -52,18 +52,13 @@ export function validateInputs(fields, isLogin = false) {
 			value = '';
 		}
 		data[key] = value.trim();
-		// console.log("key ", key);
-		// console.log("data: ", data);
 	}
 
 	if (isLogin) {
-		console.log("DATA IDENTIFIER: ", data.identifier);
 		if (data.identifier.includes("@")) {
 			data.email = data.identifier;
-			// console.log("data email: ", data.email);
 		} else {
 			data.username = data.identifier;
-			// console.log("data username: ", data.username);
 		}
 	}
 

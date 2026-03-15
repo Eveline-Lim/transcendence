@@ -134,7 +134,7 @@ export async function signup(req, reply) {
 		const refreshToken = crypto.randomBytes(64).toString("hex");
 		const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
 
-		// Store refresh token in Redis (key = sha256 hash, value = userId:sessionId)
+		// Store refresh token in Redis
 		await redisClient.set(
 			`refresh:${refreshTokenHash}`,
 			`${user.id}:${sessionId}`,
@@ -149,8 +149,8 @@ export async function signup(req, reply) {
 			tokenType: "Bearer",
 			expiresIn: ACCESS_TOKEN_TTL,
 			user: userInfo,
-			requires2FA: "false",
-			
+			requires2FA: false
+
 
 		});
 		return reply.code(201).send(response);
@@ -275,7 +275,7 @@ export async function login(req, reply) {
 		const refreshToken = crypto.randomBytes(64).toString("hex");
 		const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
 
-		// Store refresh token in Redis (key = sha256 hash, value = userId:sessionId)
+		// Store refresh token in Redis
 		await redisClient.set(
 			`refresh:${refreshTokenHash}`,
 			`${user.id}:${sessionId}`,
@@ -295,7 +295,6 @@ export async function login(req, reply) {
 
 		return reply.code(200).send(response);
 	} catch (error) {
-		console.log("LOGIN ERROR: ", error);
 		return reply.code(500).send({
 			success: false,
 			code: "INTERNAL_SERVER_ERROR",
@@ -331,7 +330,7 @@ export async function logout(req, reply) {
 		// Add JWT token to blacklist
 		await redisClient.set(
 			`blacklist:${tokenHash}`,
-			"1", // to modify ?
+			"1",
 			{ EX: ACCESS_TOKEN_TTL}
 		);
 		reply.code(204).send();

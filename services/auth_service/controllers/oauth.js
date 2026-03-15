@@ -1,18 +1,12 @@
 import { redisClient } from "../redisClient.js";
 import { ACCESS_TOKEN_TTL, REFRESH_TOKEN_TTL } from "../utils/macros.js";
 import { createPlayerProfile } from "../utils/playerService.js";
-import bcrypt from "bcrypt";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 
 export async function initiateOauth(req, reply) {
 	const { provider } = req.params;
-	console.log("provider: \n", provider);
 	const referer = req.headers.referer;
-	console.log("referer: ", referer);
-	console.log("Backend URL:", referer);
-	console.log("protocol: ", req.protocol);
-	console.log("hostname: ", req.hostname);
 
 	if (provider !== "fortytwo") {
 		return reply.code(400).send({
@@ -39,7 +33,6 @@ export async function initiateOauth(req, reply) {
 		});
 
 		const state = `${oauthSessionId}:${csrfToken}`;
-		console.log("state: ", state);
 
 		// Create the 42 authorization url
 		const authUrl =
@@ -50,7 +43,6 @@ export async function initiateOauth(req, reply) {
 				response_type: "code",
 				state
 			});
-		console.log("authUrl: \n", authUrl);
 
 		// Redirect the user to authorization page
 		return reply.redirect(authUrl);
@@ -85,8 +77,6 @@ export async function oauthCallback(req, reply) {
 	}
 
 	try {
-		// const oauthSessionId = state;
-
 		// Split state back into its two parts and validate both
 		const [oauthSessionId, csrfToken] = state.split(":");
 		if (!oauthSessionId || !csrfToken) {
@@ -99,7 +89,6 @@ export async function oauthCallback(req, reply) {
 
 		// Validate session in Redis
 		const storedSession = await redisClient.hGetAll(`oauth:${oauthSessionId}`);
-		console.log("storedSession: ", storedSession);
 		if (!storedSession || Object.keys(storedSession).length === 0 ||
 			storedSession.isOAuth !== "true") {
 				return reply.code(400).send({
@@ -109,7 +98,7 @@ export async function oauthCallback(req, reply) {
 				});
 		}
 
-		// Compare the CSRF token now that we have it
+		// Compare the CSRF token
 		if (storedSession.csrfToken !== csrfToken) {
 			return reply.code(400).send({
 				success: false,
@@ -118,7 +107,6 @@ export async function oauthCallback(req, reply) {
 			});
 		}
 		const frontendUrl = storedSession.origin;
-		console.log("frontendUrl: ", frontendUrl);
 
 		// Exchange code for 42 access token
 		const tokenResponse = await fetch("https://api.intra.42.fr/oauth/token", {
@@ -129,7 +117,7 @@ export async function oauthCallback(req, reply) {
 				client_id: process.env.OAUTH_42_CLIENT_ID,
 				client_secret: process.env.OAUTH_42_CLIENT_SECRET,
 				code,
-				redirect_uri: `${process.env.OAUTH_42_CLIENT_CALLBACK_URL}`
+				redirect_uri: process.env.OAUTH_42_CLIENT_CALLBACK_URL
 			})
 		});
 
@@ -152,7 +140,7 @@ export async function oauthCallback(req, reply) {
 
 		const fortyTwoUser = await userResponse.json();
 
-		// Check if user exists
+		// Check if user aready exists in Redis
 		const userKey = `user:${fortyTwoUser.login}`;
 		let user = await redisClient.hGetAll(userKey);
 
@@ -218,26 +206,25 @@ export async function oauthCallback(req, reply) {
 			process.env.JWT_SECRET,
 			{ expiresIn: ACCESS_TOKEN_TTL }
 		);
-		// accessToken = await bcrypt.hash(accessToken, 10);
 
 		// Refresh token
-		let refreshToken = crypto.randomBytes(64).toString("hex");
-		const hashedrefreshToken = await bcrypt.hash(refreshToken, 10);
-		await redisClient.set(`refresh:${hashedrefreshToken}`,
-			user.id, {
-				EX: REFRESH_TOKEN_TTL
-		});
-
+		const refreshToken = crypto.randomBytes(64).toString("hex");
+		const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+		await redisClient.set(
+			`refresh:${refreshTokenHash}`,
+			`${user.id}:${sessionId}`,
+			{ EX: REFRESH_TOKEN_TTL }
+		);
 		// Delete temporary OAuth session
 		await redisClient.del(`oauth:${oauthSessionId}`);
 
-		console.log("REDIRECTION frontendUrl: ", frontendUrl);
 		// Redirect to frontend
 		return reply.redirect(
 			`${frontendUrl}oauth-success#accessToken=${accessToken}&refreshToken=${refreshToken}`
 		);
 	} catch (error) {
 		console.error("OAuth callback error:", error);
+		await redisClient.del(`oauth:${oauthSessionId}`);
 		return reply.code(500).send({
 			success: false,
 			code: "INTERNAL_SERVER_ERROR",

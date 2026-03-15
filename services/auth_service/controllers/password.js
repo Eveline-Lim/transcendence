@@ -1,6 +1,6 @@
 import { validateEmail, validatePassword } from "../utils/validators.js"
 import { redisClient } from "../redisClient.js";
-import { MAX_LOGIN_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS, RESET_TOKEN_ETTL } from "../utils/macros.js";
+import { MAX_LOGIN_ATTEMPTS, RATE_LIMIT_WINDOW_SECONDS, RESET_TOKEN_TTL } from "../utils/macros.js";
 import { sendResetEmail } from "../mailService.js";
 import crypto from "node:crypto";
 import bcrypt from "bcrypt";
@@ -8,7 +8,6 @@ import jwt from "jsonwebtoken";
 import ForgotPasswordRequest from "../models/ForgotPasswordRequest.js";
 import ResetPasswordRequest from "../models/ResetPasswordRequest.js";
 import ChangePasswordRequest from "../models/ChangePasswordRequest.js";
-import { hostname } from "node:os";
 
 /**
  * Handles forgot password requests.
@@ -79,7 +78,7 @@ export async function forgotPassword(req, reply) {
 		await redisClient.set(
 			`passwordReset:${hashedToken}`,
 			userId,
-			{ EX: RESET_TOKEN_ETTL }
+			{ EX: RESET_TOKEN_TTL }
 		);
 
 		// Build the reset URL dynamically from the incoming request origin and with the raw token as a query param
@@ -156,7 +155,6 @@ export async function resetPassword(req, reply) {
 			});
 		}
 		const username = await redisClient.get(`userid:${userId}`);
-		console.log("username: ", username);
 		if (!username) {
 			return reply.code(401).send({
 				success: false,
@@ -280,7 +278,6 @@ export async function changePassword(req, reply) {
 		}
 		const hashedPassword = await bcrypt.hash(newPassword, 10);
 		await redisClient.hSet(userKey, {
-			...user,
 			password: hashedPassword,
 		});
 		return reply.code(200).send({
