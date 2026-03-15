@@ -89,7 +89,6 @@ export default function TermsOfService() {
 	const [accepted] = useState(false);
 
 	const token = localStorage.getItem("token");
-	console.log("token: ", token);
 	const acceptTermsOfService = async () => {
 		try {
 			const res = await sendData("/api/v1/auth/accept/terms-service", {
@@ -98,7 +97,6 @@ export default function TermsOfService() {
 					Authorization: `Bearer ${token}`,
 				},
 			});
-			console.log("RES: ", res);
 			if (res.success) {
 				navigate("/home", { replace: true });
 			} else {

@@ -12,7 +12,7 @@
 ## Table of Contents
 
 - [Description](#description)
-- [Quick Start / Instructions](#quick-start/instructions)
+- [Instructions](#instructions)
 - [Team Information](#team-information)
 - [Project Management](#project-management)
 - [Technical Stack](#technical-stack)
@@ -31,7 +31,7 @@ ft_transcendence is a full-stack web application built around a real-time Pong g
 
 ---
 
-## Quick Start / Instructions
+## Instructions
 
 > No clone needed. Requires `docker`, `docker compose`, and `openssl`.
 
@@ -185,6 +185,22 @@ limiting, documentation, and at least 5 endpoints:
   - Users can add other users as friends and see their online status.
   - Users have a profile page displaying their information.
 
+**Module implementation details**:
+
+User management is handled by two services: auth-service and player-service.
+
+  - **Registration and login** (`POST /api/v1/auth/register`, `POST /api/v1/auth/login`) allow users to create an account or sign in using a username, display name, email and password. Passwords must be at least 8 characters and contain uppercase, lowercase, numeric and special characters. On success, both endpoints return a short-lived JWT access token (Bearer) and a longer-lived refresh token, along with the user's information.
+
+  - **Token management** is handled through a refresh endpoint (`POST /api/v1/auth/refresh`). The access token is verified via `GET /api/v1/auth/verify`. Tokens are stored in Redis and are invalidated on logout (`POST /api/v1/auth/logout`), which blacklists the current token.
+
+  - **Password management** covers three flows: a forgot-password flow that emails a one-time reset link (`POST /api/v1/auth/password/forgot` → `POST /api/v1/auth/password/reset`) and a change-password flow for authenticated users (`POST /api/v1/auth/password/change`) that requires the current password for confirmation.
+
+  - **Player profile** is managed by the player-service. Authenticated users can retrieve their own profile (`GET /api/v1/players/me`), update their display name and email (`PATCH /api/v1/players/me`), upload or remove an avatar image (`PUT/DELETE /api/v1/players/me/avatar`) and delete their account (`DELETE /api/v1/players/me`).
+
+  - **Friends** are also handled by the player-service. Users can send, accept or decline friend requests (`POST /api/v1/players/me/friends/requests`). They can also remove friends and block or unblock other players.
+
+  -- **Session management** allows users to see all their active sessions with device and IP information (`GET /api/v1/auth/sessions`). They can revoke a specific session (`DELETE /api/v1/auth/sessions/{sessionId}`) or revoke all sessions at once.
+
 **Artificial Intelligence**
 
 - Introduce an AI Opponent for games.
@@ -282,9 +298,33 @@ etc.).
 - Implement remote authentication with OAuth 2.0 (Google, GitHub, 42,
 etc.).
 
+**Module implementation details**:
 
-- Implement a complete 2FA (Two-Factor Authentication) system for the
-users.
+The 42 provider was chosen over Google or GitHub. Since the main users of this project already have 42 accounts, using the 42 intranet for authentication made the most sense. It also shows how the app can connect to a real identity provider without asking users to create or trust another password system.
+
+The OAuth flow is implemented in the auth service using two endpoints that follow the standard authorization code flow:
+
+1. **`GET /api/v1/auth/oauth/fortytwo`** — Starts the login process by redirecting the user to the 42 authorization server. A `state` parameter is generated server-side and stored temporarily to prevent CSRF attacks.
+
+2. **`GET /api/v1/auth/oauth/fortytwo/callback`** — Receives the `code` and `state` from 42 after the user approves access. The service validates the `state`, exchanges the `code` for an access token with 42's token endpoint, fetches the user's profile from the 42 API and either creates a new local account or links it to an existing one.
+
+The provider routing is generic (`/auth/oauth/{provider}`) with `"fortytwo"` currently used as the provider, meaning the infrastructure can support additional providers (Google, GitHub) without architectural changes.
+
+- Implement a complete 2FA (Two-Factor Authentication) system for the users.
+
+**Module implementation details**:
+
+Passwords alone are insufficient protection for user accounts. This project adds 2FA using TOTP (Time-Based One-Time Passwords). It adds a second factor that is time-sensitive and device-bound. Backup codes are also provided alongside the TOTP secret. It ensure users can still access their account if they lose their authenticator app.
+
+2FA is implemented as a TOTP system compatible with standard authenticator apps (Google Authenticator etc.). The 2FA process is divided into three main steps:
+
+**Setup** (`POST /api/v1/auth/2fa/enable`) — Callable by an authenticated user who does not yet have 2FA enabled. It returns a `secret`, a `qrCodeUrl` (an `otpauth://` URI rendered as a QR code for scanning) and a set of one-time `backupCodes`. The 2FA is not yet active until the user completes verification.
+
+**Verification** (`POST /api/v1/auth/2fa/verify`) — The user submits a 6-digit TOTP code (`^[0-9]{6}$`) from their authenticator app. This endpoint serves two purposes: confirming the setup and completing login for users who already have 2FA enabled. On a successful login verification, it returns a full token pair, identical to a normal login response. If a login attempt is for an account with 2FA enabled, the initial login response sets `requires2FA: true` and the tokens will only be provided after this step.
+
+**Disabling** (`POST /api/v1/auth/2fa/disable`) — To disable 2FA, the user must provide both their current TOTP code and their account password for confirmation before disabling, preventing an attacker with a stolen access token from disabling 2FA.
+
+The `has2FAEnabled` boolean is included in the user object returned by all auth endpoints, allowing the frontend to conditionally render the 2FA step.
 
 ---
 

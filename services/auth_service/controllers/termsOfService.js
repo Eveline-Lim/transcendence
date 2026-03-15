@@ -2,7 +2,6 @@ import { redisClient } from "../redisClient.js";
 import jwt from "jsonwebtoken";
 
 export async function acceptTermsOfService(req, reply) {
-	console.log("TERMS OF SERVICE");
 	try {
 		const token = req.headers.authorization?.split(" ")[1];
 		if (!token) {
@@ -32,9 +31,10 @@ export async function acceptTermsOfService(req, reply) {
 
 		return reply.code(200).send({
 			success: true,
-			message: "Terms of service accepted",
+			message: "Terms of Service accepted",
 		});
 	} catch (error) {
+		console.error("Error accepting Terms of Service: ", error);
 		return reply.code(500).send({
 			success: false,
 			code: "INTERNAL_SERVER_ERROR",

@@ -83,7 +83,6 @@ export default function PrivacyPolicy() {
 	const navigate = useNavigate();
 
 	const token = localStorage.getItem("token");
-	console.log("token: ", token);
 	const acceptPrivacyPolicy = async () => {
 		try {
 			const res = await sendData("/api/v1/auth/accept/privacy-policy", {
@@ -92,7 +91,6 @@ export default function PrivacyPolicy() {
 					Authorization: `Bearer ${token}`,
 				},
 			});
-			console.log("RES: ", res);
 			if (res.success) {
 				navigate("/terms-service", { replace: true });
 			} else {

@@ -177,6 +177,23 @@ export async function verifyTwoFA(req, reply) {
 		await redisClient.hDel(userKey, "twoFAPending");
 
 		const sessionId = crypto.randomUUID();
+		const now = new Date().toISOString();
+		const ip = req.ip;
+
+		await redisClient
+			.multi()
+			.hSet(`session:${sessionId}`, {
+				id: sessionId,
+				userId: user.id,
+				deviceInfo: req.headers["user-agent"] ?? "unknown",
+				ipAddress: ip,
+				location: "unknown",
+				createdAt: now,
+				lastActiveAt: now,
+				isCurrent: "true",
+			})
+			.sAdd(`user:sessions:${username}`, sessionId)
+			.exec();
 
 		// Access Token (short-lived JWT)
 		const accessToken = jwt.sign(
@@ -190,7 +207,6 @@ export async function verifyTwoFA(req, reply) {
 		);
 
 		// Refresh Token
-		// Generate a random salt (64 bytes)
 		const refreshToken = crypto.randomBytes(64).toString("hex");
 		const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
 
@@ -270,9 +286,9 @@ export async function disable2FA(req, reply) {
 			});
 		}
 
-		const userKey = `user:${decoded.username}`;
+		const username = decoded.username;
+		const userKey = `user:${username}`;
 		const user = await redisClient.hGetAll(userKey);
-		console.log("user:" ,user);
 		if (!user || user.has2FAEnabled !== "true" || !user.twoFASecret) {
 			return reply.code(401).send({
 				success: false,
@@ -315,8 +331,24 @@ export async function disable2FA(req, reply) {
 		await redisClient.hDel(userKey, "twoFASecret");
 		await redisClient.hDel(userKey, "twoFABackupCodes");
 
-		// Issue a fresh token pair now that 2FA is disabled
 		const sessionId = crypto.randomUUID();
+		const now = new Date().toISOString();
+		const ip = req.ip;
+
+		await redisClient
+			.multi()
+			.hSet(`session:${sessionId}`, {
+				id: sessionId,
+				userId: user.id,
+				deviceInfo: req.headers["user-agent"] ?? "unknown",
+				ipAddress: ip,
+				location: "unknown",
+				createdAt: now,
+				lastActiveAt: now,
+				isCurrent: "true",
+			})
+			.sAdd(`user:sessions:${username}`, sessionId)
+			.exec();
 
 		const accessToken = jwt.sign(
 			{
@@ -342,9 +374,10 @@ export async function disable2FA(req, reply) {
 		const response = new AuthResponse({
 			accessToken,
 			refreshToken,
+			tokenType: "Bearer",
 			expiresIn: ACCESS_TOKEN_TTL,
 			user: userInfo,
-			requires2FA: "false",
+			requires2FA: false,
 		});
 
 		return reply.code(200).send(response);
