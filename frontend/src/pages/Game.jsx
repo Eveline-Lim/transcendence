@@ -105,6 +105,7 @@ export default function Game() {
 	const [myId,      setMyId]      = useState(null);   // "player1" | "player2"
 	const [error,     setError]     = useState(null);
 	const [aiDifficulty, setAiDifficulty] = useState(2); // 1=Easy, 2=Medium, 3=Hard, 4=Impossible
+	const [opponentDisconnected, setOpponentDisconnected] = useState(false);
 
 	// ── Refs (mutations here must not trigger re-renders) ─────────────────────
 	const canvasRef      = useRef(null);
@@ -250,7 +251,12 @@ export default function Game() {
 			const socket = gs.connect();
 
 			socket.on("connect", () => {
-				updatePhase("waiting");
+				// On first connect or reconnect, join the game room
+				if (phaseRef.current === "reconnecting") {
+					console.log("Reconnected – re-joining game room");
+				} else {
+					updatePhase("waiting");
+				}
 				gs.joinGame();
 			});
 
@@ -259,6 +265,13 @@ export default function Game() {
 				setGameState(game_state);
 				const uid = String(currentUser?.id ?? currentUser?.userId ?? "");
 				if (uid) setMyId(game_state.player1_id === uid ? "player1" : "player2");
+
+				// Reconnection: game is already running, go straight back to playing
+				if (phaseRef.current === "reconnecting" && game_state.status === "playing") {
+					setError(null);
+					keysRef.current = { up: false, down: false };
+					updatePhase("playing");
+				}
 			});
 
 			socket.on("game-start", ({ game_state }) => {
@@ -280,6 +293,15 @@ export default function Game() {
 				}
 			});
 
+			// ── Opponent disconnect / reconnect events ────────────
+			socket.on("player-disconnected", ({ message }) => {
+				setOpponentDisconnected(true);
+			});
+
+			socket.on("player-reconnected", () => {
+				setOpponentDisconnected(false);
+			});
+
 			socket.on("game-over", ({ game_state }) => {
 				gameStateRef.current = game_state;
 				setGameState(game_state);
@@ -293,17 +315,45 @@ export default function Game() {
 				gameSockRef.current = null;
 			});
 
+			// Socket.IO auto-reconnection events
 			socket.on("disconnect", () => {
 				if (phaseRef.current === "playing") {
-					setError("Disconnected from game server.");
-					updatePhase("idle");
+					updatePhase("reconnecting");
+					setError("Connection lost – reconnecting…");
 				}
+			});
+
+			socket.io.on("reconnect_failed", () => {
+				setError("Could not reconnect to the game server.");
+				updatePhase("idle");
+				gs.disconnect();
+				gameSockRef.current = null;
 			});
 		} catch {
 			setError("Could not connect to game service. Please try again.");
 			updatePhase("idle");
 		}
 	}, [currentUser]);
+
+	// ── Auto-reconnect after page refresh ─────────────────────────────────────
+	useEffect(() => {
+		if (authLoading || !currentUser || isLocal) return;
+		if (phaseRef.current !== "idle") return;
+
+		let cancelled = false;
+		(async () => {
+			try {
+				const result = await api("/api/v1/game/active-game");
+				if (cancelled || !result.active) return;
+				// Signal that this is a rejoin so connectToGame skips "waiting" phase
+				updatePhase("reconnecting");
+				connectToGame();
+			} catch {
+				// Silently ignore — player will see the idle screen
+			}
+		})();
+		return () => { cancelled = true; };
+	}, [authLoading, currentUser, isLocal, connectToGame]);
 
 	// ── AI game (server-side via AI opponent service) ─────────────────────────
 	const startAIGame = useCallback(async () => {
@@ -394,6 +444,7 @@ export default function Game() {
 		setQueueInfo(null);
 		setMyId(null);
 		setError(null);
+		setOpponentDisconnected(false);
 		gameStateRef.current = null;
 		updatePhase("idle");
 	};
@@ -518,7 +569,27 @@ export default function Game() {
 					</div>
 				)}
 
-				{/* ── Playing / Finished ───────────────────────────────── */}
+				{/* ── Reconnecting (overlay, no canvas) ────────────── */}
+				{phase === "reconnecting" && (
+					<div className="card text-center max-w-sm w-full">
+						<h1 className="text-xl font-bold mb-2">Connection Lost</h1>
+						<div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto mb-4" />
+						<p className="msg-warning mb-4">Reconnecting to game server…</p>
+						<button
+							className="btn btn-secondary w-full"
+							onClick={() => {
+								gameSockRef.current?.disconnect();
+								gameSockRef.current = null;
+								setError(null);
+								updatePhase("idle");
+							}}
+						>
+							Abandon Game
+						</button>
+					</div>
+				)}
+
+				{/* ── Playing / Finished ──────────────────────────────── */}
 				{(phase === "playing" || phase === "finished") && (
 					<div className="flex flex-col items-center gap-3">
 						{/* Player name labels above canvas */}
@@ -561,6 +632,13 @@ export default function Game() {
 								{mode === "offline"
 									? "P1: W / S  ·  P2: ↑ / ↓"
 									: "↑ / W – Up    ↓ / S – Down"}
+							</p>
+						)}
+
+						{/* Opponent disconnected banner */}
+						{phase === "playing" && opponentDisconnected && (
+							<p className="text-sm text-yellow-400 animate-pulse">
+								Opponent disconnected — waiting for reconnection…
 							</p>
 						)}
 

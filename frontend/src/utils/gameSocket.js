@@ -13,6 +13,10 @@
  *   "joined-game"   – { game_id: string, game_state: GameState }
  *   "game-start"    – { message: string, game_state: GameState }
  *   "game-update"   – { ball, paddles, score, status, winner? }
+ *   "game-paused"   – { message, disconnected_player, timeout }
+ *   "game-resumed"  – { message, game_state }
+ *   "player-disconnected" – { message, disconnected_player, timeout }
+ *   "player-reconnected"  – { message, reconnected_player }
  *   "game-over"     – { message: string, winner: string, game_state: GameState }
  *   "error"         – { message: string }
  *
@@ -34,6 +38,7 @@ export class GameSocket {
 	/**
 	 * Connect to the game service.
 	 * The JWT is passed as a query parameter so the API gateway can validate it.
+	 * Auto-reconnection is enabled so the player can rejoin after a brief drop.
 	 * @returns {import("socket.io-client").Socket}
 	 */
 	connect() {
@@ -44,6 +49,10 @@ export class GameSocket {
 			path: SOCKET_IO_PATH,
 			transports: ["websocket"],
 			query: { token },
+			reconnection: true,
+			reconnectionAttempts: 10,
+			reconnectionDelay: 1000,
+			reconnectionDelayMax: 5000,
 		});
 
 		return this._socket;

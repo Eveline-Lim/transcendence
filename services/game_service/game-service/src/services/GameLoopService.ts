@@ -84,6 +84,22 @@ export class GameLoopService {
 		}
 	}
 
+	/**
+	 * Reset the inputs of a disconnected player so their paddle stops moving.
+	 */
+	resetPlayerInputs(gameId: string, playerId: string): void {
+		const gameState = this.gameStatesCache.get(gameId);
+		if (!gameState) return;
+		const isP1 = playerId === gameState.player1_id;
+		if (isP1) {
+			gameState.inputs.player1_up = false;
+			gameState.inputs.player1_down = false;
+		} else {
+			gameState.inputs.player2_up = false;
+			gameState.inputs.player2_down = false;
+		}
+	}
+
 	private async gameLoopTick(gameId: string) {
 		try {
 			const gameState = this.gameStatesCache.get(gameId);
@@ -91,7 +107,6 @@ export class GameLoopService {
 			if(!gameState || gameState.status !== 'playing') {
 
 				if (gameState!.status === 'waiting') {
-					// set timer 30 secondes ?
 					return ;
 				}
 				this.stopGameLoop(gameId);

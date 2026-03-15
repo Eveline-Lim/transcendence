@@ -15,6 +15,9 @@ export interface GameState {
 
 	status: 'waiting' | 'playing' | 'finished';	//State of the game
 	
+	disconnected_player?: string;	// ID of the player who disconnected
+	disconnect_time?: number;		// Timestamp of disconnection
+
 	score: {
 		player1: number;
 		player2: number;

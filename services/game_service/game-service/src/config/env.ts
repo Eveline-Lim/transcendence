@@ -17,3 +17,4 @@ export const PADDLE_LEFT_X = 5;
 export const PADDLE_RIGHT_X = 95;
 export const MAX_BOUNCE_ANGLE = 2;
 export const WINNING_SCORE = 11;
+export const RECONNECT_TIMEOUT_MS = 30_000; // 30 seconds grace period for reconnection

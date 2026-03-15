@@ -18,6 +18,37 @@ import { extractUserIdOnly } from '../middleware/auth.middleware';
 
 export const	gameRouter = Router();
 
+/**
+ * GET /api/active-game
+ * Returns the player's active (non-finished) game, if any.
+ * Used by the frontend to reconnect after a page refresh.
+ */
+gameRouter.get('/active-game', extractUserIdOnly, async (req, res) => {
+	if (!redis) return res.status(503).json({ error: 'Redis unavailable' });
+
+	const userId = req.userId as string;
+	if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+	try {
+		const gameId = await redis.getPlayerGame(userId);
+		if (!gameId) return res.json({ active: false });
+
+		const gameState = await redis.getGameState(gameId);
+		if (!gameState || gameState.status === 'finished') {
+			return res.json({ active: false });
+		}
+
+		return res.json({
+			active: true,
+			gameId,
+			game_state: gameState,
+		});
+	} catch (error) {
+		console.error('Error checking active game:', error);
+		res.status(500).json({ error: 'Failed to check active game' });
+	}
+});
+
 gameRouter.post('/create-game', extractUserIdOnly, async (req, res) => {
 	
 	if (!redis) return res.status(503).json({error: 'Redis unavailable'});

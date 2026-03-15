@@ -7,6 +7,7 @@ import { redis } from './RedisInstance';
 import { GameLoopService } from './GameLoopService';
 import { PlayerServiceClient } from './PlayerServiceClient';
 import { PlayersInputs } from '../models/GameState';
+import { RECONNECT_TIMEOUT_MS } from '../config/env';
 
 
   /***********/
@@ -16,6 +17,8 @@ import { PlayersInputs } from '../models/GameState';
 export class WebsocketService {
 	private io: Server;
 	private gameLoopService: GameLoopService;
+	/** Pending forfeit timers keyed by gameId – cleared when the player reconnects. */
+	private disconnectTimers: Map<string, NodeJS.Timeout> = new Map();
 
 	constructor(io: Server) {
 		this.io = io;
@@ -55,42 +58,91 @@ export class WebsocketService {
 				const gameState = await redis!.getGameState(gameId);
 				if (!gameState || gameState.status === 'finished') return;
 
-				// Forfeit: the disconnected player loses
-				gameState.status = 'finished';
-				gameState.winner = (player_id === gameState.player1_id)
-					? gameState.player2_id
-					: gameState.player1_id;
-
-				await redis!.updateGameState(gameId, gameState);
-				this.gameLoopService.stopGameLoop(gameId);
-
-				// AI games: report forfeit only if there is a real opponent
-				if (gameState.game_mode !== 'ai') {
-					const loserId  = player_id;
-					const winnerId = gameState.winner!;
-					const winnerScore = winnerId === gameState.player1_id
-						? gameState.score.player1 : gameState.score.player2;
-					const loserScore  = winnerId === gameState.player1_id
-						? gameState.score.player2 : gameState.score.player1;
-					const durationSec = Math.round((Date.now() - gameState.created_at) / 1000);
-					PlayerServiceClient.reportMatchResult({
-						winnerId, loserId,
-						winnerScore, loserScore,
-						gameMode: gameState.game_mode,
-						duration: durationSec,
-					});
+				// If the game hasn't started yet, just clean up
+				if (gameState.status === 'waiting') {
+					gameState.status = 'finished';
+					await redis!.updateGameState(gameId, gameState);
+					this.gameLoopService.stopGameLoop(gameId);
+					return;
 				}
 
-				this.io.to(gameId).emit('game-over', {
-					message: `Player ${player_id} disconnected. Game forfeited.`,
-					winner: gameState.winner,
-					game_state: gameState
+				// Game keeps running — just freeze the disconnected player's paddle
+				this.gameLoopService.resetPlayerInputs(gameId, player_id);
+
+				// If a timer already exists (e.g. rapid disconnect/reconnect cycle), skip
+				if (this.disconnectTimers.has(gameId)) return;
+
+				// Track who disconnected
+				gameState.disconnected_player = player_id;
+				gameState.disconnect_time = Date.now();
+				await redis!.updateGameState(gameId, gameState);
+
+				// Notify the opponent
+				this.io.to(gameId).emit('player-disconnected', {
+					message: `Opponent disconnected. They have ${RECONNECT_TIMEOUT_MS / 1000}s to reconnect.`,
+					disconnected_player: player_id,
+					timeout: RECONNECT_TIMEOUT_MS,
 				});
+
+				// Start forfeit timer — if the player doesn't reconnect in time, they lose
+				const timer = setTimeout(async () => {
+					this.disconnectTimers.delete(gameId);
+					await this.forfeitGame(gameId, player_id);
+				}, RECONNECT_TIMEOUT_MS);
+
+				this.disconnectTimers.set(gameId, timer);
 			}
 			catch(error) {
 				console.error('Error handling disconnect:', error);
 			}
 		});
+	}
+
+	/**
+	 * Forfeit a game when the reconnection grace period expires.
+	 */
+	private async forfeitGame(gameId: string, disconnectedPlayerId: string) {
+		try {
+			const gameState = await redis!.getGameState(gameId);
+			if (!gameState || gameState.status === 'finished') return;
+
+			// Player reconnected in the meantime — do not forfeit
+			if (gameState.disconnected_player !== disconnectedPlayerId) return;
+
+			gameState.status = 'finished';
+			gameState.winner = (disconnectedPlayerId === gameState.player1_id)
+				? gameState.player2_id
+				: gameState.player1_id;
+			gameState.disconnected_player = undefined;
+			gameState.disconnect_time = undefined;
+
+			await redis!.updateGameState(gameId, gameState);
+			this.gameLoopService.stopGameLoop(gameId);
+
+			if (gameState.game_mode !== 'ai') {
+				const loserId  = disconnectedPlayerId;
+				const winnerId = gameState.winner!;
+				const winnerScore = winnerId === gameState.player1_id
+					? gameState.score.player1 : gameState.score.player2;
+				const loserScore  = winnerId === gameState.player1_id
+					? gameState.score.player2 : gameState.score.player1;
+				const durationSec = Math.round((Date.now() - gameState.created_at) / 1000);
+				PlayerServiceClient.reportMatchResult({
+					winnerId, loserId,
+					winnerScore, loserScore,
+					gameMode: gameState.game_mode,
+					duration: durationSec,
+				});
+			}
+
+			this.io.to(gameId).emit('game-over', {
+				message: `Player ${disconnectedPlayerId} did not reconnect in time. Game forfeited.`,
+				winner: gameState.winner,
+				game_state: gameState
+			});
+		} catch (error) {
+			console.error('Error forfeiting game:', error);
+		}
 	}
 
 	private handleJoinGame(socket: Socket) {
@@ -123,6 +175,34 @@ export class WebsocketService {
 				
 				socket.join(gameId);
 				console.log(`Player ${player_id} joined game ${gameId}`);
+
+				// ── Reconnection: player is rejoining a running game ──
+				if (gameState.status === 'playing' && gameState.disconnected_player === player_id) {
+					// Cancel the forfeit timer
+					const timer = this.disconnectTimers.get(gameId);
+					if (timer) {
+						clearTimeout(timer);
+						this.disconnectTimers.delete(gameId);
+					}
+
+					// Clear disconnect tracking
+					gameState.disconnected_player = undefined;
+					gameState.disconnect_time = undefined;
+					await redis!.updateGameState(gameId, gameState);
+
+					console.log(`Player ${player_id} reconnected to game ${gameId}`);
+
+					socket.emit('joined-game', {
+						game_id: gameId,
+						game_state: gameState
+					});
+
+					this.io.to(gameId).emit('player-reconnected', {
+						message: 'Opponent reconnected!',
+						reconnected_player: player_id,
+					});
+					return;
+				}
 
 				socket.emit('joined-game', {
 					game_id: gameId,
