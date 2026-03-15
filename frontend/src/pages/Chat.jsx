@@ -232,7 +232,7 @@ export default function Chat() {
 								placeholder="Type a message…"
 								maxLength={1000}
 								rows={3}
-									className="input flex-1 resize-none"
+									className="input flex-5 resize-none"
 								/>
 								<FormButton onClick={handleSend} className="shrink-0">Send</FormButton>
 							</div>

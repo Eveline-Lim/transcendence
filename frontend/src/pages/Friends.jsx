@@ -108,7 +108,7 @@ export default function Friends() {
 	return (
 		<div className="min-h-screen">
 			<NavBar />
-<div className="max-w-3xl mx-auto p-6 mt-6">
+<div className="max-w-6xl mx-auto p-6 mt-6">
 				<h1 className="text-xl font-bold mb-4">Friends</h1>
 
 				{msg && <p className="msg-success mb-3">{msg}</p>}
@@ -197,11 +197,14 @@ export default function Friends() {
 						<div className="flex gap-2 mb-4">
 							<input
 								ref={searchRef}
-								className="input flex-1"
+								id="friend-search"
+								name="friend-search"
+								className="input"
+								style={{ flex: '1 1 0%', minWidth: 0 }}
 								placeholder="Search by username..."
 								onKeyDown={(e) => e.key === "Enter" && handleSearch()}
 							/>
-							<FormButton onClick={handleSearch}>Search</FormButton>
+							<FormButton onClick={handleSearch} className="shrink-0">Search</FormButton>
 						</div>
 						{searchResults.map(p => (
 							<div key={p.id} className="list-item">

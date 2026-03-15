@@ -3,7 +3,7 @@ export default function FormButton({ children, type = "button", onClick, variant
 		<button
 			type={type}
 			onClick={onClick}
-			className={`btn btn-${variant} w-full ${className}`}
+			className={`btn btn-${variant} ${className}`}
 		>
 			{children}
 		</button>
