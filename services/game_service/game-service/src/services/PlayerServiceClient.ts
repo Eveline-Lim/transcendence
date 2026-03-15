@@ -2,7 +2,7 @@
  /*	IMPORT	*/
 /***********/
 
-import http from 'http';
+import https from 'https';
 import { PLAYER_SERVICE_URL } from '../config/env';
 
   /***********/
@@ -34,7 +34,7 @@ export class PlayerServiceClient {
 
 		const parsedUrl = new URL(url);
 
-		const options: http.RequestOptions = {
+		const options: https.RequestOptions = {
 			hostname: parsedUrl.hostname,
 			port: parsedUrl.port || 80,
 			path: parsedUrl.pathname,
@@ -48,7 +48,7 @@ export class PlayerServiceClient {
 			},
 		};
 
-		const req = http.request(options, (res) => {
+		const req = https.request(options, (res) => {
 			if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
 				console.log(`Match result reported: ${payload.winnerId} beat ${payload.loserId} (${payload.winnerScore}-${payload.loserScore})`);
 			} else {
