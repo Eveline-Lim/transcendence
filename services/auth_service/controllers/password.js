@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import ForgotPasswordRequest from "../models/ForgotPasswordRequest.js";
 import ResetPasswordRequest from "../models/ResetPasswordRequest.js";
 import ChangePasswordRequest from "../models/ChangePasswordRequest.js";
+import { hostname } from "node:os";
 
 /**
  * Handles forgot password requests.
@@ -41,7 +42,7 @@ export async function forgotPassword(req, reply) {
 
 	try {
 		// Rate limit check
-		const rlKey = `login:rateLimit:${email}:${ip}`;
+		const rlKey = `passwordReset:rateLimit:${email}:${ip}`;
 		const attempts = await redisClient.incr(rlKey);
 		if (attempts === 1) {
 			await redisClient.expire(rlKey, RATE_LIMIT_WINDOW_SECONDS);
@@ -57,8 +58,8 @@ export async function forgotPassword(req, reply) {
 		const username = await redisClient.get(`email:${email}`);
 		if (!username) {
 			return reply.code(202).send({
-				success: false,
-				code: "(error) PASSWORD_RESET_EMAIL_SENT_SUCCESS",
+				success: true,
+				code: "PASSWORD_RESET_EMAIL_SENT_SUCCESS",
 				message: "If an account exists for this email address, a password reset link has been sent.",
 			});
 		}
@@ -81,8 +82,9 @@ export async function forgotPassword(req, reply) {
 			{ EX: RESET_TOKEN_ETTL }
 		);
 
-		// Build the reset URL with the raw token as a query param
-		const resetLink = `${process.env.FRONTEND_URL}/password/reset?token=${token}`;
+		// Build the reset URL dynamically from the incoming request origin and with the raw token as a query param
+		const origin = `${req.headers.origin}`;
+		const resetLink = `${origin}/password/reset?token=${token}`;
 		console.log("resetLink: ", resetLink);
 
 		// Send email

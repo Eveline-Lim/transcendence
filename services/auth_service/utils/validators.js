@@ -18,15 +18,16 @@ export function validateUsername(username) {
 - At least one uppercase letter
 - At least one lowercase letter
 - At least one number
-- At least one special character from #?!@$ %^&*-
+- At least one special character from #?!@$ %^&*-.
 */
 export function validatePassword(password) {
-	const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$ %^&*-]).{8,128}$/;
+	const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$ %^&*-.]).{8,128}$/;
 	if (!passwordRegex.test(password)) {
 		return (false);
 	}
 	return (true);
 }
+
 
 export function validateEmail(email) {
 	const emailRegex = /^((?!\.)[\w\-_.]*[^.])(@\w+)(\.\w+(\.\w+)?[^.\W])$/;
