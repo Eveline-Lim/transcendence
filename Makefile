@@ -4,6 +4,11 @@ COMPOSE      := docker compose
 COMPOSE_FILE := docker-compose.yml
 COMPOSE_GHCR := docker-compose.ghcr.yml
 
+all: set-ssl build up ## Start the project locally without setting up secrets
+
+set-ssl: ## Setup SSL certificate
+	@scripts/SSL_setup.sh
+
 help: ## Display help
 	@echo "Available commands:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf"\033[36m%-15s\033[0m %s\n", $$1, $$2}'
